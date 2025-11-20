@@ -1,0 +1,30 @@
+# Django Core
+Django>=4.0,<5.0
+djangorestframework
+
+# CORS
+django-cors-headers
+
+# Environment Variables
+python-dotenv
+
+# HTTP Requests
+requests
+
+# LangChain (RAG)
+langchain-ollama
+langchain-community
+langchain-text-splitters
+
+# PDF Processing
+pypdf
+
+# Vector Database (FAISS - No requiere SQLite)
+faiss-cpu
+
+# PostgreSQL (opcional, para producción)
+# psycopg2-binary
+
+# Windows SQLite Fix (opcional, solo instalar en Windows si es necesario)
+# pysqlite3-binary
+
