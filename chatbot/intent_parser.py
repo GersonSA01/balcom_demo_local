@@ -4,14 +4,13 @@ import logging
 from django.conf import settings
 from langchain_ollama import ChatOllama
 
-# Configuración de Logging
 logger = logging.getLogger(__name__)
 
 # --- CONFIGURACIÓN DEL LLM ---
 llm = ChatOllama(
     model=settings.OLLAMA_MODEL,
-    format=settings.OLLAMA_FORMAT,
-    temperature=settings.OLLAMA_TEMPERATURE,
+    format="json",  # JSON Mode Mandatory
+    temperature=0, 
     keep_alive="1h",
     num_predict=settings.OLLAMA_NUM_PREDICT,
     base_url=settings.OLLAMA_BASE_URL,
@@ -19,63 +18,52 @@ llm = ChatOllama(
     num_thread=settings.OLLAMA_NUM_THREAD,
 )
 
-# --- PROMPT "INDUSTRIAL" (Sin cambios) ---
-SYSTEM_PROMPT = """YOU ARE A STRICT DATA EXTRACTOR.
-Output JSON only.
+# --- PROMPT "INDUSTRIAL ROUTER" (FULL ENGLISH) ---
+SYSTEM_PROMPT = """YOU ARE AN INTELLIGENT INTENT CLASSIFIER.
+Analyze the user's request (which is in Spanish) and extract structured data in JSON.
+
+YOUR PRIMARY GOAL IS TO CLASSIFY "answer_type":
+1. "informational": User wants to KNOW something, asks for "how to", requirements, steps, status, dates, or definitions.
+2. "operational": User wants to DO something immediately that requires human intervention (e.g., change, cancel, register, upload, justify).
 
 VALID INTENT_CODES:
-- "consultar_solicitudes_balcon" (Only for checking STATUS of requests)
-- "consultar_datos_personales" (Only for name, email, id)
-- "consultar_carrera_actual" (Only for 'what is my major')
-- "consultar_roles_usuario" (Only for 'what is my role')
-- "otro" (USE THIS FOR ALL OTHER ACTIONS: solicitar, justificar, inscribir, cambiar, anular, pagar)
+- "consultar_solicitudes_balcon" (Checking status)
+- "consultar_datos_personales" (Personal info)
+- "consultar_carrera_actual" (Academic info)
+- "consultar_roles_usuario" (User role)
+- "otro" (Any other action)
 
 JSON SCHEMA:
 {
   "intent_code": "string",
-  "accion": "string (infinitive verb)",
-  "objeto": "string (noun)",
+  "accion": "string (verb in Spanish)",
+  "objeto": "string (noun in Spanish)",
   "asignatura": "string or null",
-  "unidad_actividad": "string or null",
-  "periodo": "string or null",
-  "carrera": "string or null",
-  "detalle": "string or null",
+  "answer_type": "informational | operational", 
   "multi_intent": boolean,
   "intents": []
 }
 
-*** EXAMPLES (FOLLOW THIS PATTERN) ***
+*** EXAMPLES ***
 
-Input: "Quiero ver mis notas de calculo"
-Output:
-{
-  "intent_code": "otro", "accion": "consultar", "objeto": "notas", "asignatura": "calculo", "multi_intent": false, "intents": []
-}
+Input: "Quiero ver mis notas"
+Output: {"intent_code": "otro", "accion": "consultar", "objeto": "notas", "answer_type": "informational", "multi_intent": false, "intents": []}
 
-Input: "Necesito justificar una falta y solicitar cambio de paralelo"
-Output:
-{
-  "intent_code": "otro",
-  "accion": "justificar",
-  "objeto": "falta",
-  "multi_intent": true,
-  "intents": [
-    {"intent_code": "otro", "accion": "justificar", "objeto": "falta"},
-    {"intent_code": "otro", "accion": "solicitar", "objeto": "cambio de paralelo"}
-  ]
-}
+Input: "Necesito justificar una falta urgente"
+Output: {"intent_code": "otro", "accion": "justificar", "objeto": "falta", "answer_type": "operational", "multi_intent": false, "intents": []}
 
-Input: "Cual es mi carrera actual"
-Output:
-{
-  "intent_code": "consultar_carrera_actual", "accion": "consultar", "objeto": "carrera", "multi_intent": false, "intents": []
-}
+Input: "¿Cómo se justifica una falta?"
+Output: {"intent_code": "otro", "accion": "justificar", "objeto": "falta", "answer_type": "informational", "multi_intent": false, "intents": []}
+(Reason: User asks 'HOW', so it is informational, not an action request).
+
+Input: "Solicitar cambio de carrera"
+Output: {"intent_code": "otro", "accion": "solicitar", "objeto": "cambio de carrera", "answer_type": "operational", "multi_intent": false, "intents": []}
 
 *** END EXAMPLES ***
 
 RULES:
-1. If action is 'solicitar', 'cambiar', 'justificar' -> CODE IS ALWAYS "otro".
-2. Do not invent new codes like "solicitar_cambio".
+1. Questions starting with "Como", "Donde", "Requisitos" are ALWAYS "informational".
+2. Direct action commands are "operational".
 """
 
 def procesar_mensaje_usuario(texto_usuario: str) -> dict:
@@ -86,7 +74,6 @@ def procesar_mensaje_usuario(texto_usuario: str) -> dict:
     try:
         # 2. Llamada al LLM
         prompt = f"{SYSTEM_PROMPT}\nInput: \"{texto_usuario}\"\nOutput:"
-        
         response = llm.invoke(prompt)
         raw_content = response.content.strip()
 
@@ -99,7 +86,7 @@ def procesar_mensaje_usuario(texto_usuario: str) -> dict:
         json_str = match.group(0)
         data = json.loads(json_str)
 
-        # 4. Normalización (AQUÍ OCURRE LA LÓGICA DE AGENTE)
+        # 4. Normalización
         return _normalizar_salida(data, texto_usuario)
 
     except Exception as e:
@@ -110,65 +97,53 @@ def procesar_mensaje_usuario(texto_usuario: str) -> dict:
 def _normalizar_salida(data: dict, original_text: str) -> dict:
     base = {
         "intent_code": "otro",
-        "accion": "", "objeto": "", "asignatura": "", "unidad_actividad": "",
-        "periodo": "", "carrera": "", "sistema": "", "detalle": "",
-        "answer_type": "informativo",
-        "agent_handoff": False, # Nuevo campo: Indica si pasa a humano
-        "system_response": "",  # Nuevo campo: Mensaje listo para mostrar
+        "accion": "", "objeto": "", "asignatura": "",
+        "answer_type": "informational", # Default en Inglés
+        "agent_handoff": False,
+        "system_response": "",
         "multi_intent": False, "intents": [], "original_text": original_text
     }
 
+    # Copiar datos del LLM
     for k, v in data.items():
         if k in base and v is not None:
             base[k] = v
 
-    # --- 1. CLASIFICAR TIPO DE RESPUESTA ---
-    base["answer_type"] = _inferir_tipo_respuesta(base["intent_code"], base["accion"], original_text)
+    # --- PYTHON GUARDRAIL (Safety Check) ---
+    # Aunque el LLM piense en inglés, el input es español. 
+    # Reforzamos la regla de preguntas "Cómo/Dónde".
+    indicadores_pregunta = ["como ", "cómo ", "requisitos", "pasos", "donde ", "cuándo ", "que necesito"]
+    if any(i in original_text.lower() for i in indicadores_pregunta):
+        base["answer_type"] = "informational"
 
-    # --- 2. LÓGICA DE AGENTE (Handoff) ---
-    # Si es OPERATIVO, generamos el mensaje de contacto aquí mismo
-    if base["answer_type"] == "operativo":
+    # --- LÓGICA DE NEGOCIO (HANDOFF) ---
+    # Ahora verificamos la etiqueta en INGLÉS
+    if base["answer_type"] == "operational":
         base["agent_handoff"] = True
-        # Construimos un mensaje natural usando los datos extraídos
-        accion_txt = base.get('accion', 'procesar')
-        objeto_txt = base.get('objeto', 'tu solicitud')
+        accion = base.get('accion', 'tu solicitud')
+        objeto = base.get('objeto', '')
         base["system_response"] = (
-            f"Entendido. Para gestionar tu solicitud de **{accion_txt} {objeto_txt}**, "
-            "un agente especializado se pondrá en contacto contigo en breve."
+            f"Entendido. He derivado tu solicitud de **{accion} {objeto}** a un asesor humano. "
+            "Te contactarán en breve para completar el proceso."
         )
 
-    # --- 3. PROCESAR MULTI-INTENT ---
+    # --- PROCESAMIENTO DE MULTI-INTENT ---
     if base["multi_intent"] and isinstance(base.get("intents"), list):
         clean_intents = []
         for item in base["intents"]:
-            sub = {
-                "intent_code": item.get("intent_code", "otro"),
-                "accion": item.get("accion", ""),
-                "objeto": item.get("objeto", ""),
-                "asignatura": item.get("asignatura", ""),
-                "answer_type": "informativo",
-                "agent_handoff": False,
-                "system_response": ""
-            }
+            sub = base.copy()
+            sub.update(item)
+            sub["multi_intent"] = False
+            sub["intents"] = []
             
-            # Validar códigos
-            valid_codes = ["consultar_solicitudes_balcon", "consultar_datos_personales", "consultar_carrera_actual", "consultar_roles_usuario", "otro"]
-            if sub["intent_code"] not in valid_codes:
-                sub["intent_code"] = "otro"
-            
-            # Inferir tipo para sub-intent
-            sub["answer_type"] = _inferir_tipo_respuesta(sub["intent_code"], sub["accion"], "")
-            
-            # Lógica de agente para sub-intent
-            if sub["answer_type"] == "operativo":
+            # Guardrail recursivo
+            # Si el sub-intent fue marcado como operational por el LLM
+            if sub["answer_type"] == "operational":
                 sub["agent_handoff"] = True
-                accion_sub = sub.get('accion', 'realizar')
-                objeto_sub = sub.get('objeto', 'trámite')
-                sub["system_response"] = (
-                    f"Sobre tu requerimiento de **{accion_sub} {objeto_sub}**, "
-                    "he notificado a un asesor para que te ayude personalmente."
-                )
-
+                acc = sub.get('accion', 'solicitud')
+                obj = sub.get('objeto', '')
+                sub["system_response"] = f"Sobre **{acc} {obj}**: He notificado a un agente."
+            
             clean_intents.append(sub)
         base["intents"] = clean_intents
     else:
@@ -176,35 +151,6 @@ def _normalizar_salida(data: dict, original_text: str) -> dict:
 
     return base
 
-def _inferir_tipo_respuesta(code: str, accion: str, texto_raw: str) -> str:
-    """Reglas de negocio para decidir entre RAG (informativo) o AGENTE (operativo)."""
-    # Consultas de lectura rápida -> Informativo
-    if code in ["consultar_datos_personales", "consultar_carrera_actual", "consultar_roles_usuario", "consultar_solicitudes_balcon"]:
-        return "informativo"
-
-    accion = accion.lower().strip()
-    texto = texto_raw.lower().strip()
-
-    # Verbos que requieren acción humana
-    verbos_operativos = [
-        "solicitar", "cambiar", "justificar", "inscribir", "anular", 
-        "pagar", "subir", "rectificar", "retirar", "crear", "actualizar",
-        "homologar", "convalidar", "recalificar", "tramitar"
-    ]
-    
-    es_verbo_operativo = any(v in accion for v in verbos_operativos)
-
-    # Si pregunta "¿Cómo...?", es informativo (RAG), aunque el verbo sea operativo
-    indicadores_pregunta = ["como ", "cómo ", "requisitos", "pasos", "donde ", "cuándo ", "por qué"]
-    es_pregunta_como = any(i in texto for i in indicadores_pregunta)
-
-    if es_pregunta_como:
-        return "informativo"
-    
-    if es_verbo_operativo:
-        return "operativo"
-
-    return "informativo"
 
 def _es_saludo_simple(texto: str) -> bool:
     t = re.sub(r"[^\w\s]", "", texto.lower()).strip()
@@ -212,11 +158,9 @@ def _es_saludo_simple(texto: str) -> bool:
 
 def _respuesta_rapida(tipo: str, texto: str) -> dict:
     return {
-        "intent_code": "saludo" if tipo == "saludo" else "otro", 
-        "answer_type": "informativo",
+        "intent_code": "saludo" if tipo == "saludo" else "otro",
+        "answer_type": "informational",
         "agent_handoff": False,
-        "system_response": "¡Hola! Soy el asistente virtual de UNEMI. ¿En qué puedo ayudarte hoy?",
-        "original_text": texto, 
-        "multi_intent": False, 
-        "intents": []
+        "system_response": "¡Hola! Soy el asistente virtual de UNEMI. ¿En qué puedo ayudarte?",
+        "original_text": texto, "multi_intent": False, "intents": []
     }
