@@ -1,4 +1,6 @@
 <script>
+  import { onMount } from 'svelte';
+  
   export let dataUnemi = {};
   
   let personasList = [];
@@ -11,7 +13,45 @@
       cedula,
       nombre: `${dataUnemi[cedula].persona?.nombres || ''} ${dataUnemi[cedula].persona?.apellido1 || ''} ${dataUnemi[cedula].persona?.apellido2 || ''}`.trim() || cedula
     }));
+    
+    // Cargar selección guardada cuando dataUnemi esté disponible
+    loadSavedSelection();
   }
+  
+  function loadSavedSelection() {
+    try {
+      const stored = localStorage.getItem('user_session_data');
+      if (stored && dataUnemi && Object.keys(dataUnemi).length > 0) {
+        const sessionData = JSON.parse(stored);
+        const cedula = Object.keys(sessionData)[0];
+        
+        if (cedula && dataUnemi[cedula]) {
+          selectedCedula = cedula;
+          handlePersonaChange(); // Esto carga los perfiles disponibles
+          
+          // Buscar el perfil seleccionado
+          const perfiles = sessionData[cedula].perfiles;
+          if (perfiles && perfiles.length > 0) {
+            const perfilId = perfiles[0].id;
+            // Asegurar que siempre sea string para consistencia
+            selectedPerfilId = String(perfilId);
+            
+            // IMPORTANTE: Disparar el evento para actualizar el chatbot
+            // Usar setTimeout para asegurar que el DOM se actualice primero
+            setTimeout(() => {
+              updateSessionData();
+            }, 0);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error cargando selección guardada:', e);
+    }
+  }
+  
+  onMount(() => {
+    loadSavedSelection();
+  });
   
   function handlePersonaChange() {
     if (selectedCedula && dataUnemi[selectedCedula]) {
@@ -28,19 +68,65 @@
   }
   
   function updateSessionData() {
+    // Verificamos que existan datos
     if (selectedCedula && selectedPerfilId && dataUnemi[selectedCedula]) {
       const personaData = dataUnemi[selectedCedula];
-      const perfilSelected = personaData.perfiles.find(p => p.id.toString() === selectedPerfilId);
+      
+      // ---------------------------------------------------------
+      // 🔧 CORRECCIÓN: Usamos String() en ambos lados para evitar conflictos de tipo
+      // ---------------------------------------------------------
+      const perfilSelected = personaData.perfiles.find(p => 
+        String(p.id) === String(selectedPerfilId)
+      );
       
       if (perfilSelected) {
         const sessionData = {
           [selectedCedula]: {
-            perfiles: [perfilSelected]
+            persona: personaData.persona, // Incluimos datos personales (nombres, etc)
+            perfiles: [perfilSelected]    // Solo el perfil activo seleccionado
           }
         };
-        localStorage.setItem('user_session_data', JSON.stringify(sessionData));
+        
+        // Guardar en localStorage
+        const jsonString = JSON.stringify(sessionData);
+        localStorage.setItem('user_session_data', jsonString);
+        
+        // Debug: Verificar que se guardó correctamente
+        console.log("💾 UserSelector: Guardando sesión en localStorage");
+        console.log("   Cédula:", selectedCedula);
+        console.log("   Perfil ID:", selectedPerfilId, "(tipo:", typeof selectedPerfilId + ")");
+        console.log("   ✅ Perfil seleccionado correctamente:", perfilSelected.tipo || "Sin tipo");
+        console.log("   Datos guardados:", sessionData);
+        
+        // Verificar que se guardó correctamente leyéndolo de vuelta
+        const verify = localStorage.getItem('user_session_data');
+        if (verify) {
+          try {
+            const parsed = JSON.parse(verify);
+            console.log("   ✅ Verificación: Datos leídos correctamente desde localStorage");
+            console.log("   Keys en datos guardados:", Object.keys(parsed));
+          } catch (e) {
+            console.error("   ❌ Error verificando datos guardados:", e);
+          }
+        }
+        
+        // Disparamos el evento para que el chat se actualice al instante
         window.dispatchEvent(new CustomEvent('sessionDataUpdated', { detail: sessionData }));
+        console.log("   📡 Evento 'sessionDataUpdated' disparado");
+      } else {
+        console.warn("⚠️ Perfil no encontrado en el array. ID buscando:", selectedPerfilId, "(tipo:", typeof selectedPerfilId + ")");
+        console.warn("   Perfiles disponibles:", personaData.perfiles.map(p => ({ 
+          id: p.id, 
+          id_tipo: typeof p.id,
+          tipo: p.tipo 
+        })));
       }
+    } else {
+      console.warn("⚠️ UserSelector: No se puede actualizar sesión - faltan datos", {
+        hasSelectedCedula: !!selectedCedula,
+        hasSelectedPerfilId: !!selectedPerfilId,
+        hasDataUnemi: !!dataUnemi[selectedCedula]
+      });
     }
   }
 </script>
@@ -70,7 +156,7 @@
       >
         <option value="">Seleccione un perfil</option>
         {#each perfilesDisponibles as perfil}
-          <option value={perfil.id}>
+          <option value={String(perfil.id)}>
             {perfil.tipo || 'Sin tipo'}
             {#if perfil.es_estudiante}(Estudiante){/if}
             {#if perfil.es_profesor}(Profesor){/if}
@@ -85,6 +171,7 @@
 <style>
   .user-selector {
     display: flex;
+    flex-wrap: wrap; /* Permite que baje de línea en pantallas muy pequeñas */
     gap: 16px;
     padding: 14px 16px;
     background: linear-gradient(to right, #1e3a5f 0%, #2c4a6b 100%);

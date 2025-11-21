@@ -1,7 +1,6 @@
-# chatbot/rag_service.py
-
 import os
 import json
+import re
 import logging
 from pathlib import Path
 from django.conf import settings
@@ -17,6 +16,7 @@ FAISS_INDEX_PATH = os.path.join(settings.BASE_DIR, "faiss_index")
 
 class LocalRAGService:
     def __init__(self):
+        # 1. Embeddings (Nomic es el estándar de PrivateGPT para local)
         self.embeddings = OllamaEmbeddings(
             model="nomic-embed-text", 
             base_url=settings.OLLAMA_BASE_URL
@@ -25,10 +25,11 @@ class LocalRAGService:
         self.vector_store = None
         self._cargar_indice()
 
+        # 2. LLM (Configuración de temperatura baja como en settings.yaml de PrivateGPT)
         self.llm = ChatOllama(
             model=settings.OLLAMA_MODEL,
-            format="json",
-            temperature=0,
+            format="json", # Forzamos JSON nativo de Ollama
+            temperature=0.1, 
             base_url=settings.OLLAMA_BASE_URL,
             keep_alive="1h",
             num_predict=settings.OLLAMA_NUM_PREDICT,
@@ -36,18 +37,24 @@ class LocalRAGService:
             num_thread=settings.OLLAMA_NUM_THREAD,
         )
         
-        # --- PROMPT OPTIMIZADO PARA VELOCIDAD (TOKEN SAVING) ---
-        self.rag_prompt = """YOU ARE AN ACADEMIC ASSISTANT FOR UNEMI.
-Answer based ONLY on the provided CONTEXT.
+        # 3. Prompt RAG (Estricto, estilo PrivateGPT pero con lógica de contacto)
+        self.rag_prompt = """You are a helpful, respectful and honest assistant for UNEMI.
+Answer exclusively with a valid JSON.
 
 TASK:
-Return a JSON: {{ "has_information": bool, "need_contact": bool, "response": string, "sources": [] }}
+Analyze the context and user query. Return a JSON object with these keys:
+{{
+  "has_information": boolean, (true only if the answer is explicitly in the context)
+  "need_contact": boolean, (true if the context implies manual processing at a window/office/secretary)
+  "response": "string", (The answer in Spanish. Concise and natural. If no info, return null.)
+  "sources": ["file.pdf"]
+}}
 
 CRITICAL RULES:
-1. IF NO INFO IN CONTEXT: Set "has_information": false, "need_contact": true, and "response": null. (DO NOT WRITE AN APOLOGY. SAVE TOKENS).
-2. IF INFO EXISTS: Set "has_information": true. If manual action is needed, "need_contact": true. Write the answer in "response" in Spanish.
+1. CONTEXT IS FILTERED FOR ROLE: {user_role}.
+2. IF NO INFO IN CONTEXT: Set "has_information": false, "need_contact": true, "response": null.
 3. TRUTH IS ONLY IN THE CONTEXT. If it says "Prohibited", say it.
-4. CONTEXT IS FILTERED FOR USER ROLE: {user_role}. IGNORE IRRELEVANT INFO. If user asks about "Faltas", ignore "Tesis" or "Notas".
+4. IGNORE IRRELEVANT INFO. If user asks about "Faltas", ignore "Tesis" or "Notas".
 
 CONTEXT:
 {context}
@@ -56,17 +63,36 @@ USER QUERY:
 {query}
 """
 
-        # Prompt para Reformular Preguntas (Query Expansion)
-        self.expansion_prompt = """Eres un experto en terminología universitaria.
-Genera 3 variantes de búsqueda para la siguiente pregunta.
-Corrige faltas ortográficas.
+        # 4. Prompt de Expansión (EL ARREGLO CLAVE PARA TUS ALUCINACIONES)
+        # Este prompt prohíbe explícitamente contextos laborales o de CV.
+        self.expansion_prompt = """ACT AS AN ACADEMIC SEARCH EXPERT.
+Target Domain: University Regulations, Student Welfare, Academic Processes.
 
-Output JSON format:
+YOUR GOAL:
+Translate the user's colloquial query into 3 precise search queries using formal academic terminology found in official regulation PDFs.
+
+INSTRUCTIONS:
+1. DETECT THE CORE TOPIC: Identify what the user really wants (e.g., money -> financial aid; missing class -> attendance).
+2. DISCARD IRRELEVANT CONTEXTS: Ignore words related to "job", "work", "cv", "resume", "boyfriend", "parents", "currículum". Focus only on the University scope.
+3. GENERATE 3 VARIATIONS:
+   - Query 1: Formal academic term for the action (e.g., "Justificación de inasistencia").
+   - Query 2: Specific regulation or article keyword (e.g., "Normativa de asistencia").
+   - Query 3: Synonyms used in Ecuador/UNEMI context.
+
+EXAMPLES:
+User: "quiero borrar una materia"
+JSON Output: {{"queries": ["anulación de matrícula", "retiro de asignatura", "proceso de baja académica"]}}
+
+User: "falta laboral"
+JSON Output: {{"queries": ["inasistencia a clases", "justificación de inasistencia", "reglamento de asistencia"]}}
+(Note: It corrects 'laboral' to academic context).
+
+USER INPUT: "{question}"
+
+OUTPUT JSON FORMAT:
 {{
-  "queries": ["variante 1", "variante 2", "variante 3"]
+  "queries": ["term 1", "term 2", "term 3"]
 }}
-
-User Question: {question}
 """
 
     def _cargar_indice(self):
@@ -74,190 +100,143 @@ User Question: {question}
             try:
                 self.vector_store = FAISS.load_local(
                     FAISS_INDEX_PATH, 
-                    self.embeddings,
+                    self.embeddings, 
                     allow_dangerous_deserialization=True
                 )
                 logger.info("Índice FAISS cargado.")
-            except Exception as e:
-                logger.error(f"Error cargando FAISS: {e}")
-                self.vector_store = None
-        else:
-            logger.warning("Índice no encontrado.")
-            self.vector_store = None
+            except Exception: self.vector_store = None
+        else: self.vector_store = None
 
-    def _expandir_query(self, query_original: str) -> list:
-        """Genera 3 versiones de la pregunta para mejorar la búsqueda."""
+    def _extraer_json(self, texto):
+        """Ayuda a encontrar el JSON si el modelo añade texto extra."""
         try:
-            prompt = self.expansion_prompt.format(question=query_original)
-            response = self.llm.invoke(prompt)
-            raw_content = response.content.strip()
+            match = re.search(r"\{[\s\S]*\}", texto)
+            if match:
+                return json.loads(match.group(0))
+            return json.loads(texto)
+        except:
+            return None
+
+    def _expandir_query(self, query: str) -> list:
+        try:
+            prompt = self.expansion_prompt.format(question=query)
+            res = self.llm.invoke(prompt)
             
-            # Extracción robusta de JSON
-            import re
-            match = re.search(r"\{[\s\S]*\}", raw_content)
-            if not match:
-                logger.warning(f"JSON no encontrado en expansión: {raw_content[:50]}")
-                return [query_original]
+            data = self._extraer_json(res.content)
+            if not data: return [query]
             
-            json_str = match.group(0)
-            data = json.loads(json_str)
             variantes = data.get("queries", [])
-            
-            # Validar que sea una lista
-            if not isinstance(variantes, list):
-                return [query_original]
-            
-            # Agregamos la original por si acaso
-            variantes.append(query_original)
-            return list(set(variantes))  # Eliminar duplicados
+            if isinstance(variantes, list):
+                variantes.append(query)
+                return list(set(variantes))
+            return [query]
         except Exception as e:
-            logger.error(f"Error expandiendo query: {e}")
-            return [query_original]  # Fallback a la original
+            logger.error(f"Error expandiendo: {e}")
+            return [query]
 
-    def consultar(self, query: str, categorias_permitidas: list = None, user_role_name: str = "Visitante"):
-        # CASO 0: No hay base de datos -> Contactar soporte
+    def consultar(self, query: str, categorias_permitidas: list, user_role_name: str):
         if not self.vector_store:
-            return self._respuesta_fallback("El sistema de documentos está apagado.")
-
-        # Default: Si no se especifican categorías, permitir todas (compatibilidad hacia atrás)
-        if categorias_permitidas is None:
-            categorias_permitidas = ["general", "estudiantes", "docentes", "administrativos"]
+            return self._respuesta_fallback("Sistema apagado.")
 
         try:
-            # PASO 1: Expandir consulta (Multi-Query)
-            queries_optimizadas = self._expandir_query(query)
-            print(f"🔍 Búsqueda expandida: {queries_optimizadas}")
-
-            # PASO 2: Búsqueda Masiva con FILTRADO (Post-Filtering para máxima compatibilidad FAISS CPU)
-            # Buscamos más documentos (k=15) y luego filtramos por categoría en Python
-            candidatos = []
+            # 1. Expansión de Consulta
+            queries = self._expandir_query(query)
+            print(f"\n🔄 Queries expandidas: {queries}")
             
-            for q in queries_optimizadas:
-                # Traemos bastantes candidatos crudos
-                raw_docs = self.vector_store.similarity_search_with_score(q, k=15)
+            # 2. Búsqueda "Wide" (Similar a PrivateGPT similarity_top_k=10)
+            candidatos = []
+            for q in queries:
+                # k=10 asegura cobertura amplia antes del filtrado
+                raw_docs = self.vector_store.similarity_search_with_score(q, k=10)
                 for doc, score in raw_docs:
                     doc_cat = doc.metadata.get("categoria", "general")
                     
-                    # --- FILTRO DE SEGURIDAD ---
+                    # Filtro de Rol
                     if doc_cat in categorias_permitidas:
                         candidatos.append((doc, score))
 
-            # PASO 3: Ordenar y Deduplicar
-            # En FAISS L2 distance, menor score = mejor coincidencia.
-            # Ordenamos de menor a mayor score.
-            candidatos.sort(key=lambda x: x[1])  # Menor score es mejor
-
+            # 3. Reranking y Deduplicación
+            candidatos.sort(key=lambda x: x[1]) # Menor score es mejor
+            
             docs_finales = []
-            ids_vistos = set()
+            ids = set()
             
             for doc, score in candidatos:
+                # Umbral de corte (Heurística para Nomic ~0.65 es decente)
+                if score > 0.75: continue # Si es muy irrelevante, ignorar
+
                 h = hash(doc.page_content)
-                if h not in ids_vistos:
-                    ids_vistos.add(h)
+                if h not in ids:
+                    ids.add(h)
                     docs_finales.append(doc)
-                if len(docs_finales) >= 6:  # Top 6 filtrados
-                    break
+                if len(docs_finales) >= 6: break # Top 6 chunks
 
-            # CASO 1: No encontró nada en la búsqueda vectorial -> Contactar soporte
             if not docs_finales:
-                return self._respuesta_fallback(f"No encontré información relevante para tu perfil ({user_role_name}).")
+                return self._respuesta_fallback(f"No encontré información relevante en los documentos de {user_role_name}.")
 
-            # PASO 4: Construcción del Contexto
-            context_text = "\n\n".join([d.page_content for d in docs_finales])
+            # 4. Generación
+            context = "\n\n".join([d.page_content for d in docs_finales])
+            fuentes = list(set([Path(d.metadata.get("source", "Doc")).name for d in docs_finales]))
             
-            # --- DEBUG VISUAL ---
-            print("\n" + "="*40)
-            print(f"🔍 RAG ({user_role_name}) | Categorías permitidas: {categorias_permitidas}")
-            print(f"🏆 TOP {len(docs_finales)} CHUNKS SELECCIONADOS")
-            print("-" * 40)
-            fuentes_debug = list(set([Path(d.metadata.get("source", "Doc")).name for d in docs_finales]))
-            print(f"📚 Fuentes usadas: {fuentes_debug}")
-            print(f"CTX LENGTH: {len(context_text)} caracteres")
-            print("="*40 + "\n")
+            # DEBUG
+            print(f"\n🔍 RAG [{user_role_name}]")
+            print(f"📚 Fuentes ({len(docs_finales)} chunks): {fuentes}")
             
-            # PASO 5: Generación de Respuesta JSON
-            final_prompt = self.rag_prompt.format(context=context_text, query=query, user_role=user_role_name)
+            # DEBUG CONTEXTO (Verificamos que no esté metiendo currículum)
+            print(f"📄 Muestra contexto: {context[:200].replace(chr(10), ' ')}...") 
+
+            final_prompt = self.rag_prompt.format(context=context, query=query, user_role=user_role_name)
             ai_response = self.llm.invoke(final_prompt)
             
-            # Parseo seguro
-            try:
-                resultado = json.loads(ai_response.content)
-            except json.JSONDecodeError:
-                # Fallback si el modelo falla el JSON (raro con format="json")
-                return self._respuesta_fallback("Error al procesar la respuesta del sistema.")
+            resultado = self._extraer_json(ai_response.content)
+            
+            if not resultado:
+                # Fallback si el JSON falla
+                resultado = {"has_information": True, "need_contact": False, "response": ai_response.content, "sources": []}
 
-            resultado["sources"] = fuentes_debug
-
-            # --- OPTIMIZACIÓN DE VELOCIDAD (PYTHON FILL-IN) ---
-            if not resultado.get("has_information") or resultado.get("response") is None:
+            resultado["sources"] = fuentes
+            
+            # Fallback semántico: Si la IA dice que no sabe
+            if not resultado.get("has_information") or not resultado.get("response"):
                 resultado["has_information"] = False
                 resultado["need_contact"] = True
-                resultado["response"] = (
-                    "Lo siento, no encontré esa información en los reglamentos de tu perfil. "
-                    "He derivado tu caso a un asesor humano que podrá ayudarte mejor."
-                )
+                resultado["response"] = "Lo siento, no encontré esa información específica en los reglamentos de tu perfil."
 
             return resultado
 
         except Exception as e:
             logger.error(f"Error RAG: {e}", exc_info=True)
-            return self._respuesta_fallback("Ocurrió un error técnico al consultar los documentos.")
+            return self._respuesta_fallback("Error técnico.")
 
     def _respuesta_fallback(self, mensaje: str):
-        """Respuesta por defecto cuando todo falla: SIEMPRE pide contacto humano."""
-        return {
-            "has_information": False,
-            "need_contact": True,  # <--- AQUÍ ESTÁ LA CLAVE
-            "response": f"{mensaje} He derivado tu caso a un asesor humano.",
-            "sources": []
-        }
+        return {"has_information": False, "need_contact": True, "response": mensaje, "sources": []}
 
     def ingerir_documento(self, file_path: str, categoria: str = "general"):
         try:
-            if file_path.endswith(".pdf"):
-                loader = PyPDFLoader(file_path)
-            elif file_path.endswith(".txt"):
-                loader = TextLoader(file_path)
-            else:
-                return False, "Formato incorrecto"
-
-            docs = loader.load()
+            if file_path.endswith(".pdf"): loader = PyPDFLoader(file_path)
+            elif file_path.endswith(".txt"): loader = TextLoader(file_path)
+            else: return False, "Formato incorrecto"
             
-            # INYECTAR METADATA CATEGORÍA en cada documento
-            for d in docs:
-                d.metadata["categoria"] = categoria
+            docs = loader.load()
+            for d in docs: d.metadata["categoria"] = categoria
 
-            # Chunking grande para mantener contexto legal junto
+            # --- CONFIGURACIÓN DE CHUNKING (Estilo PrivateGPT) ---
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1000,    
-                chunk_overlap=200  
+                chunk_size=1024, 
+                chunk_overlap=200,
+                separators=["\n\n", "\n", ". ", " ", ""]
             )
             splits = text_splitter.split_documents(docs)
             
-            # Verificar que la categoría se mantuvo después del split
-            for split in splits:
-                if "categoria" not in split.metadata:
-                    split.metadata["categoria"] = categoria
+            if not splits: return False, "Vacío"
             
-            if not splits:
-                return False, "Archivo vacío"
-
-            if self.vector_store is None:
-                self.vector_store = FAISS.from_documents(splits, self.embeddings)
-            else:
-                self.vector_store.add_documents(splits)
+            if self.vector_store is None: self.vector_store = FAISS.from_documents(splits, self.embeddings)
+            else: self.vector_store.add_documents(splits)
             
             self.vector_store.save_local(FAISS_INDEX_PATH)
-            
-            return True, f"Procesado ({categoria}): {Path(file_path).name} ({len(splits)} fragmentos)"
-            
-        except Exception as e:
-            logger.error(f"Error ingiriendo: {e}")
-            return False, str(e)
+            return True, f"Ok ({categoria}): {len(splits)} frags"
+        except Exception as e: return False, str(e)
 
-    def listar_documentos(self):
-        if not self.vector_store:
-            return []
-        return ["Documentos FAISS (Lista no disponible)"]
+    def listar_documentos(self): return []
 
 rag_service = LocalRAGService()

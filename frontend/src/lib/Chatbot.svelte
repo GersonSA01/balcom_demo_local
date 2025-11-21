@@ -26,9 +26,21 @@
     sessionData = event.detail;
   }
   
+  function loadSessionFromStorage() {
+    try {
+      const stored = localStorage.getItem('user_session_data');
+      if (stored) {
+        sessionData = JSON.parse(stored);
+      }
+    } catch (e) {
+      console.error('Error cargando sesión desde localStorage:', e);
+    }
+  }
+  
   onMount(() => {
     checkConnection();
     loadDataUnemi();
+    loadSessionFromStorage(); // Cargar sesión guardada al iniciar
     window.addEventListener('sessionDataUpdated', handleSessionUpdate);
     
     return () => {
@@ -73,21 +85,60 @@
     isLoading = true;
 
     try {
+      // ---------------------------------------------------------
+      // 🚨 CORRECCIÓN CRÍTICA: Leer datos frescos del localStorage
+      // JUSTO ANTES de enviar, sin depender de variables reactivas
+      // ---------------------------------------------------------
+      let sessionDataToSend = {};
+      const storedData = localStorage.getItem('user_session_data');
+      
+      if (storedData) {
+        try {
+          sessionDataToSend = JSON.parse(storedData);
+          console.log("🟢 DATOS QUE SE ENVIARÁN AL PYTHON:", sessionDataToSend);
+          
+          // Verificar que realmente tiene datos
+          const keys = Object.keys(sessionDataToSend);
+          if (keys.length === 0) {
+            console.warn("⚠️ OJO: El objeto session_data está vacío {}");
+          } else {
+            console.log(`✅ Datos válidos encontrados para cédula: ${keys[0]}`);
+          }
+        } catch (e) {
+          console.error("❌ Error parseando datos de sesión desde localStorage:", e);
+          console.warn("⚠️ OJO: No se pudo leer la sesión. ¿Seleccionaste un perfil?");
+        }
+      } else {
+        console.warn("⚠️ OJO: No hay datos en localStorage. ¿Seleccionaste un perfil?");
+      }
+      // ---------------------------------------------------------
+
       const history = messages.slice(0, -1).map(msg => ({
         role: msg.role,
         content: msg.content
       }));
+
+      const requestBody = {
+        message: userMessage,
+        history: history,
+        session_data: sessionDataToSend  // Usar los datos leídos directamente
+      };
+
+      console.log("📨 Request completo:", { 
+        message: userMessage, 
+        has_session_data: Object.keys(sessionDataToSend).length > 0,
+        session_keys: Object.keys(sessionDataToSend),
+        session_data_preview: Object.keys(sessionDataToSend).length > 0 
+          ? Object.keys(sessionDataToSend)[0] 
+          : "VACÍO"
+      });
 
       const response = await fetch(`${API_BASE_URL}/chat/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          message: userMessage,
-          history: history,
-          session_data: sessionData
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await response.json();
