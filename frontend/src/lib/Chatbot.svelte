@@ -1,50 +1,50 @@
 <script>
-  import { onMount } from 'svelte';
-  import UserSelector from './UserSelector.svelte';
-  
+  import { onMount } from "svelte";
+  import UserSelector from "./UserSelector.svelte";
+
   let messages = [];
-  let inputMessage = '';
+  let inputMessage = "";
   let isLoading = false;
   let error = null;
   let isConnected = false;
-  let configuredModel = 'phi3:mini';
+  let configuredModel = "phi3:mini";
   let sessionData = {};
   let dataUnemi = {};
 
-  const API_BASE_URL = 'http://localhost:8000/api/chatbot';
-  
+  const API_BASE_URL = "http://localhost:8000/api/chatbot";
+
   async function loadDataUnemi() {
     try {
-      const response = await fetch('/data_unemi.json');
+      const response = await fetch("/data_unemi.json");
       dataUnemi = await response.json();
     } catch (e) {
-      console.error('Error cargando data_unemi.json:', e);
+      console.error("Error cargando data_unemi.json:", e);
     }
   }
-  
+
   function handleSessionUpdate(event) {
     sessionData = event.detail;
   }
-  
+
   function loadSessionFromStorage() {
     try {
-      const stored = localStorage.getItem('user_session_data');
+      const stored = localStorage.getItem("user_session_data");
       if (stored) {
         sessionData = JSON.parse(stored);
       }
     } catch (e) {
-      console.error('Error cargando sesión desde localStorage:', e);
+      console.error("Error cargando sesión desde localStorage:", e);
     }
   }
-  
+
   onMount(() => {
     checkConnection();
     loadDataUnemi();
     loadSessionFromStorage(); // Cargar sesión guardada al iniciar
-    window.addEventListener('sessionDataUpdated', handleSessionUpdate);
-    
+    window.addEventListener("sessionDataUpdated", handleSessionUpdate);
+
     return () => {
-      window.removeEventListener('sessionDataUpdated', handleSessionUpdate);
+      window.removeEventListener("sessionDataUpdated", handleSessionUpdate);
     };
   });
 
@@ -52,37 +52,45 @@
     try {
       const response = await fetch(`${API_BASE_URL}/health/`);
       const data = await response.json();
-      
+
       isConnected = data.ollama_connected && data.model_available;
-      
+
       if (data.model_configured) {
         configuredModel = data.model_configured;
       }
-      
+
       if (!isConnected) {
         if (!data.ollama_connected) {
-          error = data.error || 'Ollama no está disponible. Asegúrate de que Ollama esté ejecutándose.';
+          error =
+            data.error ||
+            "Ollama no está disponible. Asegúrate de que Ollama esté ejecutándose.";
         } else if (!data.model_available) {
           error = `El modelo ${configuredModel} no está instalado. Ejecuta: ollama pull ${configuredModel}`;
         } else {
-          error = data.error || `Ollama no está disponible o ${configuredModel} no está instalado`;
+          error =
+            data.error ||
+            `Ollama no está disponible o ${configuredModel} no está instalado`;
         }
       }
     } catch (err) {
       isConnected = false;
-      error = 'No se pudo conectar con el servidor Django. Verifica que el servidor esté ejecutándose.';
+      error =
+        "No se pudo conectar con el servidor Django. Verifica que el servidor esté ejecutándose.";
     }
   }
+
+  let loadingText = ""; // Nueva variable para el estado
 
   async function sendMessage() {
     if (!inputMessage.trim() || isLoading) return;
 
     const userMessage = inputMessage.trim();
-    inputMessage = '';
+    inputMessage = "";
     error = null;
 
-    messages = [...messages, { role: 'user', content: userMessage }];
+    messages = [...messages, { role: "user", content: userMessage }];
     isLoading = true;
+    loadingText = "Iniciando..."; // Texto inicial
 
     try {
       // ---------------------------------------------------------
@@ -90,91 +98,112 @@
       // JUSTO ANTES de enviar, sin depender de variables reactivas
       // ---------------------------------------------------------
       let sessionDataToSend = {};
-      const storedData = localStorage.getItem('user_session_data');
-      
+      const storedData = localStorage.getItem("user_session_data");
+
       if (storedData) {
         try {
           sessionDataToSend = JSON.parse(storedData);
           console.log("🟢 DATOS QUE SE ENVIARÁN AL PYTHON:", sessionDataToSend);
-          
-          // Verificar que realmente tiene datos
-          const keys = Object.keys(sessionDataToSend);
-          if (keys.length === 0) {
-            console.warn("⚠️ OJO: El objeto session_data está vacío {}");
-          } else {
-            console.log(`✅ Datos válidos encontrados para cédula: ${keys[0]}`);
-          }
         } catch (e) {
-          console.error("❌ Error parseando datos de sesión desde localStorage:", e);
-          console.warn("⚠️ OJO: No se pudo leer la sesión. ¿Seleccionaste un perfil?");
+          console.error(
+            "❌ Error parseando datos de sesión desde localStorage:",
+            e,
+          );
         }
-      } else {
-        console.warn("⚠️ OJO: No hay datos en localStorage. ¿Seleccionaste un perfil?");
       }
-      // ---------------------------------------------------------
 
-      const history = messages.slice(0, -1).map(msg => ({
+      const history = messages.slice(0, -1).map((msg) => ({
         role: msg.role,
-        content: msg.content
+        content: msg.content,
       }));
 
       const requestBody = {
         message: userMessage,
         history: history,
-        session_data: sessionDataToSend  // Usar los datos leídos directamente
+        session_data: sessionDataToSend,
       };
 
-      console.log("📨 Request completo:", { 
-        message: userMessage, 
-        has_session_data: Object.keys(sessionDataToSend).length > 0,
-        session_keys: Object.keys(sessionDataToSend),
-        session_data_preview: Object.keys(sessionDataToSend).length > 0 
-          ? Object.keys(sessionDataToSend)[0] 
-          : "VACÍO"
-      });
-
       const response = await fetch(`${API_BASE_URL}/chat/`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
       });
 
-      const data = await response.json();
+      // ⚠️ AQUÍ EMPIEZA LA LECTURA DEL STREAM
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
 
-      if (response.ok) {
-        let responseText = '';
-        
-        if (data.type === 'rag_response') {
-          responseText = data.text || 'No pude generar una respuesta.';
-          
-          if (data.sources && data.sources.length > 0) {
-            responseText += `\n\n📚 Fuentes: ${data.sources.join(', ')}`;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        // Decodificar el chunk recibido
+        buffer += decoder.decode(value, { stream: true });
+
+        // Procesar líneas completas (NDJSON)
+        const lines = buffer.split("\n");
+        buffer = lines.pop(); // Guardar el fragmento incompleto para la siguiente vuelta
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          try {
+            const update = JSON.parse(line);
+
+            // 1. SI ES ACTUALIZACIÓN DE ESTADO
+            if (update.type === "status") {
+              loadingText = update.text; // ¡Esto actualiza la UI en tiempo real!
+            }
+
+            // 2. SI ES LA RESPUESTA FINAL
+            else if (update.type === "final") {
+              const data = update.data;
+              let responseText = "";
+
+              if (data.type === "rag_response") {
+                responseText = data.text || "No pude generar una respuesta.";
+                if (data.sources && data.sources.length > 0) {
+                  responseText += `\n\n📚 Fuentes: ${data.sources.join(", ")}`;
+                }
+              } else if (data.type === "agent_handoff") {
+                responseText =
+                  data.text || "Un agente se pondrá en contacto contigo.";
+              } else if (data.type === "simple") {
+                responseText = data.text || "Respuesta simple.";
+              } else {
+                responseText = data.text || JSON.stringify(data, null, 2);
+              }
+
+              messages = [
+                ...messages,
+                { role: "assistant", content: responseText },
+              ];
+            }
+
+            // 3. SI ES ERROR
+            else if (update.type === "error") {
+              console.error("Backend error:", update.text);
+              error = "Error del servidor: " + update.text;
+            }
+          } catch (e) {
+            console.error("Error parseando JSON del stream:", e);
           }
-        } else if (data.type === 'agent_handoff') {
-          responseText = data.text || 'Un agente se pondrá en contacto contigo.';
-        } else if (data.type === 'simple_text') {
-          responseText = data.text || 'No entendí tu consulta.';
-        } else {
-          responseText = data.text || JSON.stringify(data, null, 2);
         }
-        
-        messages = [...messages, { role: 'assistant', content: responseText }];
-      } else {
-        error = data.error || 'Error al obtener respuesta';
-        messages = messages.slice(0, -1);
       }
     } catch (err) {
-      error = 'Error de conexión: ' + err.message;
+      error = "Error de conexión: " + err.message;
       messages = messages.slice(0, -1);
     } finally {
       isLoading = false;
+      loadingText = "";
     }
   }
 
   function handleKeyPress(event) {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       sendMessage();
     }
@@ -195,12 +224,19 @@
     <div class="header-right">
       <div class="status-indicator">
         <span class="status-dot" class:connected={isConnected}></span>
-        <span class="status-text">{isConnected ? 'Conectado' : 'Desconectado'}</span>
+        <span class="status-text"
+          >{isConnected ? "Conectado" : "Desconectado"}</span
+        >
       </div>
       {#if messages.length > 0}
         <button class="clear-btn" on:click={clearChat}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M2 4h12M5 4V2a1 1 0 011-1h4a1 1 0 011 1v2m3 0v10a1 1 0 01-1 1H3a1 1 0 01-1-1V4h12z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path
+              d="M2 4h12M5 4V2a1 1 0 011-1h4a1 1 0 011 1v2m3 0v10a1 1 0 01-1 1H3a1 1 0 01-1-1V4h12z"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
           </svg>
           Limpiar
         </button>
@@ -213,8 +249,13 @@
   {#if error}
     <div class="error-message">
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="2"/>
-        <path d="M10 6v4M10 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="2" />
+        <path
+          d="M10 6v4M10 14h.01"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
       </svg>
       <span>{error}</span>
     </div>
@@ -225,21 +266,31 @@
       <div class="empty-state">
         <div class="empty-icon">💬</div>
         <h4>¡Hola! Soy tu asistente virtual</h4>
-        <p>Puedo ayudarte con información sobre reglamentos, trámites y servicios de la UNEMI.</p>
-        <p class="hint">Asegúrate de seleccionar tu perfil arriba para recibir respuestas personalizadas.</p>
+        <p>
+          Puedo ayudarte con información sobre reglamentos, trámites y servicios
+          de la UNEMI.
+        </p>
+        <p class="hint">
+          Asegúrate de seleccionar tu perfil arriba para recibir respuestas
+          personalizadas.
+        </p>
       </div>
     {:else}
       {#each messages as message, idx (idx)}
-        <div class="message" class:user={message.role === 'user'} class:assistant={message.role === 'assistant'}>
+        <div
+          class="message"
+          class:user={message.role === "user"}
+          class:assistant={message.role === "assistant"}
+        >
           <div class="message-avatar">
-            {#if message.role === 'user'}
+            {#if message.role === "user"}
               👤
             {:else}
               🤖
             {/if}
           </div>
           <div class="message-content">
-            {@html message.content.replace(/\n/g, '<br>')}
+            {@html message.content.replace(/\n/g, "<br>")}
           </div>
         </div>
       {/each}
@@ -248,11 +299,14 @@
       <div class="message assistant">
         <div class="message-avatar">🤖</div>
         <div class="message-content loading">
-          <span class="typing-indicator">
+          {#if loadingText}
+            <span class="loading-text">{loadingText}</span>
+          {/if}
+          <div class="typing-indicator">
             <span></span>
             <span></span>
             <span></span>
-          </span>
+          </div>
         </div>
       </div>
     {/if}
@@ -273,11 +327,26 @@
     >
       {#if isLoading}
         <svg class="spinner" width="20" height="20" viewBox="0 0 20 20">
-          <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="50" stroke-dashoffset="25"/>
+          <circle
+            cx="10"
+            cy="10"
+            r="8"
+            stroke="currentColor"
+            stroke-width="2"
+            fill="none"
+            stroke-dasharray="50"
+            stroke-dashoffset="25"
+          />
         </svg>
       {:else}
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <path d="M18 2L9 11M18 2l-7 7M18 2H8M18 2v10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path
+            d="M18 2L9 11M18 2l-7 7M18 2H8M18 2v10"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
       {/if}
     </button>
@@ -364,8 +433,13 @@
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
 
   .status-text {
@@ -527,17 +601,20 @@
     background: #ffffff;
     padding: 16px;
     border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .typing-indicator {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     align-items: center;
   }
 
   .typing-indicator span {
-    width: 10px;
-    height: 10px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: #ff6b35;
     animation: typing 1.4s infinite;
@@ -552,7 +629,9 @@
   }
 
   @keyframes typing {
-    0%, 60%, 100% {
+    0%,
+    60%,
+    100% {
       transform: translateY(0);
       opacity: 0.4;
     }
@@ -639,6 +718,23 @@
   @keyframes spin {
     to {
       transform: rotate(360deg);
+    }
+  }
+
+  .loading-text {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
+    font-style: normal;
+    animation: fadeIn 0.3s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 </style>

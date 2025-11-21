@@ -1,19 +1,36 @@
 <script>
-  import Chatbot from './lib/Chatbot.svelte'
+  import { Router, Route, Link } from "svelte-routing";
+  import Chatbot from "./lib/Chatbot.svelte";
+  import KnowledgeBase from "./lib/KnowledgeBase.svelte";
+
+  export let url = "";
 </script>
 
-<main>
-  <div class="container">
-    <div class="header">
-      <div class="logo-section">
-        <div class="logo">UNEMI</div>
-        <div class="subtitle">Balcón de Servicios</div>
+<Router {url}>
+  <main>
+    <div class="container">
+      <div class="header">
+        <div class="logo-section">
+          <div class="logo">UNEMI</div>
+          <div class="subtitle">Balcón de Servicios</div>
+        </div>
+        <h1>Asistente Virtual</h1>
+
+        <!-- Navegación -->
+        <nav class="nav-tabs">
+          <Link to="/" class="nav-link">💬 Chatbot</Link>
+          <Link to="/knowledge_base" class="nav-link"
+            >📚 Base de Conocimiento</Link
+          >
+        </nav>
       </div>
-      <h1>Asistente Virtual</h1>
+
+      <!-- Rutas -->
+      <Route path="/knowledge_base" component={KnowledgeBase} />
+      <Route path="/" component={Chatbot} />
     </div>
-    <Chatbot />
-  </div>
-</main>
+  </main>
+</Router>
 
 <style>
   * {
@@ -68,8 +85,37 @@
     color: #1e3a5f;
     font-size: 2rem;
     font-weight: 600;
-    margin: 0;
+    margin: 0 0 1.5rem 0;
     letter-spacing: -0.5px;
+  }
+
+  .nav-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  :global(.nav-link) {
+    padding: 0.75rem 1.5rem;
+    background: #f5f5f5;
+    color: #666;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+
+  :global(.nav-link:hover) {
+    background: #e8e8e8;
+    color: #1e3a5f;
+  }
+
+  :global(.nav-link[aria-current="page"]) {
+    background: #ff6b35;
+    color: white;
+    border-color: #ff6b35;
   }
 
   @media (max-width: 768px) {
@@ -93,6 +139,16 @@
 
     h1 {
       font-size: 1.5rem;
+    }
+
+    .nav-tabs {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    :global(.nav-link) {
+      padding: 0.6rem 1rem;
+      font-size: 0.9rem;
     }
   }
 

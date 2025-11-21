@@ -46,6 +46,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 FAISS_INDEX_PATH = BASE_DIR / "faiss_index"
 DOCUMENTOS_DIR = BASE_DIR / "documentos_unemi"
 
+# RAG Document Processing Configuration
+RAG_CHUNK_SIZE = int(os.getenv('RAG_CHUNK_SIZE', '1024'))
+RAG_CHUNK_OVERLAP = int(os.getenv('RAG_CHUNK_OVERLAP', '512'))
+RAG_MAX_FILE_SIZE_MB = int(os.getenv('RAG_MAX_FILE_SIZE_MB', '50'))
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/

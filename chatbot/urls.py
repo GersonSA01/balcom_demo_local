@@ -1,10 +1,11 @@
 from django.urls import path
-from . import views
+from .views import ChatView, health, DocumentUploadView
 
 app_name = 'chatbot'
 
 urlpatterns = [
-    path('chat/', views.ChatView.as_view(), name='chat'),  # Usar APIView
-    path('health/', views.health, name='health'),
+    path('chat/', ChatView.as_view(), name='chat'),
+    path('health/', health, name='health'),
+    path('upload-documents/', DocumentUploadView.as_view(), name='upload_documents'),
 ]
 
