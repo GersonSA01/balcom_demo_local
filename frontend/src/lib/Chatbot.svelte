@@ -7,7 +7,6 @@
   let isLoading = false;
   let error = null;
   let isConnected = false;
-  let configuredModel = "phi3:mini";
   let sessionData = {};
   let dataUnemi = {};
 
@@ -15,10 +14,11 @@
 
   async function loadDataUnemi() {
     try {
-      const response = await fetch("/data_unemi.json");
+      const response = await fetch(`${API_BASE_URL}/users/`);
+      if (!response.ok) throw new Error("Error fetching users");
       dataUnemi = await response.json();
     } catch (e) {
-      console.error("Error cargando data_unemi.json:", e);
+      console.error("Error cargando usuarios desde API:", e);
     }
   }
 
@@ -53,24 +53,13 @@
       const response = await fetch(`${API_BASE_URL}/health/`);
       const data = await response.json();
 
-      isConnected = data.ollama_connected && data.model_available;
-
-      if (data.model_configured) {
-        configuredModel = data.model_configured;
-      }
+      // Verificar conexión con Private-GPT
+      isConnected = data.private_gpt_connected || false;
 
       if (!isConnected) {
-        if (!data.ollama_connected) {
-          error =
-            data.error ||
-            "Ollama no está disponible. Asegúrate de que Ollama esté ejecutándose.";
-        } else if (!data.model_available) {
-          error = `El modelo ${configuredModel} no está instalado. Ejecuta: ollama pull ${configuredModel}`;
-        } else {
-          error =
-            data.error ||
-            `Ollama no está disponible o ${configuredModel} no está instalado`;
-        }
+        error =
+          data.error ||
+          "Private-GPT no está disponible. Asegúrate de que el servidor de Private-GPT esté ejecutándose en http://localhost:8001";
       }
     } catch (err) {
       isConnected = false;
@@ -162,15 +151,31 @@
             else if (update.type === "final") {
               const data = update.data;
               let responseText = "";
+              let sources = [];
+              let isFunction = false; // Nueva bandera para estilos
 
               if (data.type === "rag_response") {
                 responseText = data.text || "No pude generar una respuesta.";
-                if (data.sources && data.sources.length > 0) {
-                  responseText += `\n\n📚 Fuentes: ${data.sources.join(", ")}`;
-                }
+                sources = data.sources || [];
               } else if (data.type === "agent_handoff") {
                 responseText =
                   data.text || "Un agente se pondrá en contacto contigo.";
+              } else if (data.type === "function_call") {
+                // --- NUEVO CASO: EL BOT QUIERE EJECUTAR ALGO ---
+                isFunction = true;
+                const funcion = data.function; // ej: "search_data"
+
+                // Aquí decides qué texto mostrar al usuario
+                if (funcion === "search_data") {
+                  responseText = "🔍 Consultando tus datos académicos...";
+                  // AQUÍ PODRÍAS DISPARAR LÓGICA DE CLIENTE (Redirección, Modal, etc.)
+                } else if (funcion === "change_career") {
+                  responseText = "⚙️ Iniciando trámite de cambio de carrera...";
+                } else if (funcion === "drop_subject") {
+                  responseText = "🗑️ Abriendo gestión de asignaturas...";
+                } else {
+                  responseText = data.text || "Ejecutando acción...";
+                }
               } else if (data.type === "simple") {
                 responseText = data.text || "Respuesta simple.";
               } else {
@@ -179,7 +184,12 @@
 
               messages = [
                 ...messages,
-                { role: "assistant", content: responseText },
+                {
+                  role: "assistant",
+                  content: responseText,
+                  sources: sources,
+                  isFunction: isFunction, // Pasamos esto para estilar diferente si quieres
+                },
               ];
             }
 
@@ -281,16 +291,32 @@
           class="message"
           class:user={message.role === "user"}
           class:assistant={message.role === "assistant"}
+          class:function-message={message.isFunction}
         >
           <div class="message-avatar">
             {#if message.role === "user"}
               👤
+            {:else if message.isFunction}
+              ⚙️
             {:else}
               🤖
             {/if}
           </div>
           <div class="message-content">
             {@html message.content.replace(/\n/g, "<br>")}
+            {#if message.sources && message.sources.length > 0}
+              <div class="sources-container">
+                <p class="sources-title">Fuentes:</p>
+                <div class="badges-wrapper">
+                  {#each message.sources as source}
+                    <span class="badge">
+                      📄 {source.title || "Documento"} ({source.article ||
+                        "Ref"})
+                    </span>
+                  {/each}
+                </div>
+              </div>
+            {/if}
           </div>
         </div>
       {/each}
@@ -736,5 +762,53 @@
     to {
       opacity: 1;
     }
+  }
+
+  .sources-container {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .sources-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    margin: 0 0 6px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badges-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: rgba(255, 107, 53, 0.1);
+    color: #c2410c;
+    border: 1px solid rgba(255, 107, 53, 0.2);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .badge:hover {
+    background: rgba(255, 107, 53, 0.15);
+    transform: translateY(-1px);
+  }
+
+  /* Estilo para mensajes de función/acción */
+  .message.function-message .message-content {
+    background: #e0f2fe; /* Azul clarito */
+    border: 1px solid #0ea5e9;
+    color: #0284c7;
+    font-weight: 600;
   }
 </style>

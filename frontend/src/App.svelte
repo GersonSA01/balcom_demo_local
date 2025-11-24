@@ -1,7 +1,6 @@
 <script>
   import { Router, Route, Link } from "svelte-routing";
   import Chatbot from "./lib/Chatbot.svelte";
-  import KnowledgeBase from "./lib/KnowledgeBase.svelte";
 
   export let url = "";
 </script>
@@ -19,14 +18,10 @@
         <!-- Navegación -->
         <nav class="nav-tabs">
           <Link to="/" class="nav-link">💬 Chatbot</Link>
-          <Link to="/knowledge_base" class="nav-link"
-            >📚 Base de Conocimiento</Link
-          >
         </nav>
       </div>
 
       <!-- Rutas -->
-      <Route path="/knowledge_base" component={KnowledgeBase} />
       <Route path="/" component={Chatbot} />
     </div>
   </main>

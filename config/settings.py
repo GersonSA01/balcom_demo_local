@@ -42,14 +42,8 @@ if sys.platform == 'win32':
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# RAG Configuration (FAISS)
-FAISS_INDEX_PATH = BASE_DIR / "faiss_index"
-DOCUMENTOS_DIR = BASE_DIR / "documentos_unemi"
-
-# RAG Document Processing Configuration
-RAG_CHUNK_SIZE = int(os.getenv('RAG_CHUNK_SIZE', '1024'))
-RAG_CHUNK_OVERLAP = int(os.getenv('RAG_CHUNK_OVERLAP', '512'))
-RAG_MAX_FILE_SIZE_MB = int(os.getenv('RAG_MAX_FILE_SIZE_MB', '50'))
+# PrivateGPT Configuration
+PRIVATE_GPT_API_URL = os.getenv('PRIVATE_GPT_API_URL', 'http://localhost:8001')
 
 
 # Quick-start development settings - unsuitable for production
@@ -170,16 +164,4 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Ollama Configuration
-OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'qwen2.5:3b-instruct-q4_K_M')
 
-# Ollama Advanced Parameters (optimizados para extracción de JSON en CPU)
-OLLAMA_NUM_PREDICT = int(os.getenv('OLLAMA_NUM_PREDICT', '512'))  # Limita tokens para velocidad
-OLLAMA_REPEAT_PENALTY = float(os.getenv('OLLAMA_REPEAT_PENALTY', '1.1'))  # Evita bucles
-OLLAMA_TOP_P = float(os.getenv('OLLAMA_TOP_P', '0.9'))  # Control de muestreo
-OLLAMA_TOP_K = int(os.getenv('OLLAMA_TOP_K', '40'))  # Control de muestreo
-OLLAMA_TEMPERATURE = float(os.getenv('OLLAMA_TEMPERATURE', '0.0'))  # Máxima precisión (cero creatividad)
-OLLAMA_NUM_CTX = int(os.getenv('OLLAMA_NUM_CTX', '8192'))  # Ventana de contexto
-OLLAMA_FORMAT = os.getenv('OLLAMA_FORMAT', 'json')  # Fuerza estructura JSON
-OLLAMA_NUM_THREAD = int(os.getenv('OLLAMA_NUM_THREAD', '6'))  # Threads CPU (8 cores - 2 para sistema)

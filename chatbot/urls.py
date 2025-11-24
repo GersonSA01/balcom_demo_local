@@ -1,11 +1,11 @@
 from django.urls import path
-from .views import ChatView, health, DocumentUploadView
+from .views import ChatView, health, get_users_list
 
 app_name = 'chatbot'
 
 urlpatterns = [
     path('chat/', ChatView.as_view(), name='chat'),
     path('health/', health, name='health'),
-    path('upload-documents/', DocumentUploadView.as_view(), name='upload_documents'),
+    path('users/', get_users_list, name='users'),
 ]
 
