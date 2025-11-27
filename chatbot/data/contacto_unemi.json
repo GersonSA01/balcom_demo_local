@@ -1,0 +1,73 @@
+{
+    "contactos_directos": {
+      "EPUNEMI": {
+        "nombre": "Empresa Pública de la Universidad Estatal de Milagro (EPUNEMI)",
+        "sede": "Universidad Estatal de Milagro, Cdla. Universitaria 'Dr. Rómulo Minchala Murillo' - Km. 1.5 vía Milagro - Virgen de Fátima; Milagro, Guayas, Ecuador",
+        "correo_ventas_unistore": "ventas_unistore@epunemi.gob.ec",
+        "atencion_virtual_meet": "https://meet.google.com/mac-tdfe-axg"
+      },
+  
+      "UNEMI": {
+        "Secretaría General": {
+          "correo": "secretariageneral@unemi.edu.ec",
+          "descripcion": "Trámites legales, actas, títulos y certificaciones."
+        },
+        "Vicerrectorado Académico": {
+          "correo": "vicerrectorado.academico@unemi.edu.ec",
+          "descripcion": "Normativa académica, mallas, docencia, prácticas y vinculación."
+        },
+        "Vicerrectorado de Investigación": {
+          "correo": "investigacion@unemi.edu.ec",
+          "descripcion": "Proyectos de investigación, publicaciones, revistas científicas."
+        },
+        "Dirección de Tecnologías de la Información (TIC)": {
+          "correo": "tic@unemi.edu.ec",
+          "descripcion": "Soporte de sistemas, SGA, plataformas institucionales."
+        },
+        "Dirección de Admisiones y Nivelación (DAN)": {
+          "correo": "admision@unemi.edu.ec",
+          "descripcion": "Procesos de inscripción, nivelación, asignación de cupos."
+        },
+        "Dirección Financiera": {
+          "correo": "financiero@unemi.edu.ec",
+          "descripcion": "Pagos, roles, servicios institucionales."
+        },
+        "Dirección de Talento Humano": {
+          "correo": "talentohumano@unemi.edu.ec",
+          "descripcion": "Contrataciones, certificados laborales, permisos."
+        },
+        "Bienestar Universitario": {
+          "correo": "bienestar@unemi.edu.ec",
+          "descripcion": "Becas, psicología, trabajo social, ayudas estudiantiles."
+        },
+        "Biblioteca Central": {
+          "correo": "biblioteca@unemi.edu.ec",
+          "descripcion": "Préstamo de libros, repositorio, recursos digitales."
+        },
+        "Unidad de Titulación": {
+          "correo": "titulacion@unemi.edu.ec",
+          "descripcion": "Procesos de titulación, seguimiento, requisitos y cronogramas."
+        },
+  
+        "Canales Oficiales de Información": {
+          "facebook": [
+            "UNEMI - Universidad Estatal de Milagro",
+            "UNEMI - Vicerrectorado Académico"
+          ],
+          "instagram": [
+            "@unemiecuador",
+            "@unemi_viceacademico"
+          ],
+          "tiktok": [
+            "@unemi",
+            "@unemi_viceacademico"
+          ],
+          "x_twitter": [
+            "@UNEMIEcuador"
+          ],
+          "sitio_web": "https://www.unemi.edu.ec"
+        }
+      }
+    }
+  }
+  

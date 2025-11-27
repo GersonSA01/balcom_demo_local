@@ -10,7 +10,7 @@
   let sessionData = {};
   let dataUnemi = {};
 
-  const API_BASE_URL = "http://localhost:8000/api/chatbot";
+  const API_BASE_URL = "http://localhost:9090/api/chatbot";
 
   async function loadDataUnemi() {
     try {
@@ -92,7 +92,6 @@
       if (storedData) {
         try {
           sessionDataToSend = JSON.parse(storedData);
-          console.log("🟢 DATOS QUE SE ENVIARÁN AL PYTHON:", sessionDataToSend);
         } catch (e) {
           console.error(
             "❌ Error parseando datos de sesión desde localStorage:",
@@ -138,13 +137,12 @@
 
         for (const line of lines) {
           if (!line.trim()) continue;
-
           try {
             const update = JSON.parse(line);
 
             // 1. SI ES ACTUALIZACIÓN DE ESTADO
             if (update.type === "status") {
-              loadingText = update.text; // ¡Esto actualiza la UI en tiempo real!
+              loadingText = update.text;
             }
 
             // 2. SI ES LA RESPUESTA FINAL
@@ -152,43 +150,63 @@
               const data = update.data;
               let responseText = "";
               let sources = [];
-              let isFunction = false; // Nueva bandera para estilos
+              let isFunction = false;
 
               if (data.type === "rag_response") {
-                responseText = data.text || "No pude generar una respuesta.";
-                sources = data.sources || [];
-              } else if (data.type === "agent_handoff") {
-                responseText =
-                  data.text || "Un agente se pondrá en contacto contigo.";
-              } else if (data.type === "function_call") {
-                // --- NUEVO CASO: EL BOT QUIERE EJECUTAR ALGO ---
-                isFunction = true;
-                const funcion = data.function; // ej: "search_data"
+                // INTENTO DE PARSEO DE JSON INTERNO
+                // El backend a veces manda un JSON stringificado dentro de 'text'
+                try {
+                    // Si data.text es un objeto JSON en string (e.g. '{"response": "Hola", ...}')
+                    const parsedInner = JSON.parse(data.text);
+                    
+                    if (parsedInner.response) {
+                        responseText = parsedInner.response; // Usamos el texto limpio
+                    } else {
+                        responseText = data.text; // Fallback
+                    }
 
-                // Aquí decides qué texto mostrar al usuario
-                if (funcion === "search_data") {
-                  responseText = "🔍 Consultando tus datos académicos...";
-                  // AQUÍ PODRÍAS DISPARAR LÓGICA DE CLIENTE (Redirección, Modal, etc.)
-                } else if (funcion === "change_career") {
-                  responseText = "⚙️ Iniciando trámite de cambio de carrera...";
-                } else if (funcion === "drop_subject") {
-                  responseText = "🗑️ Abriendo gestión de asignaturas...";
-                } else {
-                  responseText = data.text || "Ejecutando acción...";
+                    // A veces las sources vienen dentro del JSON interno
+                    if (parsedInner.sources && Array.isArray(parsedInner.sources)) {
+                        sources = parsedInner.sources; 
+                    }
+                } catch (e) {
+                    // Si no es JSON válido, es texto plano normal
+                    responseText = data.text || "No pude generar una respuesta.";
                 }
-              } else if (data.type === "simple") {
-                responseText = data.text || "Respuesta simple.";
+
+                // Si las sources venían en el objeto data principal (prioridad)
+                if (data.sources && data.sources.length > 0) {
+                    sources = data.sources;
+                }
+
+              } else if (data.type === "agent_handoff") {
+                responseText = data.text || "Un agente se pondrá en contacto contigo.";
+              } else if (data.type === "function_call") {
+                isFunction = true;
+                const funcion = data.function;
+                const payload = data.payload || {};
+
+                if (funcion === "search_data") {
+                   responseText = data.text || "🔍 Consultando tus datos...";
+                } else if (funcion === "change_career") {
+                   responseText = data.text || "⚙️ Trámite de cambio de carrera...";
+                } else if (funcion === "drop_subject") {
+                   responseText = data.text || "🗑️ Gestión de retiro de asignaturas...";
+                } else {
+                   responseText = data.text || "Ejecutando acción...";
+                }
               } else {
                 responseText = data.text || JSON.stringify(data, null, 2);
               }
 
+              // Agregamos el mensaje al chat
               messages = [
                 ...messages,
                 {
                   role: "assistant",
                   content: responseText,
                   sources: sources,
-                  isFunction: isFunction, // Pasamos esto para estilar diferente si quieres
+                  isFunction: isFunction,
                 },
               ];
             }
@@ -309,9 +327,8 @@
                 <p class="sources-title">Fuentes:</p>
                 <div class="badges-wrapper">
                   {#each message.sources as source}
-                    <span class="badge">
-                      📄 {source.title || "Documento"} ({source.article ||
-                        "Ref"})
+                    <span class="badge" title="Fuente:">
+                      {source.title || "Documento"}
                     </span>
                   {/each}
                 </div>

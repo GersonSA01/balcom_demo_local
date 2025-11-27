@@ -91,38 +91,24 @@
         const jsonString = JSON.stringify(sessionData);
         localStorage.setItem('user_session_data', jsonString);
         
-        // Debug: Verificar que se guardó correctamente
-        console.log("💾 UserSelector: Guardando sesión en localStorage");
-        console.log("   Cédula:", selectedCedula);
-        console.log("   Perfil ID:", selectedPerfilId, "(tipo:", typeof selectedPerfilId + ")");
-        console.log("   ✅ Perfil seleccionado correctamente:", perfilSelected.tipo || "Sin tipo");
-        console.log("   Datos guardados:", sessionData);
         
         // Verificar que se guardó correctamente leyéndolo de vuelta
         const verify = localStorage.getItem('user_session_data');
         if (verify) {
           try {
             const parsed = JSON.parse(verify);
-            console.log("   ✅ Verificación: Datos leídos correctamente desde localStorage");
-            console.log("   Keys en datos guardados:", Object.keys(parsed));
           } catch (e) {
-            console.error("   ❌ Error verificando datos guardados:", e);
+            console.error("Error verificando datos guardados:", e);
           }
         }
         
         // Disparamos el evento para que el chat se actualice al instante
         window.dispatchEvent(new CustomEvent('sessionDataUpdated', { detail: sessionData }));
-        console.log("   📡 Evento 'sessionDataUpdated' disparado");
       } else {
-        console.warn("⚠️ Perfil no encontrado en el array. ID buscando:", selectedPerfilId, "(tipo:", typeof selectedPerfilId + ")");
-        console.warn("   Perfiles disponibles:", personaData.perfiles.map(p => ({ 
-          id: p.id, 
-          id_tipo: typeof p.id,
-          tipo: p.tipo 
-        })));
+        console.warn("Perfil no encontrado en el array. ID buscando:", selectedPerfilId, "(tipo:", typeof selectedPerfilId + ")");
       }
     } else {
-      console.warn("⚠️ UserSelector: No se puede actualizar sesión - faltan datos", {
+      console.warn("UserSelector: No se puede actualizar sesión - faltan datos", {
         hasSelectedCedula: !!selectedCedula,
         hasSelectedPerfilId: !!selectedPerfilId,
         hasDataUnemi: !!dataUnemi[selectedCedula]
