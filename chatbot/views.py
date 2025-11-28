@@ -12,38 +12,62 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from rest_framework.views import APIView
 
+# IMPORTANTE: Asegúrate de que la ruta 'chatbot.models' sea correcta
+# Si tus modelos están en otra app (ej. sga.models), cambia esto.
+from chatbot.models import SgaPersona, SgaPerfilusuario, BusinessProcess
+
 logger = logging.getLogger(__name__)
 
 # ==============================================================================
-# 1. CARGA DE DATOS Y CONFIGURACIÓN
+# 1. CONFIGURACIÓN Y CALENDARIO
 # ==============================================================================
 
-def load_db():
-    """Carga la base de datos JSON de usuarios en memoria."""
-    json_path = os.path.join(settings.BASE_DIR, 'chatbot', 'data', 'data_unemi.json')
+def get_process_response_from_db(trigger_name):
+    """
+    Busca en la base de datos el proceso asociado al nombre de la función
+    que devolvió la IA (ej: 'change_career', 'drop_subject').
+    Valida fechas y retorna el mensaje correspondiente.
+    """
     try:
-        if not os.path.exists(json_path):
-            logger.warning(f"⚠️ Archivo no encontrado: {json_path}")
-            return {}
-        with open(json_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        # 1. Buscar el proceso activo por su trigger_function
+        process = BusinessProcess.objects.filter(trigger_function=trigger_name, status=True).first()
+        
+        if not process:
+            return {
+                "text": f"No encontré información configurada para el proceso '{trigger_name}'. Por favor contacta a secretaría.",
+                "status": "error"
+            }
+
+        # 2. Verificar si es infinito
+        if process.is_infinite:
+            return {
+                "text": process.active_message, # Mensaje de Instrucción (Afirmación)
+                "status": "success"
+            }
+
+        # 3. Validar fechas (Solo si no es infinito)
+        today = datetime.now().date()
+        
+        # Asegurar que existan fechas
+        if not process.start_date or not process.end_date:
+            return {"text": "Error en la configuración de fechas del proceso.", "status": "error"}
+
+        if process.start_date <= today <= process.end_date:
+            # DENTRO DEL RANGO -> Mensaje de Instrucción
+            return {
+                "text": process.active_message,
+                "status": "success"
+            }
+        else:
+            # FUERA DEL RANGO -> Mensaje de Rechazo
+            return {
+                "text": process.closed_message,
+                "status": "closed"
+            }
+
     except Exception as e:
-        logger.error(f"❌ Error cargando DB: {e}")
-        return {}
-
-UNEMI_DB = load_db()
-
-ACADEMIC_CALENDAR = {
-    "change_career": {
-        "start": "2025-01-01", "end": "2025-05-30",
-        "error_msg": "El proceso de Cambio de Carrera no está activo actualmente."
-    },
-    "drop_subject": {
-        "start": "2025-06-01", "end": "2025-07-15",
-        "error_msg": "El proceso de Retiro de Asignatura está cerrado.",
-        "classes_start_date": "2025-06-01"
-    }
-}
+        logger.error(f"Error validando proceso: {e}")
+        return {"text": "Ocurrió un error interno validando el proceso.", "status": "error"}
 
 # ==============================================================================
 # 2. LÓGICA DE NEGOCIO
@@ -78,16 +102,87 @@ def get_drop_subject_message():
 # ==============================================================================
 # 3. ENDPOINTS API
 # ==============================================================================
-
 @require_http_methods(["GET"])
 def get_users_list(request):
-    if not UNEMI_DB: return JsonResponse({"error": "DB no disponible"}, status=503)
-    return JsonResponse(UNEMI_DB, safe=False)
+    """
+    Devuelve únicamente al usuario con la cédula específica 0706191558,
+    con todos sus perfiles detallados y una descripción legible.
+    """
+    data = []
+    try:
+        # 1. Filtramos por la cédula específica
+        personas = SgaPersona.objects.filter(cedula='0706191558')
+        
+        for p in personas:
+            # 2. Buscamos sus perfiles activos
+            perfiles_qs = SgaPerfilusuario.objects.filter(persona=p, status=True)
+            perfiles_list = []
+            
+            for perf in perfiles_qs:
+                # 3. Mapeo completo de todos los campos de roles en el modelo
+                roles_map = [
+                    ('inscripcion', 'es_estudiante', 'Estudiante'),
+                    ('profesor', 'es_profesor', 'Profesor'),
+                    ('administrativo', 'es_administrativo', 'Administrativo'),
+                    ('externo', 'es_externo', 'Externo'),
+                    ('empleador', 'es_empleador', 'Empleador'),
+                    ('instructor', 'es_instructor', 'Instructor'),
+                    ('inscripcionaspirante', 'es_aspirante', 'Aspirante'),
+                    ('inscripcionpostulante', 'es_postulante_inscripcion', 'Inscripción Postulante'),
+                    ('postulante', 'es_postulante', 'Postulante'),
+                    ('postulanteempleo', 'es_postulante_empleo', 'Postulante Empleo'),
+                    ('inscripcionadmision', 'es_admision', 'Admisión'),
+                    ('instructorejecutiva', 'es_instructor_ejecutiva', 'Instructor Ejecutiva'),
+                    ('inscritoejecutivo', 'es_inscrito_ejecutivo', 'Inscrito Ejecutivo'),
+                    ('instructorformacionejecutiva', 'es_instructor_formacion', 'Instructor Formación')
+                ]
+
+                perf_data = {"id": perf.id}
+                roles_activos = []
+
+                # Iteramos para llenar los booleanos y detectar los nombres para la descripción
+                for field_name, json_key, label in roles_map:
+                    # getattr obtiene el valor del campo dinámicamente (ej: perf.inscripcion)
+                    # Si es un ID (entero > 0), bool() devolverá True. Si es None, False.
+                    valor = getattr(perf, field_name, None)
+                    es_activo = bool(valor)
+                    
+                    perf_data[json_key] = es_activo
+                    
+                    if es_activo:
+                        roles_activos.append(label)
+
+                # 4. Generamos la descripción final uniendo los roles encontrados
+                # Ejemplo: "Estudiante / Profesor"
+                perf_data["descripcion"] = " / ".join(roles_activos) if roles_activos else "Sin Rol Definido"
+
+                perfiles_list.append(perf_data)
+
+            # 5. Armamos la respuesta final
+            data.append({
+                "cedula": p.cedula,
+                "persona": {
+                    "nombres": p.nombres,
+                    "apellido1": p.apellido1,
+                    "apellido2": p.apellido2,
+                    # Extra: Nombre completo para facilitar visualización
+                    "nombre_completo": f"{p.nombres} {p.apellido1} {p.apellido2}".strip()
+                },
+                "perfiles": perfiles_list
+            })
+            
+    except Exception as e:
+        logger.error(f"Error obteniendo usuario: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse(data, safe=False)
+    
 
 @require_http_methods(["GET"])
 def health(request):
     pgpt_status = False
     try:
+        # Verifica conexión con PrivateGPT
         if requests.get(f"{settings.PRIVATE_GPT_API_URL}/health", timeout=10).status_code == 200:
             pgpt_status = True
     except: pass
@@ -102,26 +197,45 @@ class ChatView(APIView):
         session = request.data.get('session_data', {})
         cedula = list(session.keys())[0] if session else None
 
-        # --- 1. ROLES ---
+        # --- 1. ROLES Y PERFIL (USANDO MODELOS) ---
         roles = ["general"]
-        target_pid = None
-        if cedula and session.get(cedula, {}).get('perfiles'):
-            target_pid = session[cedula]['perfiles'][0].get('id')
+        persona = None
+        
+        if cedula:
+            # Buscar la persona en la base de datos
+            persona = SgaPersona.objects.filter(cedula=cedula, status=True).first()
+            
+            if persona:
+                # Obtener el ID del perfil seleccionado desde la sesión
+                target_pid = None
+                if session.get(cedula, {}).get('perfiles'):
+                    target_pid = session[cedula]['perfiles'][0].get('id')
+                
+                # Buscar el perfil específico
+                perfil = None
+                if target_pid:
+                    perfil = SgaPerfilusuario.objects.filter(id=target_pid, persona=persona, status=True).first()
+                
+                # Fallback: Si no hay perfil seleccionado, tomar el primero activo
+                if not perfil:
+                     perfil = SgaPerfilusuario.objects.filter(persona=persona, status=True).first()
 
-        if cedula and cedula in UNEMI_DB:
-            user_data = UNEMI_DB[cedula]
-            perfil = next((p for p in user_data.get('perfiles', []) if str(p.get('id')) == str(target_pid)), None)
-            if perfil:
-                KEYS = ["es_estudiante", "es_profesor", "es_administrativo", "es_externo",
-                        "es_inscripcionaspirante", "es_inscripcionpostulante", "es_postulante",
-                        "es_postulanteempleo", "es_inscripcionadmision"]
-                for k in KEYS:
-                    if perfil.get(k) is True: roles.append(k)
+                if perfil:
+                    # Determinar roles basados en campos del modelo
+                    if perfil.inscripcion: roles.append("es_estudiante")
+                    if perfil.profesor: roles.append("es_profesor")
+                    if perfil.administrativo: roles.append("es_administrativo")
+                    if perfil.externo: roles.append("es_externo")
+                    if perfil.inscripcionaspirante: roles.append("es_inscripcionaspirante")
+                    if perfil.inscripcionpostulante: roles.append("es_inscripcionpostulante")
+                    if perfil.postulante: roles.append("es_postulante")
+                    if perfil.postulanteempleo: roles.append("es_postulanteempleo")
+                    if perfil.inscripcionadmision: roles.append("es_inscripcionadmision")
 
         # --- 2. FILTRO DOCS ---
         doc_ids = []
         try:
-            r = requests.get(f"{settings.PRIVATE_GPT_API_URL}/v1/ingest/list", timeout=3)
+            r = requests.get(f"{settings.PRIVATE_GPT_API_URL}/v1/ingest/list", timeout=5)
             if r.status_code == 200:
                 for doc in r.json().get('data', []):
                     meta = doc.get('doc_metadata', {})
@@ -151,7 +265,7 @@ class ChatView(APIView):
                 yield json.dumps({"type": "final", "data": {"type": "rag_response", "text": "No hay documentos vigentes disponibles para tu perfil.", "sources": []}}) + "\n"
                 return
 
-            yield json.dumps({"type": "status", "text": "Consultando..."}) + "\n"
+            yield json.dumps({"type": "status", "text": "Consultando reglamento y procesos..."}) + "\n"
             
             messages_payload = [{"role": "user", "content": user_msg}]
             if history:
@@ -168,10 +282,10 @@ class ChatView(APIView):
             }
 
             try:
-                # Timeout None para esperar a que Ollama piense
-                with requests.post(f"{settings.PRIVATE_GPT_API_URL}/v1/chat/completions", json=payload, stream=True, timeout=None) as r:
+                # Timeout None para esperar a que Ollama/PrivateGPT procese sin cortar la conexión
+                with requests.post(f"{settings.PRIVATE_GPT_API_URL}/v1/chat/completions", json=payload, stream=True, timeout=600) as r:
                     full_text = ""
-                    api_sources = [] # Inicializado vacío
+                    api_sources = [] 
                     
                     for line in r.iter_lines():
                         if line:
@@ -183,13 +297,12 @@ class ChatView(APIView):
                                 
                                 chunk = json.loads(line_str)
                                 
-                                # Texto
+                                # Texto acumulativo
                                 if "choices" in chunk:
                                     delta = chunk["choices"][0].get("delta", {})
                                     full_text += delta.get("content", "")
                                 
-                                # --- CAPTURA SEGURA DE SOURCES ---
-                                # Verificamos que sea una lista antes de asignarlo
+                                # Sources (Manejo de diferentes formatos de respuesta)
                                 incoming_sources = None
                                 if "sources" in chunk:
                                     incoming_sources = chunk["sources"]
@@ -198,7 +311,6 @@ class ChatView(APIView):
                                 elif "choices" in chunk and chunk["choices"] and "sources" in chunk["choices"][0]:
                                     incoming_sources = chunk["choices"][0]["sources"]
                                 
-                                # Solo actualizamos si lo que llegó es una lista válida
                                 if isinstance(incoming_sources, list):
                                     api_sources = incoming_sources
 
@@ -206,67 +318,90 @@ class ChatView(APIView):
                     
                     # --- PROCESAMIENTO FINAL ---
                     
-                    # 1. Limpiar Sources (NO REPETIDOS, SOLO NOMBRE)
+                    # 1. Limpiar Sources (Eliminar duplicados)
                     real_sources = []
                     seen_files = set()
                     
-                    # Validación extra para evitar el error 'NoneType not iterable'
                     if api_sources and isinstance(api_sources, list):
                         for src in api_sources:
                             if not isinstance(src, dict): continue
-                            
                             doc = src.get("document", {})
                             meta = doc.get("doc_metadata", {})
                             file_name = meta.get("file_name", "Documento")
                             
-                            # Lógica: Solo 1 vez por archivo, sin páginas
                             if file_name not in seen_files:
                                 real_sources.append({
                                     "title": file_name,
-                                    "article": "" # Vacío para que el frontend no muestre páginas
+                                    "article": ""
                                 })
                                 seen_files.add(file_name)
 
-                    # 2. Parsear JSON
+                    # 2. Parsear JSON de respuesta de la IA
                     ai_data = {}
                     try:
+                        # Intentar extraer JSON si la IA devolvió texto alrededor
                         match = re.search(r"\{[\s\S]*\}", full_text)
                         if match:
                             ai_data = json.loads(match.group(0))
                         else:
+                            # Si no hay JSON válido, asumir que es texto plano
                             ai_data = {"action": "ANSWER", "response": full_text}
                     except:
                         ai_data = {"action": "ANSWER", "response": full_text}
 
-                    # Function calling logic (Search Data, etc)
+                    # 3. Lógica de Function Calling (Validación Dinámica)
                     action = ai_data.get("action", "ANSWER")
                     func_name = ai_data.get("function_name")
                     
                     if action == "FUNCTION" and func_name:
-                        # ... (lógica de funciones igual que antes) ...
-                        ai_resp = "Procesando..."
-                        p_data = {}
                         
+                        # CASO A: Datos Personales (Lógica dura existente)
                         if func_name == "search_data":
-                             # (Lógica simplificada para brevedad)
-                             if cedula and cedula in UNEMI_DB:
-                                 info = UNEMI_DB[cedula]['persona']
-                                 p_data = {"status": "success", "nombres": info.get('nombres', '')}
-                                 ai_resp = f"Hola {info.get('nombres')}."
+                             ai_resp = "Procesando solicitud de datos..."
+                             p_data = {}
+                             if persona:
+                                 nombres_completos = f"{persona.nombres} {persona.apellido1} {persona.apellido2}".strip()
+                                 p_data = {
+                                     "status": "success", 
+                                     "nombres": persona.nombres,
+                                     "apellidos": f"{persona.apellido1} {persona.apellido2}".strip(),
+                                     "nombre_completo": nombres_completos
+                                 }
+                                 ai_resp = f"Hola {nombres_completos}, aquí tienes tus datos."
                              else:
-                                 p_data = {"status": "error"}
-                        
-                        yield json.dumps({
-                            "type": "final", 
-                            "data": {
-                                "type": "function_call", 
-                                "function": func_name, 
-                                "text": ai_resp, 
-                                "payload": p_data
-                            }
-                        }) + "\n"
+                                 p_data = {"status": "error", "message": "No se encontraron datos de la persona."}
+                             
+                             yield json.dumps({
+                                "type": "final", 
+                                "data": {
+                                    "type": "function_call", 
+                                    "function": func_name, 
+                                    "text": ai_resp, 
+                                    "payload": p_data
+                                }
+                            }) + "\n"
+
+                        # CASO B: Procesos de Negocio Dinámicos (Consultar BD)
+                        else:
+                            # Llamada a la función helper definida arriba en views.py
+                            process_result = get_process_response_from_db(func_name)
+                            
+                            yield json.dumps({
+                                "type": "final", 
+                                "data": {
+                                    "type": "function_call", 
+                                    "function": func_name,
+                                    # El texto será el mensaje de 'activo' o 'cerrado' según las fechas
+                                    "text": process_result["text"], 
+                                    "payload": {
+                                        "status": process_result["status"],
+                                        "is_process_validation": True
+                                    }
+                                }
+                            }) + "\n"
+
+                    # CASO C: Respuesta RAG normal (Basada en documentos PDF)
                     else:
-                        # Respuesta RAG Normal
                         yield json.dumps({
                             "type": "final",
                             "data": {
@@ -279,17 +414,14 @@ class ChatView(APIView):
 
             except Exception as e:
                 logger.error(f"Error streaming: {e}")
-                yield json.dumps({"type": "error", "text": "Error en el servidor de IA."}) + "\n"
-
-        response = StreamingHttpResponse(event_stream(), content_type="application/x-ndjson")
-        response['X-Accel-Buffering'] = 'no'
-        return response
+                yield json.dumps({"type": "error", "text": "Error de comunicación con el servidor de IA."}) + "\n"
 
 # ==============================================================================
 # 4. GESTIÓN DOCUMENTAL
 # ==============================================================================
 
 def document_manager(request):
+    # --- Lógica de Documentos ---
     documents = []
     try:
         resp = requests.get(f"{settings.PRIVATE_GPT_API_URL}/v1/ingest/list", timeout=5)
@@ -309,7 +441,16 @@ def document_manager(request):
         ("es_postulante", "Postulante"), ("es_postulanteempleo", "Postulante Empleo"),
         ("es_inscripcionadmision", "Inscripción Admisión")
     ]
-    return render(request, 'chatbot/document_manager.html', {'documents': documents, 'role_choices': role_choices})
+
+    # --- AGREGADO: Lógica de Procesos (Para que se vean en la pestaña 2) ---
+    processes = BusinessProcess.objects.filter(status=True).order_by('-fecha_creacion')
+
+    # Enviamos ambas cosas al template 'document_manager.html' que ya tiene las pestañas
+    return render(request, 'chatbot/document_manager.html', {
+        'documents': documents, 
+        'role_choices': role_choices,
+        'processes': processes # <--- IMPORTANTE: Enviamos los procesos
+    })
 
 def upload_document(request):
     if request.method == 'POST':
@@ -325,7 +466,7 @@ def upload_document(request):
             url = f"{settings.PRIVATE_GPT_API_URL}/v1/ingest/file"
             count = 0
             for f in files:
-                r = requests.post(url, files={'file': (f.name, f.read(), f.content_type)}, timeout=None)
+                r = requests.post(url, files={'file': (f.name, f.read(), f.content_type)}, timeout=600)
                 if r.status_code == 200:
                     docs = r.json().get('data', [])
                     for d in docs:
@@ -375,3 +516,70 @@ def update_document_role(request, doc_id):
         except Exception as e:
             messages.error(request, f"Error: {e}")
     return redirect('chatbot:document_manager')
+
+# ==============================================================================
+# 5. GESTIÓN DE PROCESOS (BUSINESS PROCESSES)
+# ==============================================================================
+
+@require_http_methods(["GET"])
+def process_manager(request):
+    """ 
+    Redirige a la vista principal de gestión. 
+    Como document_manager.html ya tiene la pestaña de procesos, no necesitamos
+    un html separado.
+    """
+    return redirect('chatbot:document_manager')
+
+@require_http_methods(["POST"])
+def create_process(request):
+    """ Crea un nuevo proceso en la BD """
+    try:
+        name = request.POST.get('name')
+        trigger = request.POST.get('trigger_function')
+        is_infinite = request.POST.get('is_infinite') == 'on'
+        
+        # Manejo de fechas (si es infinito, ponemos null o la fecha de hoy por defecto para evitar errores)
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        
+        if is_infinite:
+            # Si es infinito, usamos fechas dummy o None si el modelo lo permite. 
+            # Como definimos DateField sin null=True, usaremos la fecha actual.
+            start_date = datetime.now().date()
+            end_date = datetime.now().date()
+            
+        active_msg = request.POST.get('active_message')
+        closed_msg = request.POST.get('closed_message')
+
+        BusinessProcess.objects.create(
+            name=name,
+            trigger_function=trigger,
+            is_infinite=is_infinite,
+            start_date=start_date,
+            end_date=end_date,
+            active_message=active_msg,
+            closed_message=closed_msg,
+            status=True # Activo por defecto
+            # usuario_creacion se llena solo gracias a ModeloBase y ADMINISTRADOR_ID
+        )
+        messages.success(request, "Proceso creado correctamente.")
+        
+    except Exception as e:
+        messages.error(request, f"Error al crear: {e}")
+        
+    return redirect('chatbot:process_manager')
+
+@require_http_methods(["POST"])
+def delete_process(request, process_id):
+    """ Soft delete de un proceso """
+    try:
+        proc = BusinessProcess.objects.get(id=process_id)
+        proc.status = False # Soft delete
+        proc.save()
+        messages.success(request, "Proceso eliminado.")
+    except BusinessProcess.DoesNotExist:
+        messages.error(request, "Proceso no encontrado.")
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        
+    return redirect('chatbot:process_manager')

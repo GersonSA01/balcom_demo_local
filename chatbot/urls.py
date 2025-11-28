@@ -1,7 +1,9 @@
 from django.urls import path
 from .views import (
     ChatView, health, get_users_list, 
-    document_manager, upload_document, delete_document, update_document_role
+    document_manager, upload_document, delete_document, update_document_role,
+    # Nuevas importaciones
+    process_manager, create_process, delete_process 
 )
 
 app_name = 'chatbot'
@@ -16,6 +18,11 @@ urlpatterns = [
     path('gestion/upload/', upload_document, name='upload_document'),
     path('gestion/delete/<str:doc_id>/', delete_document, name='delete_document'),
     path('gestion/update-role/<str:doc_id>/', update_document_role, name='update_document_role'),
+
+    # --- NUEVAS RUTAS: GESTIÓN DE PROCESOS ---
+    path('procesos/', process_manager, name='process_manager'),
+    path('procesos/crear/', create_process, name='create_process'),
+    path('procesos/eliminar/<int:process_id>/', delete_process, name='delete_process'),
 ]
 
 
