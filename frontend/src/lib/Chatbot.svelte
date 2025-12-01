@@ -10,7 +10,15 @@
   let sessionData = {};
   let dataUnemi = {};
 
-  const API_BASE_URL = "http://localhost:9090/api/chatbot";
+  // --- NUEVO: Estado para mostrar el botón de subida ---
+  let showUploadAction = false;
+
+  // --- NUEVO: Estado para Subida Directa ---
+  let fileInput; // Referencia al input file oculto
+  let uploadedFile = null;
+  let isUploading = false;
+
+  const API_BASE_URL = "http://localhost:8000/api/chatbot";
 
   async function loadDataUnemi() {
     try {
@@ -40,7 +48,7 @@
   onMount(() => {
     checkConnection();
     loadDataUnemi();
-    loadSessionFromStorage(); // Cargar sesión guardada al iniciar
+    loadSessionFromStorage();
     window.addEventListener("sessionDataUpdated", handleSessionUpdate);
 
     return () => {
@@ -53,39 +61,42 @@
       const response = await fetch(`${API_BASE_URL}/health/`);
       const data = await response.json();
 
-      // Verificar conexión con Private-GPT
       isConnected = data.private_gpt_connected || false;
-
       if (!isConnected) {
-        error =
-          data.error ||
-          "Private-GPT no está disponible. Asegúrate de que el servidor de Private-GPT esté ejecutándose en http://localhost:8001";
+        error = data.error || "Private-GPT no está disponible.";
       }
     } catch (err) {
       isConnected = false;
-      error =
-        "No se pudo conectar con el servidor Django. Verifica que el servidor esté ejecutándose.";
+      error = "No se pudo conectar con el servidor Django.";
     }
   }
 
-  let loadingText = ""; // Nueva variable para el estado
-
+  let loadingText = "";
   async function sendMessage() {
-    if (!inputMessage.trim() || isLoading) return;
+    if (isLoading) return;
+
+    // CASO 1: HAY ARCHIVO SELECCIONADO -> SUBIR
+    if (uploadedFile) {
+      await uploadAndSend();
+      return;
+    }
+
+    // CASO 2: FLUJO NORMAL DE CHAT
+    if (!inputMessage.trim()) return;
 
     const userMessage = inputMessage.trim();
     inputMessage = "";
     error = null;
 
+    // Si se requería subida y el usuario manda mensaje sin archivo,
+    // asumimos que está preguntando algo más, NO ocultamos el botón de subida todavía
+    // showUploadAction = false; // <-- COMENTADO: Mantenemos el botón si no ha subido nada
+
     messages = [...messages, { role: "user", content: userMessage }];
     isLoading = true;
-    loadingText = "Iniciando..."; // Texto inicial
+    loadingText = "Iniciando...";
 
     try {
-      // ---------------------------------------------------------
-      // 🚨 CORRECCIÓN CRÍTICA: Leer datos frescos del localStorage
-      // JUSTO ANTES de enviar, sin depender de variables reactivas
-      // ---------------------------------------------------------
       let sessionDataToSend = {};
       const storedData = localStorage.getItem("user_session_data");
 
@@ -93,10 +104,7 @@
         try {
           sessionDataToSend = JSON.parse(storedData);
         } catch (e) {
-          console.error(
-            "❌ Error parseando datos de sesión desde localStorage:",
-            e,
-          );
+          console.error("❌ Error parseando datos de sesión:", e);
         }
       }
 
@@ -113,13 +121,10 @@
 
       const response = await fetch(`${API_BASE_URL}/chat/`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
 
-      // ⚠️ AQUÍ EMPIEZA LA LECTURA DEL STREAM
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -128,78 +133,69 @@
         const { done, value } = await reader.read();
         if (done) break;
 
-        // Decodificar el chunk recibido
         buffer += decoder.decode(value, { stream: true });
-
-        // Procesar líneas completas (NDJSON)
         const lines = buffer.split("\n");
-        buffer = lines.pop(); // Guardar el fragmento incompleto para la siguiente vuelta
+        buffer = lines.pop();
 
         for (const line of lines) {
           if (!line.trim()) continue;
           try {
             const update = JSON.parse(line);
 
-            // 1. SI ES ACTUALIZACIÓN DE ESTADO
             if (update.type === "status") {
               loadingText = update.text;
-            }
-
-            // 2. SI ES LA RESPUESTA FINAL
-            else if (update.type === "final") {
+            } else if (update.type === "final") {
               const data = update.data;
               let responseText = "";
               let sources = [];
               let isFunction = false;
 
               if (data.type === "rag_response") {
-                // INTENTO DE PARSEO DE JSON INTERNO
-                // El backend a veces manda un JSON stringificado dentro de 'text'
                 try {
-                    // Si data.text es un objeto JSON en string (e.g. '{"response": "Hola", ...}')
-                    const parsedInner = JSON.parse(data.text);
-                    
-                    if (parsedInner.response) {
-                        responseText = parsedInner.response; // Usamos el texto limpio
-                    } else {
-                        responseText = data.text; // Fallback
-                    }
+                  const parsedInner = JSON.parse(data.text);
+                  if (typeof parsedInner.response === "string") {
+                    responseText = parsedInner.response;
+                  } else {
+                    responseText = data.text;
+                  }
 
-                    // A veces las sources vienen dentro del JSON interno
-                    if (parsedInner.sources && Array.isArray(parsedInner.sources)) {
-                        sources = parsedInner.sources; 
-                    }
+                  if (
+                    parsedInner.sources &&
+                    Array.isArray(parsedInner.sources)
+                  ) {
+                    sources = parsedInner.sources;
+                  }
                 } catch (e) {
-                    // Si no es JSON válido, es texto plano normal
-                    responseText = data.text || "No pude generar una respuesta.";
+                  responseText = data.text || "No pude generar una respuesta.";
                 }
 
-                // Si las sources venían en el objeto data principal (prioridad)
                 if (data.sources && data.sources.length > 0) {
-                    sources = data.sources;
+                  sources = data.sources;
                 }
-
-              } else if (data.type === "agent_handoff") {
-                responseText = data.text || "Un agente se pondrá en contacto contigo.";
               } else if (data.type === "function_call") {
                 isFunction = true;
                 const funcion = data.function;
                 const payload = data.payload || {};
 
-                if (funcion === "search_data") {
-                   responseText = data.text || "🔍 Consultando tus datos...";
-                } else if (funcion === "change_career") {
-                   responseText = data.text || "⚙️ Trámite de cambio de carrera...";
-                } else if (funcion === "drop_subject") {
-                   responseText = data.text || "🗑️ Gestión de retiro de asignaturas...";
+                // --- LÓGICA DEL BOTÓN DE SUBIDA ---
+                if (payload.need_documentation === true) {
+                  showUploadAction = true; // Activamos el botón global
+                }
+                // ---------------------------------
+
+                if (data.text) {
+                  responseText = data.text;
                 } else {
-                   responseText = data.text || "Ejecutando acción...";
+                  if (funcion === "search_data") {
+                    responseText = "🔍 Consultando tus datos...";
+                  } else {
+                    responseText = "Ejecutando acción...";
+                  }
                 }
               } else {
                 responseText = data.text || JSON.stringify(data, null, 2);
               }
 
-              // Agregamos el mensaje al chat
               messages = [
                 ...messages,
                 {
@@ -209,10 +205,7 @@
                   isFunction: isFunction,
                 },
               ];
-            }
-
-            // 3. SI ES ERROR
-            else if (update.type === "error") {
+            } else if (update.type === "error") {
               console.error("Backend error:", update.text);
               error = "Error del servidor: " + update.text;
             }
@@ -240,6 +233,90 @@
   function clearChat() {
     messages = [];
     error = null;
+    showUploadAction = false;
+  }
+
+  function goToUpload() {
+    // Simula clic en el input file oculto
+    fileInput.click();
+  }
+
+  function handleFileSelect(e) {
+    if (e.target.files.length > 0) {
+      uploadedFile = e.target.files[0];
+      // El usuario ya seleccionó archivo, desbloqueamos el input (visual)
+    }
+  }
+
+  function removeFile() {
+    uploadedFile = null;
+    if (fileInput) fileInput.value = "";
+  }
+
+  async function uploadAndSend() {
+    isUploading = true;
+    const details = inputMessage.trim(); // Usamos el mensaje del chat como detalles
+
+    // Limpiamos input inmediatamente para UX
+    inputMessage = "";
+
+    // Agregamos mensaje del usuario al chat con indicador de archivo
+    messages = [
+      ...messages,
+      {
+        role: "user",
+        content: `Archivo: ${uploadedFile.name}\n${details ? `Detalles: ${details}` : ""}`,
+      },
+    ];
+
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
+      formData.append("details", details);
+
+      const response = await fetch(`${API_BASE_URL}/documentacion/subir/`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.status === "success") {
+        // Limpiar estado de subida
+        uploadedFile = null;
+        if (fileInput) fileInput.value = "";
+        showUploadAction = false; // Ya cumplió
+
+        // Respuesta del asistente
+        messages = [
+          ...messages,
+          {
+            role: "assistant",
+            content:
+              "He recibido tu documentación correctamente. Procederé a revisarla.",
+          },
+        ];
+      } else {
+        messages = [
+          ...messages,
+          {
+            role: "assistant",
+            content: `Error al subir archivo: ${result.message || "Intenta de nuevo."}`,
+          },
+        ];
+      }
+    } catch (e) {
+      console.error("Error subiendo:", e);
+      messages = [
+        ...messages,
+        {
+          role: "assistant",
+          content: "❌ Error de conexión al subir el archivo.",
+        },
+      ];
+    } finally {
+      isUploading = false;
+    }
   }
 </script>
 
@@ -322,14 +399,44 @@
           </div>
           <div class="message-content">
             {@html message.content.replace(/\n/g, "<br>")}
+
             {#if message.sources && message.sources.length > 0}
               <div class="sources-container">
                 <p class="sources-title">Fuentes:</p>
                 <div class="badges-wrapper">
                   {#each message.sources as source}
-                    <span class="badge" title="Fuente:">
-                      {source.title || "Documento"}
-                    </span>
+                    {#if source.url}
+                      <a
+                        href={source.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="badge clickable"
+                        title="Clic para ver documento original"
+                      >
+                        📄 {source.title || "Documento"}
+                        <svg
+                          width="10"
+                          height="10"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="3"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          style="margin-left:2px;"
+                        >
+                          <path
+                            d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                          ></path>
+                          <polyline points="15 3 21 3 21 9"></polyline>
+                          <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                      </a>
+                    {:else}
+                      <span class="badge" title="Fuente sin enlace">
+                        {source.title || "Documento"}
+                      </span>
+                    {/if}
                   {/each}
                 </div>
               </div>
@@ -346,9 +453,7 @@
             <span class="loading-text">{loadingText}</span>
           {/if}
           <div class="typing-indicator">
-            <span></span>
-            <span></span>
-            <span></span>
+            <span></span><span></span><span></span>
           </div>
         </div>
       </div>
@@ -356,47 +461,127 @@
   </div>
 
   <div class="input-container">
-    <textarea
-      bind:value={inputMessage}
-      on:keypress={handleKeyPress}
-      placeholder="Escribe tu pregunta aquí..."
-      disabled={isLoading || !isConnected}
-      rows="2"
-    ></textarea>
+    <!-- Input oculto para subida de archivos -->
+    <input
+      type="file"
+      style="display: none;"
+      bind:this={fileInput}
+      on:change={handleFileSelect}
+      accept=".pdf,.jpg,.jpeg,.png"
+    />
+
+    {#if showUploadAction}
+      <button
+        class="upload-icon-btn"
+        on:click={goToUpload}
+        title="Se requiere documentación. Clic para subir."
+        disabled={isLoading || !isConnected}
+      >
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
+          ></path>
+        </svg>
+        <span class="notification-dot"></span>
+      </button>
+    {/if}
+
+    <div style="flex: 1; display: flex; flex-direction: column;">
+      {#if uploadedFile}
+        <div class="file-preview">
+          <span>📄 {uploadedFile.name}</span>
+          <button
+            class="remove-file-btn"
+            on:click={removeFile}
+            title="Quitar archivo">&times;</button
+          >
+        </div>
+      {/if}
+
+      <textarea
+        bind:value={inputMessage}
+        on:keypress={handleKeyPress}
+        placeholder={showUploadAction && !uploadedFile
+          ? "⚠️ Sube el documento requerido para continuar..."
+          : "Escribe tu pregunta o detalles del documento..."}
+        disabled={isLoading ||
+          !isConnected ||
+          (showUploadAction && !uploadedFile)}
+        rows="2"
+      ></textarea>
+    </div>
+
     <button
       on:click={sendMessage}
-      disabled={isLoading || !isConnected || !inputMessage.trim()}
       class="send-btn"
+      disabled={isLoading ||
+        !isConnected ||
+        (!inputMessage.trim() && !uploadedFile)}
     >
-      {#if isLoading}
-        <svg class="spinner" width="20" height="20" viewBox="0 0 20 20">
-          <circle
-            cx="10"
-            cy="10"
-            r="8"
-            stroke="currentColor"
-            stroke-width="2"
-            fill="none"
-            stroke-dasharray="50"
-            stroke-dashoffset="25"
-          />
-        </svg>
-      {:else}
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <path
-            d="M18 2L9 11M18 2l-7 7M18 2H8M18 2v10"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      {/if}
     </button>
   </div>
 </div>
 
 <style>
+  .upload-icon-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 2px solid #e2e8f0;
+    background: #f8fafc;
+    border-radius: 10px; /* Cuadrado redondeado */
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .upload-icon-btn:hover {
+    background: #e0f2fe;
+    color: #0284c7;
+    border-color: #7dd3fc;
+    transform: translateY(-1px);
+  }
+
+  .notification-dot {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    background-color: #ef4444; /* Rojo */
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    animation: pulse-red 2s infinite;
+  }
+
+  @keyframes pulse-red {
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+  }
+
   .chatbot-container {
     display: flex;
     flex-direction: column;
@@ -424,18 +609,15 @@
     align-items: center;
     gap: 12px;
   }
-
   .logo {
     font-size: 24px;
     font-weight: 700;
     color: #ffffff;
     letter-spacing: -0.5px;
   }
-
   .logo-plus {
     color: #ff6b35;
   }
-
   .chatbot-header h3 {
     margin: 0;
     font-size: 16px;
@@ -443,7 +625,6 @@
     color: #ffffff;
     letter-spacing: 0.3px;
   }
-
   .header-right {
     display: flex;
     align-items: center;
@@ -459,7 +640,6 @@
     border-radius: 20px;
     backdrop-filter: blur(10px);
   }
-
   .status-dot {
     width: 8px;
     height: 8px;
@@ -468,13 +648,11 @@
     box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
     transition: all 0.3s ease;
   }
-
   .status-dot.connected {
     background: #4ade80;
     box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
     animation: pulse 2s infinite;
   }
-
   @keyframes pulse {
     0%,
     100% {
@@ -484,7 +662,6 @@
       opacity: 0.7;
     }
   }
-
   .status-text {
     font-size: 12px;
     font-weight: 500;
@@ -508,7 +685,6 @@
     transition: all 0.2s ease;
     backdrop-filter: blur(10px);
   }
-
   .clear-btn:hover {
     background: rgba(255, 107, 53, 0.2);
     border-color: #ff6b35;
@@ -547,27 +723,23 @@
     color: #64748b;
     padding: 40px 20px;
   }
-
   .empty-icon {
     font-size: 64px;
     margin-bottom: 16px;
     filter: grayscale(0.2);
   }
-
   .empty-state h4 {
     margin: 0 0 12px 0;
     font-size: 20px;
     font-weight: 600;
     color: #1e3a5f;
   }
-
   .empty-state p {
     margin: 8px 0;
     font-size: 14px;
     line-height: 1.6;
     max-width: 400px;
   }
-
   .hint {
     font-size: 12px;
     color: #94a3b8;
@@ -580,7 +752,6 @@
     align-items: flex-start;
     animation: slideIn 0.3s ease-out;
   }
-
   @keyframes slideIn {
     from {
       opacity: 0;
@@ -591,7 +762,6 @@
       transform: translateY(0);
     }
   }
-
   .message.user {
     flex-direction: row-reverse;
   }
@@ -608,11 +778,9 @@
     background: #ffffff;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
-
   .message.user .message-avatar {
     background: linear-gradient(135deg, #1e3a5f 0%, #2c4a6b 100%);
   }
-
   .message.assistant .message-avatar {
     background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
   }
@@ -625,21 +793,18 @@
     line-height: 1.5;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
-
   .message.user .message-content {
     background: linear-gradient(135deg, #1e3a5f 0%, #2c4a6b 100%);
     color: #ffffff;
     border-bottom-right-radius: 4px;
     font-weight: 500;
   }
-
   .message.assistant .message-content {
     background: #ffffff;
     color: #1e293b;
     border: 1px solid #e2e8f0;
     border-bottom-left-radius: 4px;
   }
-
   .message-content.loading {
     background: #ffffff;
     padding: 16px;
@@ -654,7 +819,6 @@
     gap: 4px;
     align-items: center;
   }
-
   .typing-indicator span {
     width: 6px;
     height: 6px;
@@ -662,15 +826,12 @@
     background: #ff6b35;
     animation: typing 1.4s infinite;
   }
-
   .typing-indicator span:nth-child(2) {
     animation-delay: 0.2s;
   }
-
   .typing-indicator span:nth-child(3) {
     animation-delay: 0.4s;
   }
-
   @keyframes typing {
     0%,
     60%,
@@ -690,6 +851,7 @@
     border-top: 1px solid #e2e8f0;
     gap: 12px;
     background: #ffffff;
+    align-items: center;
   }
 
   .input-container textarea {
@@ -704,18 +866,12 @@
     background: #f8fafc;
     transition: all 0.3s ease;
   }
-
-  .input-container textarea::placeholder {
-    color: #94a3b8;
-  }
-
   .input-container textarea:focus {
     outline: none;
     border-color: #ff6b35;
     background: #ffffff;
     box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
   }
-
   .input-container textarea:disabled {
     background: #f1f5f9;
     cursor: not-allowed;
@@ -737,16 +893,13 @@
     min-width: 56px;
     box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
   }
-
   .send-btn:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
   }
-
   .send-btn:active:not(:disabled) {
     transform: translateY(0);
   }
-
   .send-btn:disabled {
     background: #cbd5e1;
     cursor: not-allowed;
@@ -754,24 +907,66 @@
     opacity: 0.6;
   }
 
+  /* NUEVOS ESTILOS PARA BOTÓN UPLOAD */
+  .upload-btn {
+    position: relative;
+    padding: 12px;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .upload-btn:hover {
+    background: #e2e8f0;
+    color: #1e3a5f;
+    border-color: #cbd5e1;
+  }
+  /* Indicador rojo de que se requiere acción */
+  .upload-dot {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    background-color: #ef4444;
+    border-radius: 50%;
+    border: 2px solid white;
+    animation: pulse-red 2s infinite;
+  }
+  @keyframes pulse-red {
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+  }
+
   .spinner {
     animation: spin 0.8s linear infinite;
   }
-
   @keyframes spin {
     to {
       transform: rotate(360deg);
     }
   }
-
   .loading-text {
     font-size: 14px;
     color: #64748b;
     margin: 0;
-    font-style: normal;
     animation: fadeIn 0.3s ease-in;
   }
-
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -786,7 +981,6 @@
     padding-top: 12px;
     border-top: 1px solid rgba(0, 0, 0, 0.1);
   }
-
   .sources-title {
     font-size: 11px;
     font-weight: 700;
@@ -795,18 +989,16 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
-
   .badges-wrapper {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
   }
-
   .badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 8px;
+    padding: 6px 10px; /* Un poco más grande para facilitar el clic */
     background: rgba(255, 107, 53, 0.1);
     color: #c2410c;
     border: 1px solid rgba(255, 107, 53, 0.2);
@@ -814,18 +1006,60 @@
     font-size: 11px;
     font-weight: 600;
     transition: all 0.2s ease;
+    text-decoration: none; /* Quitar subrayado por defecto de enlaces */
   }
 
-  .badge:hover {
-    background: rgba(255, 107, 53, 0.15);
-    transform: translateY(-1px);
+  /* Estilo específico cuando es un link */
+  .badge.clickable:hover {
+    background: rgba(255, 107, 53, 0.25);
+    transform: translateY(-2px);
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(255, 107, 53, 0.2);
+    border-color: #ff6b35;
   }
 
-  /* Estilo para mensajes de función/acción */
   .message.function-message .message-content {
-    background: #e0f2fe; /* Azul clarito */
+    background: #e0f2fe;
     border: 1px solid #0ea5e9;
     color: #0284c7;
     font-weight: 600;
+  }
+
+  /* Estilos para el indicador de archivo seleccionado */
+  .file-preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    margin: 0 16px 8px 16px;
+    color: #0369a1;
+    font-size: 13px;
+    animation: slideDown 0.2s ease-out;
+  }
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .remove-file-btn {
+    background: none;
+    border: none;
+    color: #0369a1;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0 4px;
+    font-size: 16px;
+  }
+  .remove-file-btn:hover {
+    color: #0c4a6e;
   }
 </style>

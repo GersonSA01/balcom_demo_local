@@ -1,0 +1,131 @@
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8 flex justify-between items-center">
+    <div>
+        <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+            Gestión de Procesos
+        </h2>
+        <p class="text-sm text-slate-500 mt-1">Configura flujos automáticos, fechas y mensajes.</p>
+    </div>
+    <button onclick="openCreateProcessModal()"
+        class="px-6 py-2.5 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition-colors shadow-lg shadow-orange-600/20 flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        Nuevo Proceso
+    </button>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Nombre / Función</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Roles</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Vigencia</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Mensajes</th>
+                    <th class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-slate-200">
+                {% for process in processes %}
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-semibold text-slate-900">{{ process.name }}</div>
+                        <span class="text-xs font-mono text-slate-400">{{ process.trigger_function }}</span>
+                    </td>
+
+                    <td class="px-6 py-4">
+                        <div class="flex flex-wrap gap-1">
+                            {% for role in process.roles %}
+                            <span
+                                class="px-2 py-1 text-xs font-medium rounded-md bg-purple-50 text-purple-700 border border-purple-100">
+                                {{ role }}
+                            </span>
+                            {% empty %}
+                            <span
+                                class="px-2 py-1 text-xs font-medium rounded-md bg-gray-50 text-gray-700 border border-gray-100">
+                                general
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if process.is_infinite %}
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Indefinido
+                        </span>
+                        {% else %}
+                        <div class="text-sm text-slate-600">
+                            <span class="block text-xs text-slate-400">Desde:</span>
+                            {{ process.start_date|date:"d/m/Y" }}
+                        </div>
+                        <div class="text-sm text-slate-600 mt-1">
+                            <span class="block text-xs text-slate-400">Hasta:</span>
+                            {{ process.end_date|date:"d/m/Y" }}
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col gap-2">
+                            <div class="text-xs">
+                                <span class="font-bold text-green-600">Instrucción:</span>
+                                <span class="text-slate-500 truncate max-w-xs block"
+                                    title="{{ process.active_message }}">
+                                    {{ process.active_message|truncatechars:50 }}
+                                </span>
+                            </div>
+
+                            {% if process.need_documentation %}
+                            <div class="mt-1">
+                                <span
+                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                    Requiere Documentación
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="openEditProcessModal(
+                            '{{ process.id }}',
+                            `{{ process.name|escapejs }}`,
+                            `{{ process.business_context|escapejs }}`,
+                            '{{ process.process_type }}',
+                            '{{ process.source_url|default:""|escapejs }}',
+                            '{{ process.is_infinite }}',
+                            '{{ process.need_documentation }}',
+                            '{{ process.start_date }}',
+                            '{{ process.end_date }}',
+                            `{{ process.active_message|escapejs }}`,
+                            {{ process.roles|safe }}
+                        )" class="text-indigo-600 hover:text-indigo-900 font-medium mr-3">
+                            Editar
+                        </button>
+
+                        <form action="{% url 'chatbot:delete_process' process.id %}" method="POST"
+                            onsubmit="return confirm('¿Eliminar este proceso?');" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-red-500 hover:text-red-700 font-medium">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center text-slate-500">
+                        <p class="mt-2 text-sm font-medium">No hay procesos registrados</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -50,17 +50,56 @@ class ModeloBase(models.Model):
         abstract = True
 
 
+
+class RagDocument(ModeloBase):
+    """
+    Modelo para gestionar los documentos de la Base de Conocimiento (RAG).
+    Es la 'Fuente de la Verdad' local.
+    """
+    archivo = models.FileField(upload_to='rag_docs/', verbose_name="Archivo Físico")
+    nombre = models.CharField(max_length=255, verbose_name="Nombre visible")
+    
+    # Metadatos de Negocio
+    roles = models.JSONField(default=list, verbose_name="Roles permitidos")
+    is_infinite = models.BooleanField(default=False, verbose_name="Vigencia Indefinida")
+    valid_from = models.DateField(null=True, blank=True, verbose_name="Válido desde")
+    valid_to = models.DateField(null=True, blank=True, verbose_name="Válido hasta")
+    
+    # Referencia al sistema externo (PrivateGPT)
+    doc_id_pgpt = models.CharField(max_length=100, blank=True, null=True, verbose_name="ID en PrivateGPT")
+    is_indexed = models.BooleanField(default=False, verbose_name="Indexado en IA")
+
+    class Meta:
+        verbose_name = "Documento de Conocimiento"
+        verbose_name_plural = "Documentos de Conocimiento"
+        db_table = 'chatbot_rag_documents'
+
+    def __str__(self):
+        return self.nombre
+
+
 class BusinessProcess(ModeloBase):
     name = models.CharField(max_length=255, verbose_name="Nombre del Proceso")
-    trigger_function = models.CharField(max_length=255, verbose_name="Función Disparadora")
-    
+    business_context = models.TextField(default="Descripcion" ,verbose_name="Contexto del proceso")
+    process_type = models.CharField(max_length=20,
+        choices=[("informativo", "Informativo"), ("operativo", "Operativo")],
+        default="informativo",
+        verbose_name="Tipo de Proceso"
+    )
+
+    source_url = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name="Fuente o referencia (opcional)"
+    )
+
     start_date = models.DateField(verbose_name="Fecha Inicio")
     end_date = models.DateField(verbose_name="Fecha Fin")
-    
     is_infinite = models.BooleanField(default=False, verbose_name="Es Indefinido")
-    
     active_message = models.TextField(verbose_name="Mensaje cuando está Activo")
-    closed_message = models.TextField(verbose_name="Mensaje cuando está Cerrado")
+    roles = models.JSONField(default=list, verbose_name="Roles Permitidos")
+    need_documentation = models.BooleanField(default=False, verbose_name="Requiere Documentación")
 
     class Meta:
         # managed = True permite a Django crear la tabla con 'python manage.py migrate'
