@@ -13,12 +13,6 @@
           <div class="logo">UNEMI</div>
           <div class="subtitle">Balcón de Servicios</div>
         </div>
-        <h1>Asistente Virtual</h1>
-
-        <!-- Navegación -->
-        <nav class="nav-tabs">
-          <Link to="/" class="nav-link">💬 Chatbot</Link>
-        </nav>
       </div>
 
       <!-- Rutas -->
@@ -49,7 +43,6 @@
 
   .header {
     text-align: center;
-    margin-bottom: 2rem;
     padding: 2rem 1rem;
   }
 
@@ -58,7 +51,6 @@
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    margin-bottom: 1rem;
   }
 
   .logo {

@@ -4,51 +4,85 @@ import requests
 import logging
 import os
 import time
+import unicodedata
 from datetime import datetime
 from django.conf import settings
 from django.http import JsonResponse, StreamingHttpResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from rest_framework.views import APIView
-
-# IMPORTANTE: Asegúrate de que la ruta 'chatbot.models' sea correcta
-from chatbot.models import SgaPersona, SgaPerfilusuario, BusinessProcess, RagDocument
-
+from django.views.decorators.csrf import csrf_exempt
+from django.core.files.storage import FileSystemStorage
+from django.views.decorators.http import require_POST
+import difflib
+from chatbot.models import (
+    SgaPersona, SgaPerfilusuario, BusinessProcess, RagDocument, 
+    ChatbotRol, SgaCarrera, SgaInscripcion,
+)
 logger = logging.getLogger(__name__)
+from django.db.models import ForeignKey
+
+def get_dynamic_sga_roles():
+    """
+    Devuelve los roles del modelo y añade un rol virtual 'General'.
+    """
+    # 1. Roles reales de la base de datos
+    roles_permitidos = {
+        'inscripcion': 'Estudiante (Pregrado)',
+        'profesor': 'Docente / Profesor',
+        'administrativo': 'Administrativo',
+        'externo': 'Usuario Externo',
+    }
+
+    roles_detectados = []
+
+    # 2. Recorremos el modelo
+    for field in SgaPerfilusuario._meta.get_fields():
+        if field.name in roles_permitidos:
+            roles_detectados.append({
+                'id': field.name,
+                'nombre': roles_permitidos[field.name]
+            })
+    
+    # --- CAMBIO AQUÍ: Añadimos el rol virtual General ---
+    roles_detectados.append({
+        'id': 'general', 
+        'nombre': 'General / Todos (Cualquier usuario logueado)'
+    })
+    # ----------------------------------------------------
+    
+    return sorted(roles_detectados, key=lambda x: x['nombre'])
 
 # ==============================================================================
 # 1. CONFIGURACIÓN Y CALENDARIO
 # ==============================================================================
 
+
+
+def normalize_text(text):
+    if not text: return ""
+    # Normaliza a minúsculas y quita tildes (NFD)
+    text = text.lower()
+    return ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
+
+
 def get_process_response_from_db(process_name):
-    """
-    Busca en la base de datos el proceso y formatea un mensaje amigable.
-    """
     try:
-        # 1. Buscar el proceso activo
-        process = BusinessProcess.objects.filter(name=process_name, status=True).first()
+        # Buscamos el proceso activo
+        process = BusinessProcess.objects.filter(nombre=process_name, status=True).first()
         
         if not process:
-            return {
-                "text": f"No encontré información configurada para el proceso '{process_name}'. Por favor contacta a secretaría.",
-                "status": "error",
-                "need_documentation": False
-            }
+            return {"text": f"Por ahora no tengo información disponible sobre el proceso {process_name}.", "status": "error", "need_documentation": False}
 
-        # --- CAMBIO: CONSTRUCCIÓN DE MENSAJE AMIGABLE ---
-        # Envolvemos los requisitos de la BD con el saludo y la instrucción final
         friendly_text = (
-            "Hola, para procesar tu solicitud por favor necesito que me ayudes con tu documentación:\n\n"
-            f"{process.active_message}\n\n"
+            "Hola 👋, para continuar con tu solicitud necesito que me compartas la documentación requerida:"
+            f"\n{process.active_message}\n"
             "También necesitaré que me des de nuevo los detalles de tu solicitud."
         )
 
-        # Lógica específica por tipo de proceso
         if process.process_type == "informativo":
-            # Si es informativo, usamos el mensaje activo directo o el contexto
             friendly_text = process.active_message or process.business_context
-            # Forzamos need_documentation a False
             process.need_documentation = False
 
         base_response = {
@@ -56,104 +90,130 @@ def get_process_response_from_db(process_name):
             "need_documentation": process.need_documentation,
             "source_url": process.source_url
         }
-
-        # 2. Verificar si es infinito
-        if process.is_infinite:
-            base_response["status"] = "success"
-            return base_response
-
-        # 3. Validar fechas
-        today = datetime.now().date()
         
-        if not process.start_date or not process.end_date:
-            return {
-                "text": "Error en configuración de fechas.", 
-                "status": "error", 
-                "need_documentation": False
-            }
-
-        if process.start_date <= today <= process.end_date:
-            base_response["status"] = "success"
-            return base_response
-        else:
-            msg_closed = f"El proceso '{process.name}' no se encuentra habilitado actualmente (Vigencia: {process.start_date.strftime('%d/%m/%Y')} - {process.end_date.strftime('%d/%m/%Y')})."
-            return {
-                "text": msg_closed,
-                "status": "closed",
-                "need_documentation": False
-            }
+        return base_response 
 
     except Exception as e:
         logger.error(f"Error validando proceso: {e}")
-        return {
-            "text": "Ocurrió un error interno validando el proceso.", 
-            "status": "error",
-            "need_documentation": False
-        }
-
+        return {"text": "Error interno.", "status": "error", "need_documentation": False}
 # ==============================================================================
 # 2. ENDPOINTS API DE USUARIOS
 # ==============================================================================
 
+@require_POST
+def create_chatbot_role(request):
+    try:
+        nombre = request.POST.get('nombre')
+        campo_sga = request.POST.get('tipo_usuario_id')
+        carreras_ids = request.POST.getlist('carreras')
+
+        rol = ChatbotRol.objects.create(
+            nombre=nombre,
+            campo_sga=campo_sga
+        )
+        if carreras_ids:
+            rol.carreras.set(carreras_ids)
+            
+        messages.success(request, "Rol creado correctamente.")
+    except Exception as e:
+        messages.error(request, f"Error al crear rol: {str(e)}")
+        
+    return redirect('chatbot:document_manager')
+
+@require_POST
+def delete_chatbot_role(request, role_id):
+    rol = get_object_or_404(ChatbotRol, id=role_id)
+    try:
+        rol.delete()
+        messages.success(request, "Rol eliminado correctamente.")
+    except Exception as e:
+        messages.error(request, "No se pudo eliminar el rol (puede estar en uso).")
+        
+    return redirect('chatbot:document_manager')
+
+@require_POST
+def edit_chatbot_role(request, role_id):
+    rol = get_object_or_404(ChatbotRol, id=role_id)
+    
+    try:
+        rol.nombre = request.POST.get('nombre')
+        # Si permites editar el campo SGA:
+        rol.campo_sga = request.POST.get('tipo_usuario_id')
+        
+        carreras_ids = request.POST.getlist('carreras')
+        if carreras_ids:
+            rol.carreras.set(carreras_ids)
+        else:
+            rol.carreras.clear()
+            
+        rol.save()
+        messages.success(request, "Rol actualizado correctamente.")
+    except Exception as e:
+        messages.error(request, f"Error al editar: {str(e)}")
+        
+    return redirect('chatbot:document_manager')
+    
+
+
+# En views.py
+
 @require_http_methods(["GET"])
 def get_users_list(request):
-    """
-    Devuelve únicamente al usuario con la cédula específica,
-    con todos sus perfiles detallados y una descripción legible.
-    """
+    TARGET_CEDULA = '0940153000' 
+    
+    roles_configurados = get_dynamic_sga_roles()
+
+    mapa_frontend = {
+        'inscripcion': 'es_estudiante',
+        'profesor': 'es_profesor',
+        'administrativo': 'es_administrativo',
+        'externo': 'es_externo',
+        'general': 'es_general' 
+    }
+
     data = []
     try:
-        # 1. Filtramos por la cédula específica (Puedes cambiar esto según necesidad)
-        personas = SgaPersona.objects.filter(cedula='0706191558')
+        personas = SgaPersona.objects.filter(cedula=TARGET_CEDULA)
         
+        if not personas.exists():
+            return JsonResponse({"mensaje": "Persona no encontrada"}, status=404)
+
         for p in personas:
-            # 2. Buscamos sus perfiles activos
             perfiles_qs = SgaPerfilusuario.objects.filter(persona=p, status=True)
             perfiles_list = []
             
             for perf in perfiles_qs:
-                # 3. Mapeo completo de todos los campos de roles en el modelo
-                roles_map = [
-                    ('inscripcion', 'es_estudiante', 'Estudiante'),
-                    ('profesor', 'es_profesor', 'Profesor'),
-                    ('administrativo', 'es_administrativo', 'Administrativo'),
-                    ('externo', 'es_externo', 'Externo'),
-                    ('empleador', 'es_empleador', 'Empleador'),
-                    ('instructor', 'es_instructor', 'Instructor'),
-                    ('inscripcionaspirante', 'es_aspirante', 'Aspirante'),
-                    ('inscripcionpostulante', 'es_postulante_inscripcion', 'Inscripción Postulante'),
-                    ('postulante', 'es_postulante', 'Postulante'),
-                    ('postulanteempleo', 'es_postulante_empleo', 'Postulante Empleo'),
-                    ('inscripcionadmision', 'es_admision', 'Admisión'),
-                    ('instructorejecutiva', 'es_instructor_ejecutiva', 'Instructor Ejecutiva'),
-                    ('inscritoejecutivo', 'es_inscrito_ejecutivo', 'Inscrito Ejecutivo'),
-                    ('instructorformacionejecutiva', 'es_instructor_formacion', 'Instructor Formación')
-                ]
-
                 perf_data = {"id": perf.id}
-                roles_activos = []
+                roles_detectados_nombres = []
 
-                # Iteramos para llenar los booleanos y detectar los nombres para la descripción
-                for field_name, json_key, label in roles_map:
-                    valor = getattr(perf, field_name, None)
-                    es_activo = bool(valor)
-                    perf_data[json_key] = es_activo
-                    if es_activo:
-                        roles_activos.append(label)
+                for rol_info in roles_configurados:
+                    campo_bd = rol_info['id']
+                    nombre_legible = rol_info['nombre']
+                    
+                    if campo_bd == 'general':
+                        valor = True
+                    else:
+                        valor = getattr(perf, campo_bd, None)
+                    
+                    # --- AQUÍ FALTABAN LOS DOS PUNTOS ---
+                    if valor: 
+                        roles_detectados_nombres.append(nombre_legible)
+                        
+                        key_frontend = mapa_frontend.get(campo_bd)
+                        if key_frontend:
+                            perf_data[key_frontend] = True
+                
+                perf_data["descripcion"] = " / ".join(roles_detectados_nombres) if roles_detectados_nombres else "Sin Rol Configurado"
+                
+                for k in mapa_frontend.values():
+                    if k not in perf_data:
+                        perf_data[k] = False
 
-                # 4. Generamos la descripción final
-                perf_data["descripcion"] = " / ".join(roles_activos) if roles_activos else "Sin Rol Definido"
                 perfiles_list.append(perf_data)
 
-            # 5. Armamos la respuesta final
             data.append({
                 "cedula": p.cedula,
-                "persona": {
-                    "nombres": p.nombres,
-                    "apellido1": p.apellido1,
-                    "apellido2": p.apellido2,
-                    "nombre_completo": f"{p.nombres} {p.apellido1} {p.apellido2}".strip()
-                },
+                "nombre_completo": f"{p.nombres} {p.apellido1} {p.apellido2}".strip(),
                 "perfiles": perfiles_list
             })
             
@@ -163,11 +223,12 @@ def get_users_list(request):
 
     return JsonResponse(data, safe=False)
 
+
 @require_http_methods(["GET"])
 def health(request):
     pgpt_status = False
     try:
-        if requests.get(f"{settings.PRIVATE_GPT_API_URL}/health", timeout=10).status_code == 200:
+        if requests.get(f"{settings.PRIVATE_GPT_API_URL}/health", timeout=5).status_code == 200:
             pgpt_status = True
     except: pass
     return JsonResponse({'status': 'ok', 'private_gpt_connected': pgpt_status})
@@ -185,344 +246,505 @@ class ChatView(APIView):
         session = request.data.get('session_data', {})
         cedula = list(session.keys())[0] if session else None
 
-        # --- 1. ROLES Y PERFIL (USANDO MODELOS) ---
-        roles = ["general"]
-        persona = None
-        
-        if cedula:
-            persona = SgaPersona.objects.filter(cedula=cedula, status=True).first()
-            if persona:
-                # Obtener el ID del perfil seleccionado
-                target_pid = None
-                if session.get(cedula, {}).get('perfiles'):
-                    target_pid = session[cedula]['perfiles'][0].get('id')
-                
-                perfil = None
-                if target_pid:
-                    perfil = SgaPerfilusuario.objects.filter(id=target_pid, persona=persona, status=True).first()
-                if not perfil:
-                     perfil = SgaPerfilusuario.objects.filter(persona=persona, status=True).first()
+        # 1. ATAJO HANDOFF (Soporte Humano)
+        is_handoff_confirmation = False
+        if history:
+            last_msg = history[-1]
+            if last_msg.get('role') == 'assistant':
+                content = last_msg.get('content', '')
+                if "Voy a derivar tu caso" in content or "adjunta evidencia" in content:
+                    is_handoff_confirmation = True
 
-                if perfil:
-                    # Determinar roles basados en campos del modelo
-                    if perfil.inscripcion: roles.append("es_estudiante")
-                    if perfil.profesor: roles.append("es_profesor")
-                    if perfil.administrativo: roles.append("es_administrativo")
-                    if perfil.externo: roles.append("es_externo")
-                    if perfil.inscripcionaspirante: roles.append("es_inscripcionaspirante")
-                    # ... se pueden agregar más mapeos aquí ...
-
-        # --- 2. FILTER DOCUMENTS (RAG) ---
-        # OPTIMIZACIÓN: Consultamos la BD Local (SQL) en lugar de la API lenta de PrivateGPT
-        doc_ids = []
-        try:
-            # 1. Obtenemos todos los documentos activos de nuestra BD local
-            # Esto es instantáneo (milisegundos) vs los 15s de PrivateGPT
-            local_docs = RagDocument.objects.filter(status=True, is_indexed=True)
-            
-            today = datetime.now().date()
-
-            for doc in local_docs:
-                # A. Filtrado por Roles
-                # doc.roles es un JSONField, es una lista directa en Python
-                doc_roles = doc.roles if isinstance(doc.roles, list) else []
-                if not doc_roles: doc_roles = ['general'] # Fallback
-                
-                # Verificamos si el usuario tiene alguno de los roles del documento
-                role_match = any(r in roles for r in doc_roles)
-                
-                # B. Filtrado por Fechas
-                date_match = True
-                if not doc.is_infinite:
-                    if doc.valid_from and today < doc.valid_from: date_match = False
-                    if doc.valid_to and today > doc.valid_to: date_match = False
-                
-                # C. Si pasa los filtros, agregamos el ID de PrivateGPT a la lista
-                if role_match and date_match and doc.doc_id_pgpt:
-                    doc_ids.append(doc.doc_id_pgpt)
-
-            logger.info(f"Filtro RAG rápido: {len(doc_ids)} documentos seleccionados de {local_docs.count()} disponibles.")
-
-        except Exception as e:
-            logger.error(f"Error filtro docs local: {e}")
-            # En caso de error crítico, doc_ids queda vacío y no se usa contexto, pero no
-
-
-        # Get all active processes
-        available_processes = BusinessProcess.objects.filter(status=True)
-        
-        # Filter processes that match the user's roles AND are currently valid by date
-        valid_process_names = []
-        valid_process_details = []  # Esto se manda como data_tools al LLM
-
-        today = datetime.now().date()
-
-        for proc in available_processes:
-            # 1) Vigencia por fecha
-            if not proc.is_infinite:
-                # Si no hay fechas configuradas, se salta
-                if not proc.start_date or not proc.end_date:
-                    continue
-                if not (proc.start_date <= today <= proc.end_date):
-                    continue
-
-            # 2) Roles permitidos
-            proc_roles = getattr(proc, 'roles', ['general'])
-            if not isinstance(proc_roles, list):
-                proc_roles = ['general']
-
-            if 'general' in proc_roles or any(r in proc_roles for r in roles):
-                valid_process_names.append(proc.name)
-
-                business_ctx = (getattr(proc, 'business_context', '') or '').strip()
-                vigencia = (
-                    "Siempre activo"
-                    if proc.is_infinite
-                    else f"Vigente del {proc.start_date.strftime('%d/%m/%Y')} al {proc.end_date.strftime('%d/%m/%Y')}"
-                )
-                roles_text = ", ".join(proc_roles)
-
-                # ESTA LÍNEA ES LO QUE LUEGO LEE EL LLM EN {data_tools}
-                valid_process_details.append(
-                    f"- {proc.name}: {business_ctx} [Roles: {roles_text}; {vigencia}]"
-                )
-
-
-        # --- 4. MODIFIED STREAMING LOGIC ---
         def event_stream():
-            # CRITICAL CHANGE: Only stop if NO docs AND NO processes
-            if not doc_ids and not valid_process_names:
-                yield json.dumps({"type": "final", "data": {"type": "rag_response", "text": "No tienes permisos para ver documentos ni procesos con tu perfil actual.", "sources": []}}) + "\n"
-                return
-
-            status_msg = "Consultando base de conocimiento..."
-            if not doc_ids and valid_process_names:
-                status_msg = "Consultando procesos disponibles..."
-
-            yield json.dumps({"type": "status", "text": status_msg}) + "\n"
-            
-            # Preparar Mensajes
-            messages_payload = [{"role": "user", "content": user_msg}]
-            
-            # INYECCIÓN DE CONTEXTO DE PROCESOS (System Prompt Injection)
-            # Le decimos al LLM qué herramientas tiene disponibles según el perfil
-            system_instruction = ""
-            if valid_process_details:
-                system_instruction = "\n".join(valid_process_details)
-
-            # Insertamos la instrucción de sistema al principio (solo data_tools)
-            messages_payload.insert(0, {"role": "system", "content": system_instruction})
-
-            # Historial
-            if history:
-                for msg in history[-4:]:
-                    messages_payload.insert(1, {"role": msg['role'], "content": str(msg['content'])})
-
-            payload = {
-                "messages": messages_payload,
-                "use_context": True if doc_ids else False, # Solo usar contexto si hay docs
-                "include_sources": True,
-                "stream": True,
-                "context_filter": {"docs_ids": doc_ids} if doc_ids else None,
-                "temperature": 0.0
-            }
-
             try:
-                # Timeout alto para procesos largos
-                with requests.post(f"{settings.PRIVATE_GPT_API_URL}/v1/chat/completions", json=payload, stream=True, timeout=600) as r:
-                    full_text = ""
-                    api_sources = [] 
+                # --- RESPUESTA RÁPIDA HANDOFF ---
+                if is_handoff_confirmation:
+                    time.sleep(1.0)
+                    yield json.dumps({
+                        "type": "final",
+                        "data": {
+                            "response": "¡Listo! He derivado tu caso. ¿Necesitas algo más?",
+                            "sources": [],
+                            "is_function": False,
+                            "action": "ANSWER",
+                            "payload": {"status": "success"},
+                            "offer_human_handoff": False
+                        }
+                    }) + "\n"
+                    return 
+
+                # --- RESPUESTA AL RECHAZO DE RAG ---
+                if user_msg == "RAG_REJECTED":
+                     yield json.dumps({
+                        "type": "final",
+                        "data": {
+                            "response": "Entendido. Por favor reformula tu pregunta intentando ser más específico. 🙏",
+                            "action": "ANSWER",
+                            "is_function": False,
+                            "sources": []
+                        }
+                    }) + "\n"
+                     return
+
+                # --- DETECCIÓN DE BYPASS (Confirmación del Usuario) ---
+                bypass_router = False
+                real_query_for_processing = user_msg
+                bypass_process_name = None
+
+                if user_msg.startswith("RAG_CONFIRMED||"):
+                    parts = user_msg.split("||")
+                    if len(parts) > 1:
+                        real_query_for_processing = parts[1] # Usamos la query limpia/reformulada
+                        bypass_router = True # Saltaremos todas las validaciones
                     
-                    for line in r.iter_lines():
-                        if line:
-                            try:
-                                line_str = line.decode('utf-8')
-                                if not line_str.startswith('data: '): continue
-                                line_str = line_str.replace('data: ', '')
-                                if line_str == "[DONE]": break
-                                
-                                chunk = json.loads(line_str)
-                                
-                                # Texto acumulativo
-                                if "choices" in chunk:
-                                    delta = chunk["choices"][0].get("delta", {})
-                                    full_text += delta.get("content", "")
-                                
-                                # Sources
-                                incoming_sources = None
-                                if "sources" in chunk: incoming_sources = chunk["sources"]
-                                elif "x_sources" in chunk: incoming_sources = chunk["x_sources"]
-                                elif "choices" in chunk and chunk["choices"] and "sources" in chunk["choices"][0]:
-                                    incoming_sources = chunk["choices"][0]["sources"]
-                                
-                                if isinstance(incoming_sources, list):
-                                    api_sources = incoming_sources
+                    if len(parts) > 2:
+                        bypass_process_name = parts[2]
 
-                            except: continue
-                    
-                    # --- PROCESAMIENTO FINAL ---
-                    
-                    # 1. Limpiar Sources y ENRIQUECER con URL local
-                    real_sources = []
-                    seen_files = set()
+# -------------------------------------------------------------
+                # 1. DETERMINAR PERFIL Y CARRERA DEL USUARIO
+                # -------------------------------------------------------------
+                user_matched_role_ids = set() # Usamos un SET para evitar duplicados
+                user_carrera_ids = set()
 
-                    if api_sources and isinstance(api_sources, list):
-                        for src in api_sources:
-                            if not isinstance(src, dict): continue
-                            
-                            doc = src.get("document", {})
-                            meta = doc.get("doc_metadata", {})
-                            
-                            file_name = meta.get("file_name", "Documento")
-                            pgpt_id = doc.get("doc_id")  # PrivateGPT devuelve el UUID aquí o en metadata
-                            
-                            # Si no está directo en doc, busca en metadata
-                            if not pgpt_id: 
-                                pgpt_id = meta.get("doc_id") 
+                if cedula:
+                    persona = SgaPersona.objects.filter(cedula=cedula).first()
+                    # Lógica para obtener el perfil activo
+                    target_pid = session.get(cedula, {}).get('perfiles', [{}])[0].get('id')
+                    perfil = None
+                    if target_pid:
+                        perfil = SgaPerfilusuario.objects.filter(id=target_pid, persona=persona, status=True).first()
+                    if not perfil:
+                        perfil = SgaPerfilusuario.objects.filter(persona=persona, status=True).first()
 
-                            if file_name not in seen_files:
-                                # === AQUÍ HACEMOS LA MAGIA ===
-                                # Buscamos en nuestra tabla RagDocument el archivo que tenga ese ID
-                                doc_url = None
-                                if pgpt_id:
-                                    local_doc = RagDocument.objects.filter(doc_id_pgpt=pgpt_id).first()
-                                    if local_doc and local_doc.archivo:
-                                        # Generamos URL absoluta (http://localhost:8000/media/...)
-                                        # para que funcione desde el frontend (puerto 5173)
-                                        doc_url = request.build_absolute_uri(local_doc.archivo.url)
-                                
-                                # Agregamos la URL al objeto que enviamos al Svelte
-                                real_sources.append({
-                                    "title": file_name, 
-                                    "article": "",
-                                    "url": doc_url  # <--- Nuevo campo
-                                })
-                                seen_files.add(file_name)
+                    if perfil:
+                        # Guardamos datos de sesión básicos
+                        request.session['user_cedula'] = cedula
+                        request.session['user_name'] = str(persona)
 
-                    if not full_text.strip():
-                        full_text = "Lo siento, por el momento no puedo generar respuestas."
-
-                    # 2. Parsear JSON de respuesta de la IA
-                    ai_data = {}
-                    try:
-                        match = re.search(r"\{[\s\S]*\}", full_text)
-                        if match:
-                            ai_data = json.loads(match.group(0))
-                        else:
-                            ai_data = {"action": "ANSWER", "response": full_text}
-                    except:
-                        ai_data = {"action": "ANSWER", "response": full_text}
-
-                    # 3. Lógica de Function Calling (Dynamic Validation)
-                    action = ai_data.get("action", "ANSWER")
-                    func_name = ai_data.get("function_name")
-                    
-                    if action == "FUNCTION" and func_name:
+                        # --- LÓGICA DE MATCHING DE ROLES Y CARRERA ---
+                        # 1. Obtenemos todos los roles configurados en el sistema (ChatbotRol)
+                        all_system_roles = ChatbotRol.objects.filter(status=True).prefetch_related('carreras')
                         
-                        # --- SECURITY CHECK ---
-                        # Verify if the user has permission for this function
-                        # search_data is allowed by default usually, unless restricted
-                        if func_name not in valid_process_names and func_name != "search_data": 
-                             yield json.dumps({
-                                "type": "final", 
-                                "data": {
-                                    "type": "rag_response", # Fallback to text
-                                    "text": f"Lo siento, tu perfil ({'/'.join(roles)}) no tiene permisos para ejecutar el trámite: {func_name}.",
-                                    "sources": []
-                                }
-                            }) + "\n"
-                             return
-                        # ----------------------
-
-                        # CASO A: Datos Personales
-                        if func_name == "search_data":
-                             ai_resp = "Procesando solicitud de datos..."
-                             p_data = {}
-                             if persona:
-                                 nombres_completos = f"{persona.nombres} {persona.apellido1} {persona.apellido2}".strip()
-                                 p_data = {
-                                     "status": "success", 
-                                     "nombres": persona.nombres,
-                                     "apellidos": f"{persona.apellido1} {persona.apellido2}".strip(),
-                                     "nombre_completo": nombres_completos
-                                 }
-                                 ai_resp = f"Hola {nombres_completos}, aquí tienes tus datos."
-                             else:
-                                 p_data = {"status": "error", "message": "No se encontraron datos de la persona."}
-                             
-                             yield json.dumps({
-                                "type": "final", 
-                                "data": {
-                                    "type": "function_call", 
-                                    "function": func_name, 
-                                    "text": ai_resp, 
-                                    "payload": p_data
-                                }
-                            }) + "\n"
-
-                        # CASO B: Dynamic Business Processes
-                        elif func_name in valid_process_names:
-                            # Usuario autorizado -> Consultar BD
-                            process_result = get_process_response_from_db(func_name)
+                        # 2. Obtenemos la configuración dinámica para saber qué campos mirar en el perfil
+                        # ej: [{'id': 'inscripcion', 'nombre': 'Estudiante'}, ...]
+                        campos_posibles = get_dynamic_sga_roles()
+                        
+                        # 3. Recorremos cada Rol configurado en el Admin del Chatbot
+                        for chatbot_rol in all_system_roles:
+                            campo_sga_requerido = chatbot_rol.campo_sga # ej: 'inscripcion' o 'general'
                             
-                            yield json.dumps({
-                                "type": "final", 
-                                "data": {
-                                    "type": "function_call", 
-                                    "function": func_name,
-                                    "text": process_result["text"], 
-                                    
-                                    # --- AQUÍ ESTÁ EL CAMBIO ---
-                                    "payload": {
-                                        "status": process_result["status"],
-                                        "is_process_validation": True,
-                                        # Enviamos el flag al frontend para que pinte el botón
-                                        "need_documentation": process_result.get("need_documentation", False)
-                                    }
-                                }
-                            }) + "\n"
+                            # --- NUEVA LÓGICA: ROL GENERAL ---
+                            if campo_sga_requerido == 'general':
+                                # Si el rol es 'general', se le asigna a CUALQUIER usuario que tenga perfil.
+                                # No validamos carreras para el rol general (es global por definición).
+                                user_matched_role_ids.add(chatbot_rol.id)
+                                continue 
+                            # ---------------------------------
 
-                    # CASO C: Respuesta RAG normal
+                            # Lógica estándar para roles específicos (Estudiante, Profesor, etc.)
+                            # Verificamos si este campo existe en el perfil del usuario
+                            objeto_relacionado = getattr(perfil, campo_sga_requerido, None)
+
+                            if objeto_relacionado:
+                                # ¡El usuario tiene este rol base!
+                                
+                                # AHORA VALIDAMOS LA CARRERA
+                                carreras_del_rol = chatbot_rol.carreras.all()
+                                
+                                if not carreras_del_rol.exists():
+                                    # CASO A: El Rol es Genérico (sin carreras marcadas)
+                                    user_matched_role_ids.add(chatbot_rol.id)
+                                else:
+                                    # CASO B: El Rol es Específico (tiene filtro de carreras)
+                                    carrera_obj = getattr(objeto_relacionado, 'carrera', None)
+                                    
+                                    if carrera_obj and carrera_obj.id in [c.id for c in carreras_del_rol]:
+                                        user_matched_role_ids.add(chatbot_rol.id)
+                                        user_carrera_ids.add(carrera_obj.id)
+
+                        request.session['user_roles'] = list(user_matched_role_ids)
+
+                yield json.dumps({"type": "status", "text": "Analizando..."}) + "\n"
+
+                # -------------------------------------------------------------
+                # 2. FILTRAR DOCUMENTOS (RAG)
+                # -------------------------------------------------------------
+                # Solo enviamos a PrivateGPT los IDs de los documentos que el usuario PUEDE ver.
+                
+                # Traemos documentos con sus roles permitidos
+                all_docs = RagDocument.objects.filter(status=True, is_indexed=True).prefetch_related('roles_permitidos')
+                
+                doc_ids_for_pgpt = [] # Lista final de IDs (nombres de archivo) para la IA
+                today = datetime.now().date()
+
+                for doc in all_docs:
+                    # 1. Validación de Fechas
+                    if not doc.is_infinite:
+                        if doc.valid_from and today < doc.valid_from: continue
+                        if doc.valid_to and today > doc.valid_to: continue
+
+                    is_allowed = False
+                    
+                    # 2. Validación de Permisos
+                    roles_doc = doc.roles_permitidos.all()
+                    
+                    if not roles_doc.exists():
+                        # Si el documento no tiene roles marcados, es PÚBLICO
+                        is_allowed = True
                     else:
-                        yield json.dumps({
-                            "type": "final",
-                            "data": {
-                                "type": "rag_response",
-                                "text": json.dumps(ai_data), 
-                                "sources": real_sources,
-                                "has_information": True
-                            }
-                        }) + "\n"
+                        # Si tiene roles, el usuario debe tener AL MENOS UNO de ellos
+                        # Como ya calculamos 'user_matched_role_ids' arriba considerando carrera,
+                        # aquí solo hacemos una intersección de conjuntos simple.
+                        doc_roles_ids = set(r.id for r in roles_doc)
+                        
+                        # Intersección: ¿Tienen elementos en común?
+                        if not user_matched_role_ids.isdisjoint(doc_roles_ids):
+                            is_allowed = True
+                    
+                    # 3. Agregado final
+                    if is_allowed and doc.doc_id_pgpt:
+                        # PrivateGPT usa el 'file_name' o el 'doc_id' UUID para filtrar.
+                        # En tu código anterior usabas 'doc.nombre'. Asegúrate que esto coincida 
+                        # con lo que guardaste en PrivateGPT (normalmente el file_name).
+                        doc_ids_for_pgpt.append(doc.nombre) 
+
+                # Debug en consola para que veas qué está pasando
+                print(f"DEBUG: Usuario Roles IDs: {user_matched_role_ids}")
+                print(f"DEBUG: Docs enviados a IA: {doc_ids_for_pgpt}")
+
+                # -------------------------------------------------------------
+                # 3. FILTRAR PROCESOS (BusinessProcess)
+                # -------------------------------------------------------------
+                all_processes = BusinessProcess.objects.filter(status=True).prefetch_related('roles_permitidos', 'roles_permitidos__carreras')
+                valid_process_details = []
+                
+                for proc in all_processes:
+                    is_proc_allowed = False
+                    if not proc.roles_permitidos.exists():
+                        is_proc_allowed = True
+                    else:
+                        for rol_config in proc.roles_permitidos.all():
+                            # 1. Chequeo de Tipo de Usuario (CORREGIDO: user_matched_role_ids)
+                            if rol_config.id in user_matched_role_ids:
+                                # 2. Chequeo de Carreras
+                                carreras_del_rol = rol_config.carreras.all()
+                                if not carreras_del_rol:
+                                    is_proc_allowed = True; break
+                                else:
+                                    # CORREGIDO: user_carrera_ids
+                                    if any(c.id in user_carrera_ids for c in carreras_del_rol):
+                                        is_proc_allowed = True; break
+                    
+                    if is_proc_allowed:
+                        desc = proc.business_context.replace("\n", " ").strip() if proc.business_context else "Sin descripción"
+                        item_str = f'FUNCTION_NAME: "{proc.nombre}"\nSCOPE: "{desc}"\n\n'
+                        valid_process_details.append(item_str)
+
+                # =============================================================
+                # A. FLUJO 1: BYPASS ROUTER (RAG CONFIRMADO)
+                # =============================================================
+                if bypass_router:
+                    yield json.dumps({"type": "status", "text": "Consultando normativa experta..."}) + "\n"
+                    
+                    rag_payload = {
+                        "messages": [
+                            {"role": "system", "content": "RAG_EXPERT_MODE"},
+                            {"role": "user", "content": real_query_for_processing}
+                        ],
+                        "use_context": True, 
+                        # CORREGIDO: doc_ids_for_pgpt (antes doc_ids)
+                        "context_filter": {"docs_ids": doc_ids_for_pgpt} if doc_ids_for_pgpt else None,
+                        "stream": False
+                    }
+                    r_rag = requests.post(f"{settings.PRIVATE_GPT_API_URL}/v1/chat/completions", json=rag_payload, timeout=None)
+                    
+                    final_response_text = "Error consultando el conocimiento."
+                    api_sources = []
+                    
+                    if r_rag.status_code == 200:
+                        rag_resp = r_rag.json()
+                        raw_rag_text = rag_resp["choices"][0]["message"]["content"]
+                        api_sources = rag_resp.get("sources", [])
+
+                        # Limpieza JSON
+                        try:
+                            clean_text = raw_rag_text.replace("```json", "").replace("```", "").strip()
+                            if "{" in clean_text:
+                                start = clean_text.find("{")
+                                end = clean_text.rfind("}") + 1
+                                if start != -1 and end != -1:
+                                    json_data = json.loads(clean_text[start:end])
+                                    first_pass = json_data.get("response", "")
+                                    if isinstance(first_pass, str) and "{" in first_pass and "response" in first_pass:
+                                        inner = json.loads(first_pass)
+                                        final_response_text = inner.get("response", first_pass)
+                                    else:
+                                        final_response_text = first_pass
+                                else: final_response_text = raw_rag_text
+                            else: final_response_text = raw_rag_text
+                        except: final_response_text = raw_rag_text
+
+                        # 2. INYECCIÓN DEL MENSAJE CERRADO
+                        if bypass_process_name and bypass_process_name != "null":
+                            try:
+                                # CORREGIDO: filter(nombre=...)
+                                proc_obj = BusinessProcess.objects.filter(nombre=bypass_process_name, status=True).first()
+                                if proc_obj:
+                                    # CORREGIDO: proc_obj.nombre
+                                    msg_bd = proc_obj.closed_message if (proc_obj.closed_message and proc_obj.closed_message.strip()) else f"El proceso {proc_obj.nombre} no está disponible."
+                                    final_response_text = f"⚠️ **AVISO: {proc_obj.nombre}**\n{msg_bd}\n\nℹ️ **Información de la Normativa:**\n{final_response_text}"
+                            except Exception as e:
+                                logger.error(f"Error pegando mensaje proceso cerrado: {e}")
+
+                    # Extracción de Sources
+                    final_sources = []
+                    seen = set()
+                    for src in api_sources:
+                        meta = src.get("document", {}).get("doc_metadata", {})
+                        fname = meta.get("file_name") or "Documento"
+                        if fname not in seen:
+                            final_sources.append({"title": fname, "url": None})
+                            seen.add(fname)
+
+                    yield json.dumps({
+                        "type": "final",
+                        "data": {
+                            "response": final_response_text,
+                            "sources": final_sources,
+                            "is_function": False, "action": "ANSWER", "payload": {}, "offer_human_handoff": False
+                        }
+                    }) + "\n"
+                    return
+
+# =============================================================
+                # B. FLUJO 2: ROUTER NORMAL
+                # =============================================================
+                action = "ANSWER"
+                found_process_name = None
+                
+                # 1. PREPARACIÓN: Incluimos [TOOLS_LIST] para activar _detect_intent en chat_service
+                if valid_process_details:
+                    system_instruction = "[TOOLS_LIST]\n" + "\n".join(valid_process_details) + "\n[END_TOOLS_LIST]"
+                else:
+                    system_instruction = "NO_TOOLS_AVAILABLE"
+
+                payload_router = {
+                    "messages": [
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": real_query_for_processing}
+                    ],
+                    "use_context": False, # Esto fuerza al chat_service a usar la lógica de Router
+                    "stream": False
+                }
+                
+                try:
+                    # --- PETICIÓN AL ROUTER (Esta línea faltaba o estaba mal indentada) ---
+                    r = requests.post(f"{settings.PRIVATE_GPT_API_URL}/v1/chat/completions", json=payload_router, timeout=300)
+                    raw_content = r.json()["choices"][0]["message"]["content"]
+                    
+                    # 2. LÓGICA DE INTERPRETACIÓN BLINDADA
+                    try:
+                        clean_json_str = raw_content.replace("```json", "").replace("```", "").strip()
+                        data_router = json.loads(clean_json_str)
+                        
+                        if isinstance(data_router, dict):
+                            # CASO A: Respuesta procesada por ChatService (tiene 'action')
+                            if "action" in data_router:
+                                server_action = data_router.get("action")
+                                server_func = data_router.get("function_name")
+                                server_response = data_router.get("response", "")
+
+                                if server_action == "FUNCTION":
+                                    action = "FUNCTION"
+                                    found_process_name = server_func
+                                elif server_action == "ANSWER" and server_func == "OFF_TOPIC":
+                                    action = "OFF_TOPIC"
+                                elif server_action == "ANSWER" and "Hola" in server_response:
+                                    action = "GREETING"
+                                else:
+                                    action = "ANSWER"
+                            
+                            # CASO B: Respuesta cruda del LLM (tiene 'classification')
+                            elif "classification" in data_router:
+                                cls = data_router.get("classification")
+                                func = data_router.get("function_name")
+                                
+                                if cls == "GREETING":
+                                    action = "GREETING"
+                                elif cls == "OFF_TOPIC":
+                                    action = "OFF_TOPIC"
+                                elif cls == "FUNCTION":
+                                    action = "FUNCTION"
+                                    found_process_name = func
+                                else:
+                                    action = "ANSWER" # RAG
+                            
+                            else:
+                                action = "ANSWER"
+
+                    except Exception as e:
+                        logger.error(f"Error parseando router JSON: {e}")
+                        action = "ANSWER"
+
+                except Exception as e:
+                    logger.error(f"Error router connection: {e}")
+                    action = "ANSWER"
+                    
+                # DECISIÓN REFORMULACIÓN Y EJECUCIÓN
+                # -------------------------------------------------------------
+                must_reformulate = False
+                detected_proc_for_frontend = None 
+                
+                # --- CORRECCIÓN: Inicializar variables por defecto AQUÍ ---
+                final_sources = [] 
+                final_response_text = ""
+                is_function = False
+                payload_data = {}
+                # ----------------------------------------------------------
+
+                if action == "GREETING":
+                    must_reformulate = False
+                    final_response_text = "¡Hola! 👋 Soy el asistente virtual de la UNEMI. ¿En qué puedo ayudarte hoy?"
+                
+                elif action == "OFF_TOPIC":
+                    must_reformulate = False
+                    final_response_text = "Lo siento, solo estoy entrenado para responder dudas académicas y administrativas de la UNEMI. No puedo ayudarte con eso."
+
+                elif action == "ANSWER":
+                    must_reformulate = True
+                    
+                elif action == "FUNCTION":
+                    if found_process_name == "HUMAN_HANDOFF":
+                        must_reformulate = False 
+                    else:
+                        # Validación de vigencia del proceso
+                        proc = BusinessProcess.objects.filter(nombre=found_process_name, status=True).first()
+                        
+                        if proc:
+                            today = datetime.now().date()
+                            is_active = True
+                            if not proc.is_infinite:
+                                if not (proc.start_date <= today <= proc.end_date):
+                                    is_active = False
+                            
+                            if not is_active:
+                                must_reformulate = True
+                                detected_proc_for_frontend = found_process_name
+                        else:
+                            must_reformulate = True
+
+                # -------------------------------------------------------------
+                # EJECUCIÓN 1: REFORMULACIÓN (SI ES NECESARIO)
+                # -------------------------------------------------------------
+                if must_reformulate:
+                    yield json.dumps({"type": "status", "text": "Analizando consulta..."}) + "\n"
+                    
+                    reform_payload = {
+                        "messages": [{"role": "system", "content": "REFORMULATE_QUERY_MODE"}, {"role": "user", "content": user_msg}],
+                        "stream": False, "temperature": 0.1, "use_context": False
+                    }
+                    reformulated_q = user_msg
+                    try:
+                        r_ref = requests.post(f"{settings.PRIVATE_GPT_API_URL}/v1/chat/completions", json=reform_payload, timeout=None)
+                        if r_ref.status_code == 200:
+                            content = r_ref.json()["choices"][0]["message"]["content"]
+                            clean_content = content.strip().replace('"', '').replace("Here is the reformulated query:", "")
+                            if len(clean_content) > 5: reformulated_q = clean_content
+                    except: pass
+
+                    msg_text = f"Entendí: {reformulated_q}. ¿Es correcto?"
+                    
+                    yield json.dumps({
+                        "type": "final",
+                        "data": {
+                            "response": msg_text,
+                            "action": "RAG_CONFIRMATION", 
+                            "payload": {
+                                "reformulated_query": reformulated_q,
+                                "detected_process": detected_proc_for_frontend
+                            },
+                            "sources": [], "is_function": False, "offer_human_handoff": False
+                        }
+                    }) + "\n"
+                    return
+
+                # -------------------------------------------------------------
+                # EJECUCIÓN 2: RESPUESTA DIRECTA (SI NO HUBO REFORMULACIÓN)
+                # -------------------------------------------------------------
+                elif action == "FUNCTION": 
+                    if found_process_name == "HUMAN_HANDOFF":
+                         final_response_text = "Voy a derivar tu caso con mis compañeros humanos..."
+                         is_function = True
+                         payload_data = {"status": "success", "need_documentation": True, "upload_optional": True}
+                    else:
+                        res = get_process_response_from_db(found_process_name)
+                        final_response_text = res["text"]
+                        is_function = True
+                        payload_data = res
+                        if res.get("source_url"):
+                             # AQUI FALLABA ANTES: final_sources ahora ya existe como []
+                             final_sources.append({"title": f"{found_process_name}", "url": res.get("source_url")})
+
+                # RESPUESTA FINAL
+                yield json.dumps({
+                    "type": "final",
+                    "data": {
+                        "response": final_response_text,
+                        "sources": final_sources,
+                        "is_function": is_function,        
+                        "action": action,                  
+                        "payload": payload_data,            
+                        "offer_human_handoff": False
+                    }
+                }) + "\n"
 
             except Exception as e:
-                logger.error(f"Error streaming: {e}")
-                yield json.dumps({"type": "error", "text": "Error de comunicación con el servidor de IA."}) + "\n"
-    
-        return StreamingHttpResponse(event_stream(), content_type='application/x-ndjson')
+                logger.error(f"Error stream: {e}")
+                yield json.dumps({"type": "error", "text": "Error interno."}) + "\n"
 
+        return StreamingHttpResponse(event_stream(), content_type='application/x-ndjson')
 # ==============================================================================
 # 4. GESTIÓN DOCUMENTAL
 # ==============================================================================
 
 def document_manager(request):
-    # Consultamos directo a la BD (Mucho más rápido y permite paginación)
+    # 1. Documentos (Igual que antes)
     documents = RagDocument.objects.filter(status=True).order_by('-fecha_creacion')
+    
+    try:
+        r = requests.get(f"{settings.PRIVATE_GPT_API_URL}/v1/ingest/list", timeout=3)
+        if r.status_code == 200:
+            pgpt_data = r.json().get('data', [])
+            real_pgpt_ids = {item['doc_id'] for item in pgpt_data}
+            docs_changed = False
+            for doc in documents:
+                if doc.doc_id_pgpt:
+                    if doc.doc_id_pgpt not in real_pgpt_ids and doc.is_indexed:
+                        doc.is_indexed = False; doc.save(); docs_changed = True
+                    elif doc.doc_id_pgpt in real_pgpt_ids and not doc.is_indexed:
+                        doc.is_indexed = True; doc.save(); docs_changed = True
+            if docs_changed: documents = RagDocument.objects.filter(status=True).order_by('-fecha_creacion')
+    except: pass
 
-    role_choices = [
-        ("general", "General"), ("es_estudiante", "Estudiante"), ("es_profesor", "Profesor"),
-        ("es_administrativo", "Administrativo"), ("es_externo", "Externo"),
-        ("es_inscripcionaspirante", "Inscripción Aspirante"), ("es_inscripcionpostulante", "Inscripción Postulante"),
-        ("es_postulante", "Postulante"), ("es_postulanteempleo", "Postulante Empleo"),
-        ("es_inscripcionadmision", "Inscripción Admisión")
-    ]
-
-    # --- AGREGADO: Lógica de Procesos ---
+    # 2. CONSULTAS A BASE DE DATOS (LO NUEVO)
+    
+    # 1. Roles ya configurados (ej: "Estudiantes Derecho")
+    chatbot_roles = ChatbotRol.objects.filter(status=True).prefetch_related('carreras')    # 2. Tipos Base (ej: "Estudiante", "Profesor") -> ESTO VIENE DE BDD AHORA
+    tipos_catalogo = get_dynamic_sga_roles()
+    
+    # 3. Carreras (ej: "Ing. Software") -> ESTO VIENE DE BDD
+    carreras_reales = SgaCarrera.objects.all().values('id', 'nombre').order_by('nombre')
+    
+    # 3. Procesos
+    documents = RagDocument.objects.filter(status=True).order_by('-fecha_creacion')
     processes = BusinessProcess.objects.filter(status=True).order_by('-fecha_creacion')
 
     return render(request, 'chatbot/document_manager.html', {
-        'documents': documents, 
-        'role_choices': role_choices,
-        'processes': processes
+        'documents': documents,
+        'processes': processes,
+        'chatbot_roles': chatbot_roles,
+        'tipos_base': tipos_catalogo,  # <--- Pasamos la lista dinámica
+        'carreras_list': carreras_reales,
     })
 
 def upload_document(request):
@@ -530,7 +752,8 @@ def upload_document(request):
         files = request.FILES.getlist('file')
         
         # Recoger datos del formulario
-        roles = request.POST.getlist('roles') or ['general']
+        # AHORA 'roles' SERÁ UNA LISTA DE IDs (números), NO DE STRINGS
+        role_ids = request.POST.getlist('roles') 
         is_inf = request.POST.get('is_infinite') == 'on'
         v_from = request.POST.get('valid_from') or None
         v_to = request.POST.get('valid_to') or None
@@ -554,13 +777,17 @@ def upload_document(request):
                 doc_db = RagDocument(
                     archivo=f,
                     nombre=f.name,
-                    roles=roles,
+                    # roles=roles,  <--- ELIMINA ESTO DEL CONSTRUCTOR
                     is_infinite=is_inf,
                     valid_from=v_from,
                     valid_to=v_to,
                     is_indexed=False 
                 )
                 doc_db.save(request) # Pasamos request para que ModeloBase guarde el usuario_creacion
+                
+                # ASIGNAR LA RELACIÓN MANY-TO-MANY DESPUÉS DE GUARDAR
+                if role_ids:
+                    doc_db.roles_permitidos.set(role_ids) # Usamos .set() con los IDs
 
                 # 2. ENVIAR A PRIVATE-GPT (Sincronización)
                 try:
@@ -569,7 +796,7 @@ def upload_document(request):
                         r = requests.post(
                             ingest_url, 
                             files={'file': (doc_db.nombre, local_file, 'application/pdf')}, # Ajustar content-type si varía
-                            timeout=600
+                            timeout=None
                         )
                     
                     if r.status_code == 200:
@@ -583,7 +810,7 @@ def upload_document(request):
                             
                             # (Opcional) Subir metadata a PGPT también para que el RAG filtre bien
                             meta_payload = {
-                                "roles": roles, "is_infinite": is_inf, 
+                                "roles": role_ids, "is_infinite": is_inf, 
                                 "valid_from": v_from, "valid_to": v_to,
                                 "db_id": doc_db.id, # Útil para referencias cruzadas
                                 "access_url": doc_db.archivo.url
@@ -640,14 +867,17 @@ def update_document_role(request, doc_id):
     if request.method == 'POST':
         try:
             # 1. Obtener datos del form
-            roles = request.POST.getlist('roles') or ['general']
+            role_ids = request.POST.getlist('roles') # IDs de ChatbotRol
             is_inf = request.POST.get('is_infinite') == 'on'
             v_from = request.POST.get('valid_from') or None
             v_to = request.POST.get('valid_to') or None
 
             # 2. Actualizar BD Local
             doc = RagDocument.objects.get(id=doc_id)
-            doc.roles = roles
+            
+            # Actualizamos la relación M2M
+            doc.roles_permitidos.set(role_ids) 
+            
             doc.is_infinite = is_inf
             doc.valid_from = v_from
             doc.valid_to = v_to
@@ -656,7 +886,7 @@ def update_document_role(request, doc_id):
             # 3. Sincronizar con PrivateGPT
             if doc.doc_id_pgpt:
                 payload = {
-                    "roles": roles, 
+                    "roles": role_ids, 
                     "is_infinite": is_inf, 
                     "valid_from": v_from, 
                     "valid_to": v_to,
@@ -688,45 +918,63 @@ def process_manager(request):
 @require_http_methods(["POST"])
 def create_process(request):
     try:
-        name = request.POST.get('name')
+        # 1. Recuperar variables del formulario
+        name_input = request.POST.get('name')
         process_type = request.POST.get('process_type', 'informativo')
-        source_url = request.POST.get('source_url') or None
+        source_url = request.POST.get('source_url')
+        business_context = request.POST.get('business_context')
+        active_msg = request.POST.get('active_message')
         
+        # Checkboxes
+        # En HTML los checkbox envían 'on' si están marcados, o nada si no.
         is_infinite = request.POST.get('is_infinite') == 'on'
         
-        need_documentation = request.POST.get('need_documentation') == 'on'
-        if process_type == "informativo":
-            need_documentation = False
-            
-        start_date = request.POST.get('start_date')
-        end_date = request.POST.get('end_date')
-        active_msg = request.POST.get('active_message')
-        business_context = request.POST.get('business_context') 
+        # Documentación solo si es operativo
+        need_documentation = False
+        if process_type == 'operativo':
+            need_documentation = request.POST.get('need_documentation') == 'on'
+
+        # Fechas
+        start_date = request.POST.get('start_date') or None
+        end_date = request.POST.get('end_date') or None
         
-        roles = request.POST.getlist('roles')
-        if not roles: roles = ['general']
-
+        # Si es infinito, ponemos fecha de hoy por defecto para que no falle la BD (aunque no se usen)
         if is_infinite:
-            start_date = datetime.now().date()
-            end_date = datetime.now().date()
+            now = datetime.now().date()
+            start_date = now
+            end_date = now
+            
+        # Mensaje de cerrado
+        has_closed = request.POST.get('has_closed_message') == 'on'
+        closed_msg = request.POST.get('closed_message') if has_closed else None
+        
+        # Roles
+        role_ids = request.POST.getlist('roles')
 
-        BusinessProcess.objects.create(
-            name=name,
+        # 2. Crear el objeto
+        proc = BusinessProcess.objects.create(
+            nombre=name_input,
             process_type=process_type,
             source_url=source_url,
             is_infinite=is_infinite,
             business_context=business_context,
+            closed_message=closed_msg,
             need_documentation=need_documentation, 
             start_date=start_date,
             end_date=end_date,
             active_message=active_msg,
-            roles=roles,
             status=True
         )
+        
+        # 3. Asignar relación ManyToMany
+        if role_ids:
+            proc.roles_permitidos.set(role_ids)
+            
         messages.success(request, "Proceso creado correctamente.")
         
     except Exception as e:
         messages.error(request, f"Error al crear: {e}")
+        logger.error(f"Error create_process: {e}")
         
     return redirect('chatbot:process_manager')
 
@@ -749,19 +997,25 @@ def edit_process(request, process_id):
     try:
         proc = BusinessProcess.objects.get(id=process_id)
         
-        proc.name = request.POST.get('name')
+        # CORRECCIÓN: Usar .nombre
+        proc.nombre = request.POST.get('name') 
+        
         proc.business_context = request.POST.get('business_context')
         proc.process_type = request.POST.get('process_type', proc.process_type)
         proc.source_url = request.POST.get('source_url') or None
         
-        proc.is_infinite = request.POST.get('is_infinite') == 'on'
+        # Checkbox: Is Infinite
+        raw_infinite = request.POST.get('is_infinite')
+        proc.is_infinite = raw_infinite in ['on', 'true', '1', 'True']
         
-        # --- NUEVO: Requiere Documentación ---
+        # Checkbox: Need Documentation
         if proc.process_type == "operativo":
-            proc.need_documentation = request.POST.get('need_documentation') == 'on'
+            raw_docs = request.POST.get('need_documentation')
+            proc.need_documentation = raw_docs in ['on', 'true', '1', 'True']
         else:
             proc.need_documentation = False
         
+        # Fechas
         start_date = request.POST.get('start_date')
         end_date = request.POST.get('end_date')
         
@@ -773,11 +1027,19 @@ def edit_process(request, process_id):
             if end_date: proc.end_date = end_date
             
         proc.active_message = request.POST.get('active_message')
-        # proc.closed_message eliminado
         
-        roles = request.POST.getlist('roles')
-        if not roles: roles = ['general']
-        proc.roles = roles
+        # --- LÓGICA DE MENSAJE CERRADO ---
+        has_closed_msg = request.POST.get('has_closed_message') == 'on'
+        if has_closed_msg:
+            # Guardamos lo que venga en el textarea
+            proc.closed_message = request.POST.get('closed_message')
+        else:
+            # Si desmarcó el checkbox, borramos el mensaje anterior
+            proc.closed_message = None
+        # ---------------------------------
+        
+        role_ids = request.POST.getlist('roles')
+        proc.roles_permitidos.set(role_ids)
         
         proc.save()
         messages.success(request, "Proceso actualizado correctamente.")
@@ -793,8 +1055,6 @@ def edit_process(request, process_id):
 # 6. SUBIDA DE DOCUMENTACIÓN (CHATBOT MODAL)
 # ==============================================================================
 
-from django.views.decorators.csrf import csrf_exempt
-from django.core.files.storage import FileSystemStorage
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -815,15 +1075,24 @@ def upload_documentation(request):
         filename = fs.save(uploaded_file.name, uploaded_file)
         file_url = fs.url(filename)
         
-        # Aquí podrías guardar un registro en BD si fuera necesario
-        # Por ejemplo: DocumentoEntregado.objects.create(...)
-        
         logger.info(f"Archivo subido desde chatbot: {filename} | Detalles: {extra_details}")
-        
+
+        # --- SIMULACIÓN DE PROCESAMIENTO ---
+        time.sleep(2) # Simula un pequeño retraso de procesamiento
+
+        # Definimos el mensaje que el Chatbot mostrará al usuario
+        mensaje_para_usuario = (
+            "Perfecto, he recibido tu documento correctamente. "
+            "He derivado tu solicitud a mis compañeros humanos, por favor "
+            "esté atento a su correo institucional para futuras notificaciones. "
+            "¿Hay algo mas en que te pueda ayudar?"
+        )
+
         return JsonResponse({
             'status': 'success', 
             'message': 'Archivo recibido correctamente.',
-            'file_url': file_url
+            'file_url': file_url,
+            'ai_response': mensaje_para_usuario # <--- Enviamos el texto desde aquí
         })
         
     except Exception as e:

@@ -1,59 +1,48 @@
 {% extends 'chatbot/base.html' %}
 
-{% block title %}Gestión de Conocimiento{% endblock %}
-
 {% block content %}
-<div class="max-w-6xl mx-auto">
 
-    <div class="mb-8 flex justify-between items-end">
-        <div>
-            <h1 class="text-3xl font-bold text-slate-900">Base de Conocimiento</h1>
-            <p class="mt-2 text-slate-600">Gestiona los documentos y procesos que alimentan al Asistente Virtual.</p>
-        </div>
-        <div class="text-sm text-slate-500 text-right">
-            <div>Documentos: <span class="font-semibold text-slate-900">{{ documents|length }}</span></div>
-            <div>Procesos: <span class="font-semibold text-slate-900">{{ processes|length }}</span></div>
-        </div>
-    </div>
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Centro de Conocimiento RAG</h1>
+    
+    <div class="flex gap-2">
+        <button onclick="openRoleModal()" class="flex items-center px-4 py-2 bg-purple-600 text-white rounded shadow hover:bg-purple-700 transition">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            Gestionar Roles
+        </button>
 
-    <!-- TABS -->
-    <div class="mb-6 border-b border-slate-200">
-        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-            <button onclick="switchTab('docs')" id="tab-docs"
-                class="border-orange-500 text-orange-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 011.414.586l4 4a1 1 0 01.586 1.414V19a2 2 0 01-2 2z">
-                    </path>
-                </svg>
-                Documentos
-            </button>
-            <button onclick="switchTab('procs')" id="tab-procs"
-                class="border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
-                    </path>
-                </svg>
-                Procesos Académicos
-            </button>
-        </nav>
-    </div>
-
-    <!-- TAB DOCUMENTOS -->
-    <div id="content-docs" class="block">
-        {% include 'chatbot/document_manager/_document_table.html' %}
-    </div>
-
-    <!-- TAB PROCESOS -->
-    <div id="content-procs" class="hidden">
-        {% include 'chatbot/document_manager/_process_table.html' %}
+        <button onclick="openUploadModal()" class="flex items-center px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            Subir Documento
+        </button>
     </div>
 </div>
 
-{# Modales separados por responsabilidad #}
+<div class="bg-white rounded-lg shadow mb-8">
+    <div class="p-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-700">Documentos Normativos (RAG)</h2>
+        <p class="text-xs text-gray-500 mt-1">Archivos PDF que el chatbot usa para responder preguntas.</p>
+    </div>
+    {% include 'chatbot/document_manager/_document_table.html' %}
+</div>
+
+<div class="bg-white rounded-lg shadow">
+    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+        <div>
+            <h2 class="text-lg font-semibold text-gray-700">Procesos de Negocio</h2>
+            <p class="text-xs text-gray-500 mt-1">Acciones directas (trámites, enlaces, fechas) que el chatbot puede ejecutar.</p>
+        </div>
+        <button onclick="openCreateProcessModal()" class="text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 px-3 py-1 rounded hover:bg-blue-50 transition">
+            + Nuevo Proceso
+        </button>
+    </div>
+    {% include 'chatbot/document_manager/_process_table.html' %}
+</div>
+
 {% include 'chatbot/document_manager/_modals_documents.html' %}
 {% include 'chatbot/document_manager/_modals_processes.html' %}
+
+{% include 'chatbot/document_manager/_modals_roles.html' %}
 
 {% endblock %}
 
@@ -271,6 +260,32 @@
         setupInfiniteToggle(docCheckbox, docDateFields);
     }
 
+    // ========= LOGICA MENSAJE CERRADO (NUEVO) =========
+
+    function toggleClosedMsg(prefix) {
+        const checkbox = document.getElementById(prefix + '_has_closed');
+        const container = document.getElementById(prefix + '_closed_container');
+        const input = document.getElementById(prefix + '_closed_msg');
+
+        if (!checkbox || !container) return;
+
+        if (checkbox.checked) {
+            container.classList.remove('hidden');
+            if (input) input.required = true;
+        } else {
+            container.classList.add('hidden');
+            if (input) input.required = false;
+        }
+    }
+
+    function updateClosedPreview(prefix) {
+        const input = document.getElementById(prefix + '_closed_msg');
+        const preview = document.getElementById(prefix + '_closed_preview');
+        if (input && preview) {
+            preview.innerText = input.value || '(Escribe el mensaje...)';
+        }
+    }
+
     // ========= LOGICA NUEVO PROCESO =========
 
     const procModal = document.getElementById('createProcessModal');
@@ -281,6 +296,10 @@
         if (!procModal) return;
         const form = document.getElementById('createProcessForm');
         if (form) form.reset();
+
+        // INICIALIZAR ESTADO VISUAL
+        toggleDocRequirement('cp');
+
         updateCreatePreview();
         showModal('createProcessModal');
     }
@@ -301,7 +320,7 @@
     const epDateFields = document.getElementById('ep_dateFields');
     const epDocs = document.getElementById('ep_docs');
 
-    function openEditProcessModal(id, name, business_context, process_type, source_url, isInfiniteStr, needDocStr, start, end, activeMsg, rolesList) {
+    function openEditProcessModal(id, name, business_context, process_type, source_url, isInfiniteStr, needDocStr, start, end, activeMsg, rolesList, closedMsg) {
         if (!epForm || !epModal) return;
 
         epForm.action = `/api/chatbot/procesos/editar/${id}/`;
@@ -312,18 +331,16 @@
         document.getElementById('ep_source').value = source_url || '';
         document.getElementById('ep_active_msg').value = activeMsg || '';
 
-        const isInfinite = (isInfiniteStr === 'true');
+        const isInfinite = (String(isInfiniteStr).trim() === 'true');
         if (epInfinite) epInfinite.checked = isInfinite;
 
-        const needDoc = (needDocStr === 'true');
+        const needDoc = (String(needDocStr).trim() === 'true');
         if (epDocs) epDocs.checked = needDoc;
 
         if (epDateFields) {
             if (isInfinite) {
                 epDateFields.style.opacity = '0.5';
                 epDateFields.style.pointerEvents = 'none';
-                document.getElementById('ep_start_date').value = '';
-                document.getElementById('ep_end_date').value = '';
             } else {
                 epDateFields.style.opacity = '1';
                 epDateFields.style.pointerEvents = 'auto';
@@ -331,6 +348,25 @@
                 document.getElementById('ep_end_date').value = end || '';
             }
         }
+
+        // =========================================================
+        // 🔴 2. LÓGICA FALTANTE: GESTIONAR EL MENSAJE CERRADO
+        // =========================================================
+        const epHasClosed = document.getElementById('ep_has_closed');
+        const epClosedMsg = document.getElementById('ep_closed_msg');
+
+        // Verificamos si viene un mensaje válido (diferente de 'None' o vacío)
+        if (closedMsg && closedMsg !== 'None' && closedMsg.trim() !== '') {
+            epHasClosed.checked = true;
+            epClosedMsg.value = closedMsg;
+            toggleClosedMsg('ep'); // Muestra el contenedor
+            updateClosedPreview('ep'); // Actualiza la vista previa
+        } else {
+            epHasClosed.checked = false;
+            epClosedMsg.value = '';
+            toggleClosedMsg('ep'); // Oculta el contenedor
+        }
+        // =========================================================
 
         document.querySelectorAll('.ep-role-checkbox').forEach(cb => cb.checked = false);
         if (rolesList && Array.isArray(rolesList)) {
@@ -340,6 +376,7 @@
             });
         }
 
+        toggleDocRequirement('ep');
         updateEditPreview();
         showModal('editProcessModal');
     }
@@ -396,5 +433,57 @@
         if (event.target === createProcModal) closeCreateProcessModal();
         if (event.target === editProcModal) closeEditProcessModal();
     };
+
+    function toggleDocRequirement(prefix) {
+        const typeSelectId = prefix + '_type';
+        const containerId = prefix + '_docs_container';
+        // IDs de checkboxes son distintos en create/edit
+        const checkboxId = (prefix === 'cp') ? 'proc_docs' : 'ep_docs';
+
+        const typeSelect = document.getElementById(typeSelectId);
+        const container = document.getElementById(containerId);
+        const checkbox = document.getElementById(checkboxId);
+
+        if (!typeSelect || !container || !checkbox) return;
+
+        if (typeSelect.value === 'informativo') {
+            // Si es informativo: OCULTAR y DESMARCAR
+            container.classList.add('hidden');
+            checkbox.checked = false;
+        } else {
+            // Si es operativo: MOSTRAR
+            container.classList.remove('hidden');
+        }
+
+        // Actualizar la vista previa del mensaje
+        if (prefix === 'cp') updateCreatePreview();
+        else updateEditPreview();
+    }
+
+    function toggleDates(idSuffix) {
+        const checkbox = document.getElementById('inf_' + idSuffix);
+        const dateFrom = document.getElementById('from_' + idSuffix);
+        const dateTo = document.getElementById('to_' + idSuffix);
+
+        if (checkbox && checkbox.checked) {
+            if (dateFrom) {
+                dateFrom.disabled = true;
+                dateFrom.classList.add('bg-gray-100');
+            }
+            if (dateTo) {
+                dateTo.disabled = true;
+                dateTo.classList.add('bg-gray-100');
+            }
+        } else {
+            if (dateFrom) {
+                dateFrom.disabled = false;
+                dateFrom.classList.remove('bg-gray-100');
+            }
+            if (dateTo) {
+                dateTo.disabled = false;
+                dateTo.classList.remove('bg-gray-100');
+            }
+        }
+    }
 </script>
 {% endblock %}

@@ -3,7 +3,8 @@ from .views import (
     ChatView, health, get_users_list, 
     document_manager, upload_document, delete_document, update_document_role,
     process_manager, create_process, delete_process, edit_process,
-    upload_documentation
+    upload_documentation, create_chatbot_role, delete_chatbot_role, edit_chatbot_role,
+    get_users_list
 )
 
 app_name = 'chatbot'
@@ -27,6 +28,10 @@ urlpatterns = [
     
     # --- NUEVA RUTA: SUBIDA DE DOCUMENTACIÓN DESDE EL CHAT ---
     path('documentacion/subir/', upload_documentation, name='upload_documentation'),
+    path('gestion/roles/create/', create_chatbot_role, name='create_chatbot_role'),
+    path('gestion/roles/edit/<int:role_id>/', edit_chatbot_role, name='edit_chatbot_role'),
+    path('gestion/roles/delete/<int:role_id>/', delete_chatbot_role, name='delete_chatbot_role'),
+    path('api/mi-status/', get_users_list, name='ver_mi_status'),
 ]
 
 

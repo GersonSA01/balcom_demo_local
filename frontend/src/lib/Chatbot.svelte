@@ -1,7 +1,8 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import UserSelector from "./UserSelector.svelte";
 
+  let chatContainer; // Referencia al div de mensajes
   let messages = [];
   let inputMessage = "";
   let isLoading = false;
@@ -12,13 +13,14 @@
 
   // --- NUEVO: Estado para mostrar el botón de subida ---
   let showUploadAction = false;
+  let isUploadOptional = false;
 
   // --- NUEVO: Estado para Subida Directa ---
   let fileInput; // Referencia al input file oculto
   let uploadedFile = null;
   let isUploading = false;
 
-  const API_BASE_URL = "http://localhost:8000/api/chatbot";
+  const API_BASE_URL = "http://localhost:9090/api/chatbot";
 
   async function loadDataUnemi() {
     try {
@@ -63,49 +65,59 @@
 
       isConnected = data.private_gpt_connected || false;
       if (!isConnected) {
-        error = data.error || "Private-GPT no está disponible.";
+        error =
+          data.error ||
+          "El asistente no pudo conectarse al servidor en este momento. Por favor intenta nuevamente.";
       }
     } catch (err) {
       isConnected = false;
-      error = "No se pudo conectar con el servidor Django.";
+      error =
+        "No logré comunicarme con el servidor. Intenta otra vez en unos momentos.";
     }
   }
 
   let loadingText = "";
-  async function sendMessage() {
-    if (isLoading) return;
+  async function sendMessage(isHidden = false) {
+    if (isLoading || (!inputMessage.trim() && !isHidden)) return;
 
-    // CASO 1: HAY ARCHIVO SELECCIONADO -> SUBIR
     if (uploadedFile) {
       await uploadAndSend();
       return;
     }
 
-    // CASO 2: FLUJO NORMAL DE CHAT
-    if (!inputMessage.trim()) return;
-
     const userMessage = inputMessage.trim();
     inputMessage = "";
     error = null;
 
-    // Si se requería subida y el usuario manda mensaje sin archivo,
-    // asumimos que está preguntando algo más, NO ocultamos el botón de subida todavía
-    // showUploadAction = false; // <-- COMENTADO: Mantenemos el botón si no ha subido nada
+    if (!isHidden) {
+      messages = [...messages, { role: "user", content: userMessage }];
+    } else {
+      // === NUEVO: MANEJO DE MENSAJES OCULTOS PARA RAG ===
+      if (userMessage.startsWith("RAG_CONFIRMED||")) {
+        // El usuario dijo SI, mostramos "Sí" visualmente, pero enviamos la query optimizada
+        messages = [...messages, { role: "user", content: "Sí, es correcto." }];
+      } else if (userMessage === "RAG_REJECTED") {
+        messages = [...messages, { role: "user", content: "No, no es eso." }];
+      } else if (userMessage === "HUMAN_HANDOFF") {
+        messages = [
+          ...messages,
+          { role: "user", content: "Sí, por favor conéctame con un humano." },
+        ];
+      } else {
+        messages = [...messages, { role: "user", content: userMessage }];
+      }
+    }
 
-    messages = [...messages, { role: "user", content: userMessage }];
     isLoading = true;
-    loadingText = "Iniciando...";
+    loadingText = "Pensando...";
 
     try {
       let sessionDataToSend = {};
       const storedData = localStorage.getItem("user_session_data");
-
       if (storedData) {
         try {
           sessionDataToSend = JSON.parse(storedData);
-        } catch (e) {
-          console.error("❌ Error parseando datos de sesión:", e);
-        }
+        } catch (e) {}
       }
 
       const history = messages.slice(0, -1).map((msg) => ({
@@ -124,6 +136,8 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
+
+      if (!response.ok) throw new Error("Error en el servidor");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -146,77 +160,51 @@
               loadingText = update.text;
             } else if (update.type === "final") {
               const data = update.data;
-              let responseText = "";
-              let sources = [];
-              let isFunction = false;
 
-              if (data.type === "rag_response") {
-                try {
-                  const parsedInner = JSON.parse(data.text);
-                  if (typeof parsedInner.response === "string") {
-                    responseText = parsedInner.response;
-                  } else {
-                    responseText = data.text;
-                  }
-
-                  if (
-                    parsedInner.sources &&
-                    Array.isArray(parsedInner.sources)
-                  ) {
-                    sources = parsedInner.sources;
-                  }
-                } catch (e) {
-                  responseText = data.text || "No pude generar una respuesta.";
-                }
-
-                if (data.sources && data.sources.length > 0) {
-                  sources = data.sources;
-                }
-              } else if (data.type === "function_call") {
-                isFunction = true;
-                const funcion = data.function;
-                const payload = data.payload || {};
-
-                // --- LÓGICA DEL BOTÓN DE SUBIDA ---
-                if (payload.need_documentation === true) {
-                  showUploadAction = true; // Activamos el botón global
-                }
-                // ---------------------------------
-
-                if (data.text) {
-                  responseText = data.text;
-                } else {
-                  if (funcion === "search_data") {
-                    responseText = "🔍 Consultando tus datos...";
-                  } else {
-                    responseText = "Ejecutando acción...";
-                  }
-                }
+              // LOGICA DE UPLOAD (Existente)
+              if (data.payload && data.payload.need_documentation) {
+                showUploadAction = true;
+                isUploadOptional = data.payload.upload_optional || false;
               } else {
-                responseText = data.text || JSON.stringify(data, null, 2);
+                showUploadAction = false;
+                isUploadOptional = false;
               }
 
+              const isRagConfirm = data.action === "RAG_CONFIRMATION";
+
+              // AQUÍ GUARDAMOS LA BANDERA offerHandoff
               messages = [
                 ...messages,
                 {
                   role: "assistant",
-                  content: responseText,
-                  sources: sources,
-                  isFunction: isFunction,
+                  content: data.response,
+                  sources: data.sources,
+                  isFunction: data.is_function,
+                  offerHandoff: data.offer_human_handoff,
+                  isRagConfirmation: isRagConfirm,
+                  reformulatedQuery: data.payload
+                    ? data.payload.reformulated_query
+                    : null,
+                  confirmationResolved: false,
                 },
               ];
             } else if (update.type === "error") {
-              console.error("Backend error:", update.text);
-              error = "Error del servidor: " + update.text;
+              messages = [
+                ...messages,
+                { role: "assistant", content: update.text },
+              ];
             }
           } catch (e) {
-            console.error("Error parseando JSON del stream:", e);
+            console.error("Error leyendo línea:", line);
           }
         }
       }
     } catch (err) {
-      error = "Error de conexión: " + err.message;
-      messages = messages.slice(0, -1);
+      console.error(err);
+      messages = [
+        ...messages,
+        { role: "assistant", content: "Error de conexión." },
+      ];
     } finally {
       isLoading = false;
       loadingText = "";
@@ -228,6 +216,25 @@
       event.preventDefault();
       sendMessage();
     }
+  }
+
+  function confirmRag(index, reformulatedQuery) {
+    messages[index].confirmationResolved = true;
+    messages[index].selectedOption = "yes";
+    messages = [...messages]; // Forzar reactividad
+
+    // Enviamos el comando especial con la query optimizada
+    inputMessage = "RAG_CONFIRMED||" + reformulatedQuery;
+    sendMessage(true);
+  }
+
+  function rejectRag(index) {
+    messages[index].confirmationResolved = true;
+    messages[index].selectedOption = "no";
+    messages = [...messages];
+
+    inputMessage = "RAG_REJECTED";
+    sendMessage(true);
   }
 
   function clearChat() {
@@ -253,27 +260,56 @@
     if (fileInput) fileInput.value = "";
   }
 
+  // Función centralizada y mejorada
+  async function scrollToBottom() {
+    await tick(); // Espera a que el DOM se actualice con el nuevo mensaje
+    if (chatContainer) {
+      chatContainer.scrollTo({
+        top: chatContainer.scrollHeight,
+        behavior: "smooth", // Scroll suave
+      });
+    }
+  }
+
+  // ESTA ES LA CLAVE: Reactividad automática
+  // Cada vez que 'messages' cambie (longitud o contenido), se ejecuta el scroll.
+  $: if (messages) {
+    scrollToBottom();
+  }
+
   async function uploadAndSend() {
+    if (!uploadedFile) return; // Validación extra
+
     isUploading = true;
-    const details = inputMessage.trim(); // Usamos el mensaje del chat como detalles
+    const details = inputMessage.trim();
 
-    // Limpiamos input inmediatamente para UX
+    // 1. Guardamos referencia local del archivo para enviarlo
+    const fileToSend = uploadedFile;
+    const detailsToSend = details;
+
+    // 2. LIMPIEZA INMEDIATA (Optimistic UI)
+    // Quitamos el archivo y texto de la vista del usuario AHORA MISMO
+    uploadedFile = null;
     inputMessage = "";
+    if (fileInput) fileInput.value = "";
+    showUploadAction = false;
 
-    // Agregamos mensaje del usuario al chat con indicador de archivo
+    // 3. Agregamos el mensaje del usuario al chat visualmente
     messages = [
       ...messages,
       {
         role: "user",
-        content: `Archivo: ${uploadedFile.name}\n${details ? `Detalles: ${details}` : ""}`,
+        content: `He cargado tu archivo: ${fileToSend.name}${detailsToSend ? `\nDetalles: ${detailsToSend}` : ""}`,
       },
     ];
+    // scrollToBottom(); // Eliminado por reactividad
 
     try {
       const formData = new FormData();
-      formData.append("file", uploadedFile);
-      formData.append("details", details);
+      formData.append("file", fileToSend); // Usamos la referencia guardada
+      formData.append("details", detailsToSend);
 
+      // 4. Hacemos la petición (el usuario ya ve el chat limpio)
       const response = await fetch(`${API_BASE_URL}/documentacion/subir/`, {
         method: "POST",
         body: formData,
@@ -282,21 +318,19 @@
       const result = await response.json();
 
       if (result.status === "success") {
-        // Limpiar estado de subida
-        uploadedFile = null;
-        if (fileInput) fileInput.value = "";
-        showUploadAction = false; // Ya cumplió
-
-        // Respuesta del asistente
+        // Respuesta del Bot
         messages = [
           ...messages,
           {
             role: "assistant",
             content:
-              "He recibido tu documentación correctamente. Procederé a revisarla.",
+              result.ai_response ||
+              "¡Perfecto! Tu documento fue recibido sin problemas.",
           },
         ];
+        // scrollToBottom(); // Eliminado por reactividad
       } else {
+        // Si falla, mostramos error
         messages = [
           ...messages,
           {
@@ -304,6 +338,7 @@
             content: `Error al subir archivo: ${result.message || "Intenta de nuevo."}`,
           },
         ];
+        // scrollToBottom();
       }
     } catch (e) {
       console.error("Error subiendo:", e);
@@ -311,12 +346,50 @@
         ...messages,
         {
           role: "assistant",
-          content: "❌ Error de conexión al subir el archivo.",
+          content:
+            "No pude subir tu documento por un problema de conexión. Por favor intenta nuevamente.",
         },
       ];
+      // scrollToBottom();
     } finally {
       isUploading = false;
     }
+  }
+
+  $: lastMessage = messages[messages.length - 1];
+  $: isHandoffPending =
+    lastMessage && lastMessage.offerHandoff && !lastMessage.handoffResolved;
+
+  // --- NUEVA FUNCIÓN: Manejar clic en "Sí, contactar humano" ---
+  function confirmHandoff(index) {
+    // Bloqueamos los botones visualmente inmediatamente
+    messages[index].handoffResolved = true;
+    messages[index].selectedOption = "yes"; // Opcional: para estilos específicos
+
+    // Forzamos actualización de Svelte
+    messages = [...messages];
+
+    // Procedemos con la lógica de envío
+    inputMessage = "HUMAN_HANDOFF";
+    sendMessage(true);
+  }
+
+  function cancelHandoff(index) {
+    // Bloqueamos los botones visualmente
+    messages[index].handoffResolved = true;
+    messages[index].selectedOption = "no";
+
+    // Forzamos actualización
+    messages = [...messages];
+
+    // Agregamos mensaje de usuario manualmente
+    messages = [
+      ...messages,
+      {
+        role: "user",
+        content: "No, gracias. Seguiré conversando.",
+      },
+    ];
   }
 </script>
 
@@ -366,18 +439,29 @@
     </div>
   {/if}
 
-  <div class="messages-container">
+  <div class="messages-container" bind:this={chatContainer}>
     {#if messages.length === 0}
       <div class="empty-state">
-        <div class="empty-icon">💬</div>
-        <h4>¡Hola! Soy tu asistente virtual</h4>
+        <div class="empty-icon">
+          <svg
+            width="64"
+            height="64"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#cbd5e1"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+            ></path>
+          </svg>
+        </div>
+        <h4>¡Hola! 👋 Soy tu asistente virtual UNEMI</h4>
         <p>
-          Puedo ayudarte con información sobre reglamentos, trámites y servicios
-          de la UNEMI.
-        </p>
-        <p class="hint">
-          Asegúrate de seleccionar tu perfil arriba para recibir respuestas
-          personalizadas.
+          Estoy aquí para ayudarte con información sobre trámites, servicios,
+          reglamentos y más. Escríbeme tu consulta cuando quieras.
         </p>
       </div>
     {:else}
@@ -386,19 +470,94 @@
           class="message"
           class:user={message.role === "user"}
           class:assistant={message.role === "assistant"}
-          class:function-message={message.isFunction}
         >
           <div class="message-avatar">
             {#if message.role === "user"}
-              👤
-            {:else if message.isFunction}
-              ⚙️
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
             {:else}
-              🤖
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 8V4H8"></path>
+                <rect x="4" y="8" width="16" height="12" rx="2"></rect>
+                <path d="M2 14h2"></path>
+                <path d="M20 14h2"></path>
+                <path d="M15 13v2"></path>
+                <path d="M9 13v2"></path>
+              </svg>
             {/if}
           </div>
+
           <div class="message-content">
             {@html message.content.replace(/\n/g, "<br>")}
+
+            {#if message.offerHandoff}
+              <div class="handoff-buttons">
+                <button
+                  class="btn-yes"
+                  class:selected={message.selectedOption === "yes"}
+                  on:click={() => confirmHandoff(idx)}
+                  disabled={message.handoffResolved}
+                >
+                  🧑‍💻 Sí, contactar a un humano
+                </button>
+
+                <button
+                  class="btn-no"
+                  class:selected={message.selectedOption === "no"}
+                  on:click={() => cancelHandoff(idx)}
+                  disabled={message.handoffResolved}
+                >
+                  Continuar conversando
+                </button>
+              </div>
+            {/if}
+
+            {#if message.isRagConfirmation}
+              <div class="handoff-buttons">
+                <button
+                  class="btn-yes"
+                  class:selected={message.selectedOption === "yes"}
+                  on:click={() =>
+                    confirmRag(
+                      idx,
+                      message.reformulatedQuery,
+                      message.detectedProcess,
+                    )}
+                  disabled={message.confirmationResolved}
+                >
+                  Sí, buscar
+                </button>
+
+                <button
+                  class="btn-no"
+                  class:selected={message.selectedOption === "no"}
+                  on:click={() => rejectRag(idx)}
+                  disabled={message.confirmationResolved}
+                >
+                  No
+                </button>
+              </div>
+            {/if}
 
             {#if message.sources && message.sources.length > 0}
               <div class="sources-container">
@@ -413,7 +572,7 @@
                         class="badge clickable"
                         title="Clic para ver documento original"
                       >
-                        📄 {source.title || "Documento"}
+                        {source.title || "Documento"}
                         <svg
                           width="10"
                           height="10"
@@ -445,9 +604,28 @@
         </div>
       {/each}
     {/if}
+
     {#if isLoading}
       <div class="message assistant">
-        <div class="message-avatar">🤖</div>
+        <div class="message-avatar">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 8V4H8"></path>
+            <rect x="4" y="8" width="16" height="12" rx="2"></rect>
+            <path d="M2 14h2"></path>
+            <path d="M20 14h2"></path>
+            <path d="M15 13v2"></path>
+            <path d="M9 13v2"></path>
+          </svg>
+        </div>
         <div class="message-content loading">
           {#if loadingText}
             <span class="loading-text">{loadingText}</span>
@@ -461,7 +639,6 @@
   </div>
 
   <div class="input-container">
-    <!-- Input oculto para subida de archivos -->
     <input
       type="file"
       style="display: none;"
@@ -478,8 +655,8 @@
         disabled={isLoading || !isConnected}
       >
         <svg
-          width="24"
-          height="24"
+          width="20"
+          height="20"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -498,7 +675,22 @@
     <div style="flex: 1; display: flex; flex-direction: column;">
       {#if uploadedFile}
         <div class="file-preview">
-          <span>📄 {uploadedFile.name}</span>
+          <span style="display:flex; align-items:center; gap:5px;">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><path
+                d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+              ></path><polyline points="13 2 13 9 20 9"></polyline></svg
+            >
+            {uploadedFile.name}
+          </span>
           <button
             class="remove-file-btn"
             on:click={removeFile}
@@ -510,23 +702,46 @@
       <textarea
         bind:value={inputMessage}
         on:keypress={handleKeyPress}
-        placeholder={showUploadAction && !uploadedFile
-          ? "⚠️ Sube el documento requerido para continuar..."
-          : "Escribe tu pregunta o detalles del documento..."}
+        placeholder={showUploadAction && !uploadedFile && !isUploadOptional
+          ? "Por favor sube el documento obligatoriamente..."
+          : showUploadAction && isUploadOptional && !uploadedFile
+            ? "Describe tu caso o sube una evidencia (opcional)..."
+            : isHandoffPending
+              ? "Por favor selecciona una opción arriba 👆"
+              : "Escribe aquí tu consulta… estoy listo para ayudarte 😊"}
         disabled={isLoading ||
           !isConnected ||
-          (showUploadAction && !uploadedFile)}
-        rows="2"
+          (showUploadAction && !uploadedFile && !isUploadOptional) ||
+          isHandoffPending}
+        rows="1"
+        style="min-height: 44px;"
       ></textarea>
     </div>
 
     <button
-      on:click={sendMessage}
+      on:click={() => sendMessage(false)}
       class="send-btn"
       disabled={isLoading ||
         !isConnected ||
-        (!inputMessage.trim() && !uploadedFile)}
+        (!inputMessage.trim() && !uploadedFile) ||
+        (showUploadAction && !uploadedFile && !isUploadOptional) ||
+        isHandoffPending}
+      title="Enviar mensaje"
     >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        style="transform: translateX(-1px) translateY(1px);"
+      >
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
     </button>
   </div>
 </div>
@@ -547,12 +762,17 @@
     transition: all 0.2s ease;
     flex-shrink: 0;
   }
+  .upload-icon-btn svg {
+    width: 20px; /* Forzamos el ancho */
+    height: 20px; /* Forzamos el alto */
+    stroke: #64748b; /* Aseguramos el color base */
+    flex-shrink: 0; /* Evita que el flexbox lo aplaste */
+  }
 
-  .upload-icon-btn:hover {
-    background: #e0f2fe;
-    color: #0284c7;
-    border-color: #7dd3fc;
-    transform: translateY(-1px);
+  .upload-icon-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f1f5f9;
   }
 
   .notification-dot {
@@ -740,11 +960,6 @@
     line-height: 1.6;
     max-width: 400px;
   }
-  .hint {
-    font-size: 12px;
-    color: #94a3b8;
-    font-style: italic;
-  }
 
   .message {
     display: flex;
@@ -773,14 +988,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
     flex-shrink: 0;
-    background: #ffffff;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    color: #ffffff;
   }
+
   .message.user .message-avatar {
     background: linear-gradient(135deg, #1e3a5f 0%, #2c4a6b 100%);
   }
+
   .message.assistant .message-avatar {
     background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
   }
@@ -1018,13 +1234,6 @@
     border-color: #ff6b35;
   }
 
-  .message.function-message .message-content {
-    background: #e0f2fe;
-    border: 1px solid #0ea5e9;
-    color: #0284c7;
-    font-weight: 600;
-  }
-
   /* Estilos para el indicador de archivo seleccionado */
   .file-preview {
     display: flex;
@@ -1061,5 +1270,55 @@
   }
   .remove-file-btn:hover {
     color: #0c4a6e;
+  }
+  /* ESTILOS NUEVOS PARA LOS BOTONES DE DECISIÓN */
+  .handoff-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+  }
+  .btn-yes {
+    background-color: #1e3a5f;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+  .btn-yes:hover {
+    background-color: #ff6b35;
+  }
+  .btn-no {
+    background-color: transparent;
+    color: #ffffff;
+    border: 1px solid #cbd5e1;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .btn-no:hover {
+    background-color: #f1f5f9;
+    color: #1e293b;
+  }
+
+  .handoff-buttons button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none; /* Evita clics extra */
+  }
+  .btn-yes.selected {
+    background-color: #2c4a6b !important; /* Un azul más oscuro */
+    border-color: #2c4a6b;
+  }
+
+  .btn-no.selected {
+    background-color: #e2e8f0 !important;
+    color: #94a3b8;
   }
 </style>
