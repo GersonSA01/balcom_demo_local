@@ -10,10 +10,12 @@
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^1.0.0",
-    "svelte": "3.44.0",
+    "svelte": "^3.59.2",
     "vite": "^3.0.0"
   },
   "dependencies": {
-    "svelte-routing": "^2.13.0"
+    "bootstrap": "^5.3.8",
+    "svelte-routing": "^2.13.0",
+    "sveltestrap": "^5.11.3"
   }
 }

@@ -1,62 +1,71 @@
 <div id="roleManagerModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
-    <div class="relative top-10 mx-auto p-0 border w-11/12 md:w-3/4 lg:w-2/3 shadow-xl rounded-lg bg-white flex flex-col" style="height: 85vh;">
+    <div class="relative top-10 mx-auto p-0 border w-11/12 md:w-3/4 lg:w-2/3 shadow-xl rounded-lg bg-white flex flex-col"
+        style="height: 85vh;">
 
         <div class="flex justify-between items-center p-4 border-b bg-gray-50 rounded-t-lg">
             <div>
-                <h3 class="text-xl font-bold text-gray-800">Gestión de Roles</h3>
+                <h3 class="text-xl font-bold text-[#1e3a5f]">Gestión de Roles</h3>
                 <p class="text-xs text-gray-500">Crea, edita o elimina los roles de acceso.</p>
             </div>
-            <button onclick="closeRoleModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            <button onclick="closeRoleModal()" class="text-gray-500 hover:text-[#1e3a5f] text-2xl">&times;</button>
         </div>
 
         <div class="flex-1 overflow-hidden flex flex-col md:flex-row">
 
             <div class="w-full md:w-1/3 border-r bg-gray-50 overflow-y-auto p-4">
                 <h4 class="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">Roles Existentes</h4>
-                
+
                 <div class="space-y-2">
                     {% for rol in chatbot_roles %}
                     <div class="bg-white p-3 rounded border shadow-sm hover:shadow-md transition-all relative group">
-                        
+
                         <div class="flex justify-between items-start mb-2">
                             <div class="pr-2 w-3/4">
-                                <span class="block font-bold text-gray-800 text-sm truncate" title="{{ rol.nombre }}">{{ rol.nombre }}</span>
-                                <span class="block text-xs text-blue-600 font-medium bg-blue-50 px-1 rounded inline-block mt-1">
-                                    SGA: {{ rol.campo_sga }}
-                                </span>
+                                <span class="block font-bold text-[#1e3a5f] text-sm truncate"
+                                    title="{{ rol.nombre }}">{{ rol.nombre }}</span>
                             </div>
 
                             <div class="flex items-center gap-1">
-                                <button type="button" 
-                                    onclick="startEditRole(
+                                <button type="button" onclick="startEditRole(
                                         '{{ rol.id }}', 
                                         '{{ rol.nombre|escapejs }}', 
                                         '{{ rol.campo_sga }}', 
                                         [{% for c in rol.carreras.all %}{{ c.id }}{% if not forloop.last %},{% endif %}{% endfor %}]
                                     )"
-                                    class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                    class="p-1.5 text-gray-400 hover:text-[#ff6b35] hover:bg-blue-50 rounded transition-colors"
                                     title="Editar">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
+                                        </path>
+                                    </svg>
                                 </button>
 
-                                <form action="{% url 'chatbot:delete_chatbot_role' rol.id %}" method="POST" 
-                                      onsubmit="return confirm('¿Seguro que deseas eliminar el rol {{ rol.nombre }}?');" class="inline">
+                                <form action="{% url 'chatbot:delete_chatbot_role' rol.id %}" method="POST"
+                                    onsubmit="return confirm('¿Seguro que deseas eliminar el rol {{ rol.nombre }}?');"
+                                    class="inline">
                                     {% csrf_token %}
-                                    <button type="submit" 
+                                    <button type="submit"
                                         class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                                         title="Eliminar">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                            </path>
+                                        </svg>
                                     </button>
                                 </form>
                             </div>
                         </div>
-                        
+
                         <div class="border-t border-gray-100 pt-2">
                             <div class="flex flex-wrap gap-1">
                                 {% for carrera in rol.carreras.all|slice:":2" %}
-                                <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px]">{{ carrera.nombre|truncatechars:15 }}</span>
+                                <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px]">{{
+                                    carrera.nombre|truncatechars:15 }}</span>
                                 {% empty %}
-                                <span class="text-[10px] text-green-600 font-medium px-1 bg-green-50 rounded">Global (Todas)</span>
+                                <span class="text-[10px] text-green-600 font-medium px-1 bg-green-50 rounded">Global
+                                    (Todas)</span>
                                 {% endfor %}
                                 {% if rol.carreras.count > 2 %}
                                 <span class="text-[10px] text-gray-400">+{{ rol.carreras.count|add:"-2" }} más</span>
@@ -71,11 +80,11 @@
             </div>
 
             <div class="w-full md:w-2/3 p-5 overflow-y-auto bg-white">
-                
+
                 <div class="flex justify-between items-center mb-4 pb-2 border-b">
-                    <h4 id="formTitle" class="font-bold text-lg text-gray-800">Crear Nuevo Rol</h4>
-                    
-                    <button id="cancelEditBtn" type="button" onclick="resetForm()" 
+                    <h4 id="formTitle" class="font-bold text-lg text-[#1e3a5f]">Crear Nuevo Rol</h4>
+
+                    <button id="cancelEditBtn" type="button" onclick="resetForm()"
                         class="hidden px-3 py-1 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded border border-red-200 transition-colors">
                         Cancelar Edición ✕
                     </button>
@@ -83,17 +92,20 @@
 
                 <form id="roleForm" action="{% url 'chatbot:create_chatbot_role' %}" method="POST">
                     {% csrf_token %}
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                             <label class="block text-gray-700 text-xs font-bold mb-1">Nombre Descriptivo</label>
-                            <input type="text" id="roleName" name="nombre" placeholder="Ej: Docentes Ingeniería" required
-                                class="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow">
+                            <input type="text" id="roleName" name="nombre" placeholder="Ej: Docentes Ingeniería"
+                                required
+                                class="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-[#ff6b35] outline-none transition-shadow">
                         </div>
 
                         <div>
                             <label class="block text-gray-700 text-xs font-bold mb-1">Campo en Perfil SGA</label>
-                            <select id="roleSgaField" name="tipo_usuario_id" class="w-full border rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" required>
+                            <select id="roleSgaField" name="tipo_usuario_id"
+                                class="w-full border rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-[#ff6b35] outline-none"
+                                required>
                                 <option value="" disabled selected>Seleccione campo...</option>
                                 {% for tipo in tipos_base %}
                                 <option value="{{ tipo.id }}">{{ tipo.nombre }}</option>
@@ -112,33 +124,41 @@
                             <input type="text" id="careerSearch" placeholder="Filtrar carreras..."
                                 class="w-full border rounded pl-8 py-1.5 text-sm bg-gray-50 focus:bg-white transition-colors outline-none"
                                 onkeyup="filterCareers()">
-                            <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
                         </div>
 
                         <div class="h-60 overflow-y-auto border-t pt-2" id="careerList">
-                            <label class="flex items-center p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 sticky top-0 bg-white z-10">
-                                <input type="checkbox" id="selectAll" onchange="toggleAllCareers(this)" class="rounded text-blue-600 focus:ring-blue-500">
+                            <label
+                                class="flex items-center p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 sticky top-0 bg-white z-10">
+                                <input type="checkbox" id="selectAll" onchange="toggleAllCareers(this)"
+                                    class="rounded text-[#ff6b35] focus:ring-[#ff6b35]">
                                 <span class="ml-2 text-xs font-bold text-gray-700">Seleccionar Todas / Ninguna</span>
                             </label>
 
                             {% for carrera in carreras_list %}
-                            <label class="flex items-center p-2 hover:bg-gray-50 cursor-pointer career-item transition-colors">
+                            <label
+                                class="flex items-center p-2 hover:bg-gray-50 cursor-pointer career-item transition-colors">
                                 <input type="checkbox" name="carreras" value="{{ carrera.id }}"
-                                    class="career-cb rounded text-blue-600 focus:ring-blue-500">
+                                    class="career-cb rounded text-[#ff6b35] focus:ring-[#ff6b35]">
                                 <span class="ml-2 text-xs text-gray-600 career-name">{{ carrera.nombre }}</span>
                             </label>
                             {% endfor %}
                         </div>
-                        
+
                         <div class="mt-2 text-[10px] text-gray-400 italic text-right">
                             * Si no seleccionas ninguna, el rol aplicará a <b>todas</b> las carreras.
                         </div>
                     </div>
 
                     <div class="flex justify-end pt-3 border-t gap-2">
-                        <button type="button" onclick="closeRoleModal()" class="px-4 py-2 text-gray-600 text-sm hover:bg-gray-100 rounded transition-colors">Cerrar</button>
+                        <button type="button" onclick="closeRoleModal()"
+                            class="px-4 py-2 text-gray-600 text-sm hover:bg-gray-100 rounded transition-colors">Cerrar</button>
                         <button type="submit" id="submitBtn"
-                            class="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded shadow hover:bg-blue-700 active:scale-95 transition-all">
+                            class="px-6 py-2 bg-[#ff6b35] hover:bg-[#ff8c5a] text-white text-sm font-bold rounded shadow transition-all active:scale-95">
                             Guardar Rol
                         </button>
                     </div>
@@ -149,62 +169,70 @@
 </div>
 
 <script>
-    // --- LÓGICA DE EDICIÓN ---
 
-    // URLs Base (para usarlas en JS)
+    // URLs Base
     const CREATE_URL = "{% url 'chatbot:create_chatbot_role' %}";
-    // Usamos un placeholder '0' que reemplazaremos luego con el ID real
     const EDIT_URL_TEMPLATE = "{% url 'chatbot:edit_chatbot_role' 0 %}";
+
+    // Elementos del DOM cacheados para limpieza
+    const btnSubmit = document.getElementById('submitBtn');
+    const formTitle = document.getElementById('formTitle');
+    const cancelBtn = document.getElementById('cancelEditBtn');
+    const roleForm = document.getElementById('roleForm');
 
     function startEditRole(id, name, sgaField, careerIds) {
         // 1. Cambiar estado visual a "Edición"
-        document.getElementById('formTitle').innerText = 'Editar Rol: ' + name;
-        document.getElementById('formTitle').classList.add('text-blue-600');
-        document.getElementById('submitBtn').innerText = 'Actualizar Rol';
-        document.getElementById('submitBtn').classList.replace('bg-blue-600', 'bg-green-600');
-        document.getElementById('submitBtn').classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
-        document.getElementById('cancelEditBtn').classList.remove('hidden');
+        formTitle.innerText = 'Editar Rol: ' + name;
+        formTitle.classList.add('text-[#ff6b35]');
+
+        btnSubmit.innerText = 'Actualizar Rol';
+
+        // CAMBIO DE COLOR SEGURO (Sin usar replace con espacios)
+        // Quitamos el naranja y ponemos un verde/azul para diferenciar la edición
+        btnSubmit.classList.remove('bg-[#ff6b35]', 'hover:bg-[#ff8c5a]');
+        btnSubmit.classList.add('bg-green-600', 'hover:bg-green-700');
+
+        cancelBtn.classList.remove('hidden');
 
         // 2. Llenar Inputs
         document.getElementById('roleName').value = name;
         document.getElementById('roleSgaField').value = sgaField;
 
         // 3. Cambiar el Action del Formulario
-        // Construimos la URL: /gestion/roles/edit/15/
-        document.getElementById('roleForm').action = EDIT_URL_TEMPLATE.replace('0', id);
-        
+        roleForm.action = EDIT_URL_TEMPLATE.replace('0', id);
+
         // 4. Marcar Checkboxes de Carreras
         const checkboxes = document.querySelectorAll('.career-cb');
-        
-        // Primero desmarcar todo
-        checkboxes.forEach(cb => cb.checked = false);
-        
-        // Marcar solo los que vienen en careerIds
+        checkboxes.forEach(cb => cb.checked = false); // Reset
+
         checkboxes.forEach(cb => {
-            // Convertimos a string para comparar seguros
             if (careerIds.includes(parseInt(cb.value))) {
                 cb.checked = true;
             }
         });
-        
-        updateCount(); // Actualizar contador visual
+
+        updateCount();
     }
 
     function resetForm() {
         // 1. Restaurar visual a "Crear"
-        document.getElementById('formTitle').innerText = 'Crear Nuevo Rol';
-        document.getElementById('formTitle').classList.remove('text-blue-600');
-        document.getElementById('submitBtn').innerText = 'Guardar Rol';
-        document.getElementById('submitBtn').classList.replace('bg-green-600', 'bg-blue-600');
-        document.getElementById('submitBtn').classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
-        document.getElementById('cancelEditBtn').classList.add('hidden');
+        formTitle.innerText = 'Crear Nuevo Rol';
+        formTitle.classList.remove('text-[#ff6b35]');
+
+        btnSubmit.innerText = 'Guardar Rol';
+
+        // RESTAURAR COLOR NARANJA (Seguro)
+        btnSubmit.classList.remove('bg-green-600', 'hover:bg-green-700');
+        btnSubmit.classList.add('bg-[#ff6b35]', 'hover:bg-[#ff8c5a]');
+
+        cancelBtn.classList.add('hidden');
 
         // 2. Limpiar Inputs
         document.getElementById('roleName').value = '';
-        document.getElementById('roleSgaField').value = ''; // Reset select
-        
+        document.getElementById('roleSgaField').value = '';
+
         // 3. Restaurar Action URL
-        document.getElementById('roleForm').action = CREATE_URL;
+        roleForm.action = CREATE_URL;
 
         // 4. Limpiar Checkboxes
         document.querySelectorAll('.career-cb').forEach(cb => cb.checked = false);
@@ -212,8 +240,7 @@
         updateCount();
     }
 
-
-    // --- LÓGICA DE FILTROS Y UI (Igual que antes) ---
+    // --- LÓGICA DE FILTROS Y UI (Sin cambios) ---
 
     function filterCareers() {
         const input = document.getElementById('careerSearch');
@@ -224,11 +251,7 @@
         for (let i = 0; i < items.length; i++) {
             const span = items[i].getElementsByClassName('career-name')[0];
             const txtValue = span.textContent || span.innerText;
-            if (txtValue.toLowerCase().indexOf(filter) > -1) {
-                items[i].style.display = "";
-            } else {
-                items[i].style.display = "none";
-            }
+            items[i].style.display = txtValue.toLowerCase().indexOf(filter) > -1 ? "" : "none";
         }
     }
 
@@ -247,12 +270,31 @@
         document.getElementById('selectedCount').innerText = checked + ' seleccionadas';
     }
 
-    function openRoleModal() { 
-        resetForm(); // Siempre resetear al abrir para evitar ediciones fantasmas
-        document.getElementById('roleManagerModal').classList.remove('hidden'); 
+    function openRoleModal() {
+        resetForm();
+        document.getElementById('roleManagerModal').classList.remove('hidden');
     }
-    
-    function closeRoleModal() { 
-        document.getElementById('roleManagerModal').classList.add('hidden'); 
+
+    function closeRoleModal() {
+        document.getElementById('roleManagerModal').classList.add('hidden');
     }
+
+    // Add validation on submit
+    document.addEventListener('DOMContentLoaded', () => {
+        const rForm = document.getElementById('roleForm');
+        if (rForm) {
+            rForm.addEventListener('submit', (e) => {
+                const inputs = rForm.querySelectorAll('input, select, textarea');
+                let valid = true;
+                inputs.forEach(i => {
+                    // Custom check for Sga Field which might use a placeholder value
+                    if (!validateInput(i)) valid = false;
+                });
+
+                if (!valid) {
+                    e.preventDefault();
+                }
+            });
+        }
+    });
 </script>

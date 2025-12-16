@@ -3,52 +3,91 @@
 {% block content %}
 
 <div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-gray-800">Centro de Conocimiento RAG</h1>
-    
-    <div class="flex gap-2">
-        <button onclick="openRoleModal()" class="flex items-center px-4 py-2 bg-purple-600 text-white rounded shadow hover:bg-purple-700 transition">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-            Gestionar Roles
-        </button>
-
-        <button onclick="openUploadModal()" class="flex items-center px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-            Subir Documento
-        </button>
+    <div>
+        <h1 class="text-2xl font-bold text-[#1e3a5f]">Centro de Conocimiento RAG</h1>
+        <p class="text-sm text-slate-500">Administra la base de conocimientos y flujos del asistente virtual.</p>
     </div>
+
+    <button onclick="openRoleModal()"
+        class="flex items-center px-4 py-2 bg-[#1e3a5f] text-white rounded-lg shadow-sm hover:bg-[#2c4a6b] transition-colors text-sm font-medium">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+            </path>
+        </svg>
+        Gestionar Roles
+    </button>
 </div>
 
-<div class="bg-white rounded-lg shadow mb-8">
-    <div class="p-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-700">Documentos Normativos (RAG)</h2>
-        <p class="text-xs text-gray-500 mt-1">Archivos PDF que el chatbot usa para responder preguntas.</p>
-    </div>
+<div class="mb-6 border-b border-gray-200">
+    <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+        <button onclick="switchTab('docs')" id="tab-docs"
+            class="tab-active whitespace-nowrap py-4 px-1 text-sm transition-colors flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 011.414.586l4 4a1 1 0 01.586 1.414V19a2 2 0 01-2 2z">
+                </path>
+            </svg>
+            Documentos Normativos
+        </button>
+
+        <button onclick="switchTab('procs')" id="tab-procs"
+            class="tab-inactive whitespace-nowrap py-4 px-1 text-sm transition-colors flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
+                </path>
+            </svg>
+            Procesos de Negocio
+        </button>
+    </nav>
+</div>
+
+<div id="content-docs" class="bg-white rounded-xl shadow-sm border border-slate-200 min-h-[400px]">
     {% include 'chatbot/document_manager/_document_table.html' %}
 </div>
 
-<div class="bg-white rounded-lg shadow">
-    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-        <div>
-            <h2 class="text-lg font-semibold text-gray-700">Procesos de Negocio</h2>
-            <p class="text-xs text-gray-500 mt-1">Acciones directas (trámites, enlaces, fechas) que el chatbot puede ejecutar.</p>
-        </div>
-        <button onclick="openCreateProcessModal()" class="text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 px-3 py-1 rounded hover:bg-blue-50 transition">
-            + Nuevo Proceso
-        </button>
-    </div>
+<div id="content-procs" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 min-h-[400px]">
     {% include 'chatbot/document_manager/_process_table.html' %}
 </div>
 
 {% include 'chatbot/document_manager/_modals_documents.html' %}
 {% include 'chatbot/document_manager/_modals_processes.html' %}
-
 {% include 'chatbot/document_manager/_modals_roles.html' %}
+{% include 'chatbot/document_manager/_modals_process_types.html' %}
 
 {% endblock %}
-
 {% block extra_scripts %}
 <script>
-    // ========= HELPERS GENÉRICOS =========
+    // =========================================================
+    // DECLARACIONES GLOBALES (ACCESO DIRECTO A ELEMENTOS DOM)
+    // =========================================================
+
+    // Modales Principales
+    const docUploadModal = document.getElementById('uploadModal');
+    const docEditModal = document.getElementById('editModal');
+    const roleManagerModal = document.getElementById('roleManagerModal');
+    const processTypeModal = document.getElementById('processTypeModal');
+
+    // Variables de Procesos (CP = Create Process, EP = Edit Process)
+    const cpModal = document.getElementById('createProcessModal');
+    const cpForm = document.getElementById('createProcessForm');
+    const cpInfiniteCheckbox = document.getElementById('proc_infinite');
+    const epModal = document.getElementById('editProcessModal');
+    const epForm = document.getElementById('editProcessForm');
+    const epInfiniteCheckbox = document.getElementById('ep_infinite');
+
+    // Elementos de edición de documentos
+    const epDocsCheckbox = document.getElementById('ep_docs'); // Checkbox Requiere Documentación (Edit Proc)
+
+    // Elementos de edición de procesos
+    const epHasClosedCheckbox = document.getElementById('ep_has_closed'); // Checkbox Mensaje Cerrado (Edit Proc)
+    const epClosedMsgInput = document.getElementById('ep_closed_msg'); // Input Mensaje Cerrado (Edit Proc)
+
+
+    // =========================================================
+    // HELPERS GENÉRICOS DE UI
+    // =========================================================
 
     function showModal(id) {
         const modal = document.getElementById(id);
@@ -64,25 +103,7 @@
         modal.classList.remove('flex');
     }
 
-    function setupInfiniteToggle(checkbox, dateContainer) {
-        if (!checkbox || !dateContainer) return;
-
-        const inputs = dateContainer.querySelectorAll('input[type="date"]');
-
-        function applyState() {
-            const isInfinite = checkbox.checked;
-            dateContainer.style.opacity = isInfinite ? '0.5' : '1';
-            dateContainer.style.pointerEvents = isInfinite ? 'none' : 'auto';
-            inputs.forEach(input => {
-                input.required = !isInfinite;
-                if (isInfinite) input.value = '';
-            });
-        }
-
-        checkbox.addEventListener('change', applyState);
-        applyState();
-    }
-
+    // Lógica para la vista previa de Documentos/Procesos
     function applyPreview(config) {
         const input = document.getElementById(config.textareaId);
         const checkbox = document.getElementById(config.checkboxId);
@@ -90,7 +111,6 @@
         const greeting = document.getElementById(config.greetingId);
         const closing = document.getElementById(config.closingId);
 
-        // Ya no revisamos ningún botón
         if (!input || !previewText || !greeting || !closing) return;
 
         const text = input.value.trim();
@@ -101,128 +121,374 @@
             closing.classList.remove('hidden');
 
             previewText.classList.add(
-                'border-l-2',
-                'border-orange-400',
-                'pl-2',
-                'bg-orange-50',
-                'p-1'
+                'border-l-2', 'border-orange-400', 'pl-2', 'bg-orange-50', 'p-1'
             );
         } else {
             greeting.classList.add('hidden');
             closing.classList.add('hidden');
 
             previewText.classList.remove(
-                'border-l-2',
-                'border-orange-400',
-                'pl-2',
-                'bg-orange-50',
-                'p-1'
+                'border-l-2', 'border-orange-400', 'pl-2', 'bg-orange-50', 'p-1'
             );
         }
     }
 
 
-    // ========= TABS =========
+    // =========================================================
+    // WIZARD CONTROL (Navegación por Pasos)
+    // =========================================================
 
-    function switchTab(tab) {
-        document.getElementById('content-docs').classList.add('hidden');
-        document.getElementById('content-procs').classList.add('hidden');
+    // =========================================================
+    // WIZARD CONTROL (Navegación por Pasos)
+    // =========================================================
 
-        const tabs = ['docs', 'procs'];
-        tabs.forEach(t => {
-            const el = document.getElementById('tab-' + t);
-            el.classList.remove('border-orange-500', 'text-orange-600');
-            el.classList.add('border-transparent', 'text-slate-500');
-        });
+    const WIZARD_STEPS = [
+        { title: "1. Información Básica y Requisitos", contentId: '_step_content_1' },
+        { title: "2. Vigencia y Roles", contentId: '_step_content_2' },
+        { title: "3. Mensaje Activo y Preview", contentId: '_step_content_3' },
+    ];
 
-        document.getElementById('content-' + tab).classList.remove('hidden');
-        const activeTab = document.getElementById('tab-' + tab);
-        activeTab.classList.remove('border-transparent', 'text-slate-500');
-        activeTab.classList.add('border-orange-500', 'text-orange-600');
+    // --- VALIDATION HELPERS ---
+    function showError(input, message) {
+        clearError(input); // Prevent duplicates
+        const errorMsg = document.createElement('p');
+        errorMsg.classList.add('text-xs', 'text-red-600', 'mt-1', 'font-medium', 'error-msg', 'animate-pulse');
+        errorMsg.innerText = message;
+        input.parentElement.appendChild(errorMsg);
+        input.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+        input.classList.remove('border-slate-300', 'focus:ring-[#ff6b35]', 'focus:border-[#ff6b35]', 'focus:ring-green-500', 'focus:border-green-500');
     }
 
-    // ========= FILTRO DE DOCUMENTOS =========
+    function clearError(input) {
+        const parent = input.parentElement;
+        const existingError = parent.querySelector('.error-msg');
+        if (existingError) existingError.remove();
 
-    function filterTable() {
-        const roleFilter = document.getElementById('roleFilter').value;
-        const searchTerm = document.getElementById('docSearch').value.toLowerCase();
-
-        const rows = document.querySelectorAll('.doc-row');
-
-        rows.forEach(row => {
-            const rawRoles = row.getAttribute('data-role') || '';
-            const roles = rawRoles.split(',');
-            const matchesRole = (roleFilter === 'all' || roles.includes(roleFilter));
-
-            const textContent = row.innerText.toLowerCase();
-            const matchesSearch = textContent.includes(searchTerm);
-
-            row.style.display = (matchesRole && matchesSearch) ? '' : 'none';
-        });
+        input.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+        // Restore default borders (will depend on focus state, but removing red is enough)
+        input.classList.add('border-slate-300');
     }
 
-    // ========= LOGICA DOCUMENTOS =========
+    function validateInput(input) {
+        // Skip hidden inputs or unchecked checkboxes/radios (unless required group logic, which we handle simply here)
+        if (input.type === 'hidden' || input.style.display === 'none' || input.offsetParent === null) return true;
 
-    function toggleDateInputs(prefix) {
-        const isInfinite = document.getElementById(prefix + '_infinite')?.checked;
-        const dateDiv = document.getElementById(prefix + '_dates');
-        if (!dateDiv) return;
-        if (isInfinite) {
-            dateDiv.classList.add('hidden');
+        let isValid = true;
+        let msg = '';
+
+        if (input.required && !input.value.trim()) {
+            isValid = false;
+            msg = 'Este campo es obligatorio.';
+        } else if (input.type === 'email' && input.value && !input.value.includes('@')) {
+            isValid = false;
+            msg = 'Ingrese un correo válido.';
+        } else if (input.pattern && !new RegExp(input.pattern).test(input.value)) {
+            isValid = false;
+            msg = 'Formato inválido.';
+        }
+
+        // Custom Logic for specific IDs if needed
+        if (isValid) {
+            clearError(input);
         } else {
-            dateDiv.classList.remove('hidden');
+            showError(input, msg);
+        }
+        return isValid;
+    }
+
+    function validateStep(prefix, stepNumber) {
+        const contentId = `${prefix}${WIZARD_STEPS[stepNumber - 1].contentId}`;
+        const container = document.getElementById(contentId);
+        if (!container) return true;
+
+        const inputs = container.querySelectorAll('input, select, textarea');
+        let stepValid = true;
+
+        inputs.forEach(input => {
+            if (!validateInput(input)) {
+                stepValid = false;
+            }
+        });
+
+        return stepValid;
+    }
+
+    // Initialize Real-time Validation Listeners
+    document.addEventListener('DOMContentLoaded', () => {
+        // Attach to all inputs in the document (or you could limit to modals)
+        // using 'blur' for showing errors and 'input' for clearing them
+        document.body.addEventListener('blur', (e) => {
+            if (e.target.matches('input, select, textarea')) {
+                validateInput(e.target);
+            }
+        }, true);
+
+        document.body.addEventListener('input', (e) => {
+            if (e.target.matches('input, select, textarea')) {
+                // Determine if we should validate immediately (e.g. if error exists)
+                if (e.target.parentElement.querySelector('.error-msg')) {
+                    validateInput(e.target);
+                }
+            }
+        }, true);
+    });
+
+    function updateWizardUI(prefix, currentStep) {
+        const totalSteps = WIZARD_STEPS.length;
+        const titleElement = document.getElementById(`${prefix}_step_title`);
+
+        if (titleElement) titleElement.innerText = WIZARD_STEPS[currentStep - 1].title;
+
+        for (let i = 1; i <= totalSteps; i++) {
+            const indicator = document.getElementById(`${prefix}_step_${i}`);
+            const content = document.getElementById(`${prefix}${WIZARD_STEPS[i - 1].contentId}`);
+
+            if (indicator) {
+                indicator.classList.remove('bg-[#ff6b35]', 'bg-gray-200');
+                indicator.classList.add(i <= currentStep ? 'bg-[#ff6b35]' : 'bg-gray-200');
+            }
+
+            if (content) {
+                content.classList.toggle('hidden', i !== currentStep);
+            }
+        }
+
+        const prevBtn = document.getElementById(`${prefix}_prev_btn`);
+        const nextBtn = document.getElementById(`${prefix}_next_btn`);
+        const submitBtn = document.getElementById(`${prefix}_submit_btn`);
+
+        if (prevBtn) prevBtn.classList.toggle('hidden', currentStep === 1);
+
+        // Logic for Next/Submit buttons visibility
+        if (nextBtn) {
+            nextBtn.classList.toggle('hidden', currentStep === totalSteps);
+        }
+        if (submitBtn) {
+            submitBtn.classList.toggle('hidden', currentStep !== totalSteps);
         }
     }
 
-    function openUploadModal() {
-        showModal('uploadModal');
-        const form = document.getElementById('uploadForm');
-        if (form) form.reset();
+    function nextStep(prefix) {
+        let currentStep = parseInt(document.body.getAttribute(`data-${prefix}-step`)) || 1;
 
-        const uploadLoading = document.getElementById('uploadLoading');
-        if (uploadLoading) {
-            uploadLoading.classList.add('hidden');
-            uploadLoading.classList.remove('flex');
+        // VALIDATE BEFORE MOVING
+        if (!validateStep(prefix, currentStep)) {
+            // Optional: Shake effect or toast??
+            return;
+        }
+
+        if (currentStep < WIZARD_STEPS.length) {
+            currentStep++;
+            document.body.setAttribute(`data-${prefix}-step`, currentStep);
+            updateWizardUI(prefix, currentStep);
         }
     }
 
-    function closeUploadModal() {
-        hideModal('uploadModal');
+    function prevStep(prefix) {
+        let currentStep = parseInt(document.body.getAttribute(`data-${prefix}-step`)) || 1;
+        if (currentStep > 1) {
+            currentStep--;
+            document.body.setAttribute(`data-${prefix}-step`, currentStep);
+            updateWizardUI(prefix, currentStep);
+        }
     }
 
-    function openEditModal(docId, currentRolesString, infiniteStr, fromStr, toStr) {
-        const modal = document.getElementById('editModal');
-        const form = document.getElementById('editForm');
-        const docIdInput = document.getElementById('editDocId');
+    // =========================================================
+    // LÓGICA DE VIGENCIA DE PROCESOS (UNIFICADA)
+    // =========================================================
 
-        if (!modal || !form || !docIdInput) return;
+    function toggleVigencyUI(prefix, isInfinite) {
+        const dateContainer = document.getElementById(prefix + '_dateFields');
+        const closedMsgBlock = document.getElementById(prefix + '_closedMsgBlock');
 
-        form.action = `/api/chatbot/gestion/update-role/${docId}/`;
-        docIdInput.value = docId;
+        // 1. Toggle Fechas
+        if (dateContainer) {
+            // CORRECCIÓN: Usamos style.display = 'none' en lugar de classList.add('hidden')
+            // El contenedor usa GRID, así que lo mostramos como 'grid'
+            dateContainer.style.display = isInfinite ? 'none' : 'grid';
 
-        document.querySelectorAll('#editModal input[name="roles"]').forEach(cb => cb.checked = false);
+            dateContainer.style.opacity = isInfinite ? '0.5' : '1';
+            dateContainer.style.pointerEvents = isInfinite ? 'none' : 'auto';
 
-        if (currentRolesString) {
-            const roles = currentRolesString.split(',');
-            roles.forEach(role => {
-                const cb = document.querySelector(`#editModal input[name="roles"][value="${role.trim()}"]`);
+            const inputs = dateContainer.querySelectorAll('input[type="date"]');
+            inputs.forEach(input => {
+                input.required = !isInfinite;
+                if (isInfinite) input.value = '';
+            });
+        }
+
+        // 2. Toggle Mensaje Cerrado (Lógica inversa a las fechas)
+        if (closedMsgBlock) {
+            // Mostrar si NO es infinito (usamos 'block' para el div)
+            closedMsgBlock.style.display = isInfinite ? 'none' : 'block';
+
+            // Si se vuelve infinito, limpiamos el estado del checkbox cerrado
+            if (isInfinite) {
+                const closedCheckbox = document.getElementById(prefix + '_has_closed');
+                const closedContainer = document.getElementById(prefix + '_closed_container');
+                if (closedCheckbox) closedCheckbox.checked = false;
+                if (closedContainer) closedContainer.classList.add('hidden');
+            }
+        }
+
+
+        // 2. Toggle Mensaje Cerrado (Lógica inversa a las fechas)
+        if (closedMsgBlock) {
+            // Mostrar si NO es infinito
+            closedMsgBlock.classList.toggle('hidden', isInfinite);
+
+            // Si se vuelve infinito, limpiamos el estado del checkbox cerrado
+            if (isInfinite) {
+                const closedCheckbox = document.getElementById(prefix + '_has_closed');
+                const closedContainer = document.getElementById(prefix + '_closed_container');
+                if (closedCheckbox) closedCheckbox.checked = false;
+                if (closedContainer) closedContainer.classList.add('hidden');
+            }
+        }
+    }
+
+
+    // =========================================================
+    // TOGGLE DE REQUISITOS (DOCS) BASADO EN TIPO
+    // =========================================================
+
+    function toggleDocRequirement(prefix) {
+        const typeSelectId = prefix + '_type';
+        const containerId = prefix + '_docs_container';
+        const checkboxId = (prefix === 'cp') ? 'proc_docs' : 'ep_docs';
+
+        const typeSelect = document.getElementById(typeSelectId);
+        const container = document.getElementById(containerId);
+        const checkbox = document.getElementById(checkboxId);
+
+        if (!typeSelect || !container || !checkbox) return;
+
+        const selectedOption = typeSelect.options[typeSelect.selectedIndex];
+        const requiresDoc = selectedOption.getAttribute('data-req-doc') === 'true';
+
+        if (requiresDoc) {
+            container.classList.remove('hidden');
+            checkbox.checked = true;
+        } else {
+            container.classList.add('hidden');
+            checkbox.checked = false;
+        }
+
+        if (prefix === 'cp') updateCreatePreview();
+        else updateEditPreview();
+    }
+
+    // =========================================================
+    // LÓGICA DE APERTURA DE MODALES
+    // =========================================================
+
+    // --- PROCESOS ---
+    function openCreateProcessModal() {
+        if (!cpModal || !cpForm) return;
+
+        cpForm.reset();
+
+        if (cpInfiniteCheckbox) cpInfiniteCheckbox.checked = true;
+
+        document.body.setAttribute('data-cp-step', 1);
+        updateWizardUI('cp', 1);
+
+        toggleVigencyUI('cp', true);
+        toggleDocRequirement('cp');
+        updateCreatePreview();
+        showModal('createProcessModal');
+    }
+
+    function closeCreateProcessModal() {
+        hideModal('createProcessModal');
+    }
+
+    function openEditProcessModal(id, name, business_context, process_type, source_url, isInfiniteStr, needDocStr, start, end, activeMsg, rolesList, closedMsg) {
+        if (!epModal || !epForm) return;
+
+        // Asignación de valores
+        epForm.action = `/api/chatbot/procesos/editar/${id}/`;
+        document.getElementById('ep_name').value = name;
+        document.getElementById('ep_context').value = business_context ?? '';
+        document.getElementById('ep_type').value = process_type;
+        document.getElementById('ep_source').value = source_url || '';
+        document.getElementById('ep_active_msg').value = activeMsg || '';
+
+        const isInfinite = (String(isInfiniteStr).trim() === 'true');
+        const needDoc = (String(needDocStr).trim() === 'true');
+
+        if (epInfiniteCheckbox) epInfiniteCheckbox.checked = isInfinite;
+        if (epDocsCheckbox) epDocsCheckbox.checked = needDoc;
+
+        toggleVigencyUI('ep', isInfinite);
+
+        if (!isInfinite) {
+            document.getElementById('ep_start_date').value = start || '';
+            document.getElementById('ep_end_date').value = end || '';
+        }
+
+        const hasClosedMessage = closedMsg && closedMsg !== 'None' && closedMsg.trim() !== '';
+
+        if (epHasClosedCheckbox) epHasClosedCheckbox.checked = hasClosedMessage;
+        if (epClosedMsgInput) epClosedMsgInput.value = closedMsg || '';
+
+        toggleClosedMsg('ep'); // Forzar el toggle del input cerrado
+
+        // Restaurar Roles
+        document.querySelectorAll('.ep-role-checkbox').forEach(cb => cb.checked = false);
+        if (rolesList) {
+            rolesList.forEach(roleId => {
+                const cb = document.querySelector(`.ep-role-checkbox[value="${roleId}"]`);
                 if (cb) cb.checked = true;
             });
-        } else {
-            const cb = document.querySelector(`#editModal input[name="roles"][value="general"]`);
-            if (cb) cb.checked = true;
         }
 
-        const isInfinite = (infiniteStr === 'true');
-        const infiniteCheckbox = document.getElementById('ed_infinite');
-        const fromInput = document.getElementById('ed_valid_from');
-        const toInput = document.getElementById('ed_valid_to');
+        // Inicializar Wizard y Previews
+        document.body.setAttribute('data-ep-step', 1);
+        updateWizardUI('ep', 1);
+        toggleDocRequirement('ep');
+        updateEditPreview();
+        updateClosedPreview('ep');
 
-        if (infiniteCheckbox) infiniteCheckbox.checked = isInfinite;
-        if (fromInput) fromInput.value = fromStr || '';
-        if (toInput) toInput.value = toStr || '';
+        showModal('editProcessModal');
+    }
 
+    function closeEditProcessModal() {
+        hideModal('editProcessModal');
+    }
+
+    // --- DOCUMENTOS ---
+    function openUploadModal() { hideModal('editModal'); showModal('uploadModal'); }
+    function closeUploadModal() { hideModal('uploadModal'); }
+    function openEditModal(docId, rolesList, isInfiniteStr, validFrom, validTo) {
+        hideModal('uploadModal');
+        const form = document.getElementById('editForm');
+        form.action = `/api/chatbot/gestion/update-role/${docId}/`;
+        document.getElementById('editDocId').value = docId;
+
+        // Reset checkboxes
+        document.querySelectorAll('#editForm input[name="roles"]').forEach(cb => cb.checked = false);
+
+        // Check roles
+        if (rolesList && Array.isArray(rolesList)) {
+            rolesList.forEach(roleId => {
+                const cb = document.querySelector(`#editForm input[name="roles"][value="${roleId}"]`);
+                if (cb) cb.checked = true;
+            });
+        }
+
+        const isInfinite = (String(isInfiniteStr).trim() === 'True' || String(isInfiniteStr).trim() === 'true');
+        document.getElementById('ed_infinite').checked = isInfinite;
+
+        const validFromInput = document.getElementById('ed_valid_from');
+        const validToInput = document.getElementById('ed_valid_to');
+
+        if (validFromInput) validFromInput.value = validFrom || '';
+        if (validToInput) validToInput.value = validTo || '';
+
+        // Trigger date input visibility
         toggleDateInputs('ed');
+
         showModal('editModal');
     }
 
@@ -230,38 +496,60 @@
         hideModal('editModal');
     }
 
-    function confirmAndDelete() {
-        if (confirm('¿Estás seguro de eliminar este documento y todas sus páginas asociadas?')) {
-            const deleteModal = document.getElementById('deleteLoadingModal');
-            if (deleteModal) {
-                deleteModal.classList.remove('hidden');
-                deleteModal.classList.add('flex');
-            }
-            return true;
-        }
-        return false;
-    }
+    function toggleDateInputs(prefix) {
+        const checkboxId = (prefix === 'new') ? 'new_infinite' : 'ed_infinite';
+        const containerId = (prefix === 'new') ? 'new_dates' : 'ed_dates';
 
-    function showUploadLoading() {
-        const form = document.getElementById('uploadForm');
-        const loading = document.getElementById('uploadLoading');
-        if (form) form.classList.add('hidden');
-        if (loading) {
-            loading.classList.remove('hidden');
-            loading.classList.add('flex');
+        const checkbox = document.getElementById(checkboxId);
+        const container = document.getElementById(containerId);
+
+        if (!checkbox || !container) return;
+
+        if (checkbox.checked) {
+            container.classList.add('hidden');
+            const inputs = container.querySelectorAll('input');
+            inputs.forEach(i => i.required = false);
+        } else {
+            container.classList.remove('hidden');
+            const inputs = container.querySelectorAll('input');
+            inputs.forEach(i => i.required = true);
         }
     }
 
-    // ========= TOGGLE VIGENCIA DOCUMENTOS =========
+    // --- ROLES ---
+    function openRoleModal() { showModal('roleManagerModal'); }
+    function closeRoleModal() { hideModal('roleManagerModal'); }
 
-    const docCheckbox = document.getElementById('doc_infinite');
-    const docDateFields = document.getElementById('doc_dateFields');
-    if (docCheckbox && docDateFields) {
-        setupInfiniteToggle(docCheckbox, docDateFields);
+    // --- TIPOS DE PROCESO ---
+    function openProcessTypeModal() { showModal('processTypeModal'); }
+    function closeProcessTypeModal() { hideModal('processTypeModal'); }
+
+
+    // =========================================================
+    // LÓGICA DE UTILIDADES (Previews, Filters, Toggles)
+    // =========================================================
+
+    // Script optimizado para el cambio de Tabs
+    function switchTab(tabName) {
+        document.getElementById('content-docs').classList.add('hidden');
+        document.getElementById('content-procs').classList.add('hidden');
+
+        const tabDocs = document.getElementById('tab-docs');
+        const tabProcs = document.getElementById('tab-procs');
+
+        tabDocs.classList.remove('tab-active');
+        tabDocs.classList.add('tab-inactive');
+
+        tabProcs.classList.remove('tab-active');
+        tabProcs.classList.add('tab-inactive');
+
+        document.getElementById('content-' + tabName).classList.remove('hidden');
+        const activeTab = document.getElementById('tab-' + tabName);
+        activeTab.classList.remove('tab-inactive');
+        activeTab.classList.add('tab-active');
     }
 
-    // ========= LOGICA MENSAJE CERRADO (NUEVO) =========
-
+    // LOGICA MENSAJE CERRADO
     function toggleClosedMsg(prefix) {
         const checkbox = document.getElementById(prefix + '_has_closed');
         const container = document.getElementById(prefix + '_closed_container');
@@ -286,204 +574,155 @@
         }
     }
 
-    // ========= LOGICA NUEVO PROCESO =========
-
-    const procModal = document.getElementById('createProcessModal');
-    const procCheckbox = document.getElementById('proc_infinite');
-    const procDateFields = document.getElementById('proc_dateFields');
-
-    function openCreateProcessModal() {
-        if (!procModal) return;
-        const form = document.getElementById('createProcessForm');
-        if (form) form.reset();
-
-        // INICIALIZAR ESTADO VISUAL
-        toggleDocRequirement('cp');
-
-        updateCreatePreview();
-        showModal('createProcessModal');
-    }
-
-    function closeCreateProcessModal() {
-        hideModal('createProcessModal');
-    }
-
-    if (procCheckbox && procDateFields) {
-        setupInfiniteToggle(procCheckbox, procDateFields);
-    }
-
-    // ========= LOGICA EDITAR PROCESO =========
-
-    const epModal = document.getElementById('editProcessModal');
-    const epForm = document.getElementById('editProcessForm');
-    const epInfinite = document.getElementById('ep_infinite');
-    const epDateFields = document.getElementById('ep_dateFields');
-    const epDocs = document.getElementById('ep_docs');
-
-    function openEditProcessModal(id, name, business_context, process_type, source_url, isInfiniteStr, needDocStr, start, end, activeMsg, rolesList, closedMsg) {
-        if (!epForm || !epModal) return;
-
-        epForm.action = `/api/chatbot/procesos/editar/${id}/`;
-
-        document.getElementById('ep_name').value = name;
-        document.getElementById('ep_context').value = business_context ?? '';
-        document.getElementById('ep_type').value = process_type || 'informativo';
-        document.getElementById('ep_source').value = source_url || '';
-        document.getElementById('ep_active_msg').value = activeMsg || '';
-
-        const isInfinite = (String(isInfiniteStr).trim() === 'true');
-        if (epInfinite) epInfinite.checked = isInfinite;
-
-        const needDoc = (String(needDocStr).trim() === 'true');
-        if (epDocs) epDocs.checked = needDoc;
-
-        if (epDateFields) {
-            if (isInfinite) {
-                epDateFields.style.opacity = '0.5';
-                epDateFields.style.pointerEvents = 'none';
-            } else {
-                epDateFields.style.opacity = '1';
-                epDateFields.style.pointerEvents = 'auto';
-                document.getElementById('ep_start_date').value = start || '';
-                document.getElementById('ep_end_date').value = end || '';
-            }
-        }
-
-        // =========================================================
-        // 🔴 2. LÓGICA FALTANTE: GESTIONAR EL MENSAJE CERRADO
-        // =========================================================
-        const epHasClosed = document.getElementById('ep_has_closed');
-        const epClosedMsg = document.getElementById('ep_closed_msg');
-
-        // Verificamos si viene un mensaje válido (diferente de 'None' o vacío)
-        if (closedMsg && closedMsg !== 'None' && closedMsg.trim() !== '') {
-            epHasClosed.checked = true;
-            epClosedMsg.value = closedMsg;
-            toggleClosedMsg('ep'); // Muestra el contenedor
-            updateClosedPreview('ep'); // Actualiza la vista previa
-        } else {
-            epHasClosed.checked = false;
-            epClosedMsg.value = '';
-            toggleClosedMsg('ep'); // Oculta el contenedor
-        }
-        // =========================================================
-
-        document.querySelectorAll('.ep-role-checkbox').forEach(cb => cb.checked = false);
-        if (rolesList && Array.isArray(rolesList)) {
-            rolesList.forEach(role => {
-                const cb = document.querySelector(`.ep-role-checkbox[value="${role}"]`);
-                if (cb) cb.checked = true;
-            });
-        }
-
-        toggleDocRequirement('ep');
-        updateEditPreview();
-        showModal('editProcessModal');
-    }
-
-    function closeEditProcessModal() {
-        hideModal('editProcessModal');
-    }
-
-    if (epInfinite && epDateFields) {
-        setupInfiniteToggle(epInfinite, epDateFields);
-    }
-
-    // ========= VISTA PREVIA DINÁMICA =========
-
+    // VISTA PREVIA DINÁMICA DE PROCESOS
     const createPreviewConfig = {
-        textareaId: 'create_active_msg',
-        checkboxId: 'proc_docs',
-        previewId: 'create_msg_preview',
-        greetingId: 'preview_greeting',
-        closingId: 'preview_closing',
-        placeholder: '(El mensaje aparecerá aquí...)'
+        textareaId: 'create_active_msg', checkboxId: 'proc_docs', previewId: 'create_msg_preview',
+        greetingId: 'preview_greeting', closingId: 'preview_closing', placeholder: '(El mensaje aparecerá aquí...)'
     };
 
     const editPreviewConfig = {
-        textareaId: 'ep_active_msg',
-        checkboxId: 'ep_docs',
-        previewId: 'ep_msg_preview',
-        greetingId: 'ep_preview_greeting',
-        closingId: 'ep_preview_closing',
-        placeholder: '(El mensaje aparecerá aquí...)'
+        textareaId: 'ep_active_msg', checkboxId: 'ep_docs', previewId: 'ep_msg_preview',
+        greetingId: 'ep_preview_greeting', closingId: 'ep_preview_closing', placeholder: '(El mensaje aparecerá aquí...)'
     };
 
-    function updateCreatePreview() {
-        applyPreview(createPreviewConfig);
+    function updateCreatePreview() { applyPreview(createPreviewConfig); }
+    function updateEditPreview() { applyPreview(editPreviewConfig); }
+
+    // FILTROS DE TABLAS
+    function filterTable() {
+        const query = document.getElementById('docSearch').value.toLowerCase();
+        const selectedRole = document.getElementById('roleFilter').value;
+        const rows = document.querySelectorAll('.doc-row');
+
+        rows.forEach(row => {
+            const fileName = row.querySelector('td:first-child').innerText.toLowerCase();
+            const roleData = row.getAttribute('data-role'); // "inscripcion,profesor" or ""
+
+            // 1. Filtro de Texto
+            const matchesSearch = fileName.includes(query);
+
+            // 2. Filtro de Rol
+            let matchesRole = false;
+
+            // Convertir string de IDs "1,2,3" a array ["1", "2", "3"]
+            // Si está vacío, usar array vacío []
+            const roleString = roleData ? roleData.trim() : '';
+            const roles = roleString ? roleString.split(',') : [];
+
+            // Obtener el TEXTO de la opción seleccionada para manejar "General" independientemente del ID
+            const filterSelect = document.getElementById('roleFilter');
+            const selectedText = filterSelect.options[filterSelect.selectedIndex].text.toLowerCase().trim();
+
+            if (selectedRole === 'all') {
+                matchesRole = true;
+            } else if (selectedText.includes('general')) {
+                // Smart Handling: Si el texto dice "General" (sea "General" del DB o "General (Publico)")
+                // Mostramos tanto los que coinciden con el ID específico como los que no tienen roles (vacíos)
+                // Esto unifica cualquier rol llamado "General" para que incluya los públicos.
+                matchesRole = roles.includes(selectedRole) || roles.length === 0;
+            } else {
+                // Roles Específicos normales
+                matchesRole = roles.includes(selectedRole);
+            }
+
+            if (matchesSearch && matchesRole) {
+                row.classList.remove('hidden');
+            } else {
+                row.classList.add('hidden');
+            }
+        });
     }
 
-    function updateEditPreview() {
-        applyPreview(editPreviewConfig);
+
+    // =========================================================
+    // LÓGICA INICIALIZACIÓN (Setup en carga)
+    // =========================================================
+
+    // Función que maneja la lógica de ocultar/mostrar fechas para documentos
+    function setupInfiniteToggle(checkbox, dateContainer) {
+        if (!checkbox || !dateContainer) return;
+
+        const inputs = dateContainer.querySelectorAll('input[type="date"]');
+
+        function applyState() {
+            const isInfinite = checkbox.checked;
+            dateContainer.classList.toggle('hidden', isInfinite);
+            dateContainer.style.opacity = isInfinite ? '0.5' : '1';
+            dateContainer.style.pointerEvents = isInfinite ? 'none' : 'auto';
+            inputs.forEach(input => {
+                input.required = !isInfinite;
+                if (isInfinite) input.value = '';
+            });
+        }
+
+        checkbox.addEventListener('change', applyState);
+        applyState(); // Aplicar estado inicial
     }
 
-    // ========= CIERRE DE MODALES POR CLICK FUERA =========
+    // Inicializar la lógica de infinito en los modales de Documentos al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+        const newInfiniteCheckbox = document.getElementById('new_infinite');
+        const newDateFields = document.getElementById('new_dates');
+        if (newInfiniteCheckbox && newDateFields) {
+            setupInfiniteToggle(newInfiniteCheckbox, newDateFields);
+        }
 
+        const editInfiniteCheckbox = document.getElementById('ed_infinite');
+        const editDateFields = document.getElementById('ed_dates');
+        if (editInfiniteCheckbox && editDateFields) {
+            setupInfiniteToggle(editInfiniteCheckbox, editDateFields);
+        }
+    });
+
+
+    // =========================================================
+    // LÓGICA DE SUBIDA (SPINNER)
+    // =========================================================
+    document.addEventListener('DOMContentLoaded', function () {
+        const uploadForm = document.getElementById('uploadForm');
+        const uploadLoading = document.getElementById('uploadLoading');
+
+        // Buscamos el div que contiene los inputs para ocultarlo al subir
+        // En tu HTML, el form tiene hijos directos. Ocultaremos todo menos el loading.
+
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function (e) {
+                // Check if validation failed
+                if (e.defaultPrevented) return;
+
+                // 1. Mostrar Spinner
+                if (uploadLoading) {
+                    uploadLoading.classList.remove('hidden');
+                    uploadLoading.classList.add('flex');
+                }
+
+                // 2. Ocultar el formulario completo y el header
+                uploadForm.classList.add('hidden');
+
+                const header = document.getElementById('uploadModalHeader');
+                if (header) header.classList.add('hidden');
+            });
+        }
+    });
+
+    // CIERRE DE MODALES POR CLICK FUERA (adaptar a IDs correctos)
     window.onclick = function (event) {
         const uploadModal = document.getElementById('uploadModal');
         const editModal = document.getElementById('editModal');
         const createProcModal = document.getElementById('createProcessModal');
         const editProcModal = document.getElementById('editProcessModal');
+
         const uploadLoading = document.getElementById('uploadLoading');
 
         if (uploadLoading && !uploadLoading.classList.contains('hidden')) return;
 
-        if (event.target === uploadModal) closeUploadModal();
-        if (event.target === editModal) closeEditModal();
-        if (event.target === createProcModal) closeCreateProcessModal();
-        if (event.target === editProcModal) closeEditProcessModal();
+        if (event.target === uploadModal) hideModal('uploadModal');
+        if (event.target === editModal) hideModal('editModal');
+        if (event.target === createProcModal) hideModal('createProcessModal');
+        if (event.target === editProcModal) hideModal('editProcessModal');
+        if (event.target === roleManagerModal) hideModal('roleManagerModal');
+        if (event.target === processTypeModal) hideModal('processTypeModal');
     };
 
-    function toggleDocRequirement(prefix) {
-        const typeSelectId = prefix + '_type';
-        const containerId = prefix + '_docs_container';
-        // IDs de checkboxes son distintos en create/edit
-        const checkboxId = (prefix === 'cp') ? 'proc_docs' : 'ep_docs';
-
-        const typeSelect = document.getElementById(typeSelectId);
-        const container = document.getElementById(containerId);
-        const checkbox = document.getElementById(checkboxId);
-
-        if (!typeSelect || !container || !checkbox) return;
-
-        if (typeSelect.value === 'informativo') {
-            // Si es informativo: OCULTAR y DESMARCAR
-            container.classList.add('hidden');
-            checkbox.checked = false;
-        } else {
-            // Si es operativo: MOSTRAR
-            container.classList.remove('hidden');
-        }
-
-        // Actualizar la vista previa del mensaje
-        if (prefix === 'cp') updateCreatePreview();
-        else updateEditPreview();
-    }
-
-    function toggleDates(idSuffix) {
-        const checkbox = document.getElementById('inf_' + idSuffix);
-        const dateFrom = document.getElementById('from_' + idSuffix);
-        const dateTo = document.getElementById('to_' + idSuffix);
-
-        if (checkbox && checkbox.checked) {
-            if (dateFrom) {
-                dateFrom.disabled = true;
-                dateFrom.classList.add('bg-gray-100');
-            }
-            if (dateTo) {
-                dateTo.disabled = true;
-                dateTo.classList.add('bg-gray-100');
-            }
-        } else {
-            if (dateFrom) {
-                dateFrom.disabled = false;
-                dateFrom.classList.remove('bg-gray-100');
-            }
-            if (dateTo) {
-                dateTo.disabled = false;
-                dateTo.classList.remove('bg-gray-100');
-            }
-        }
-    }
 </script>
 {% endblock %}

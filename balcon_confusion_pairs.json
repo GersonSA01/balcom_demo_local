@@ -1,0 +1,740 @@
+[
+  {
+    "similarity": 0.846,
+    "overlap": 11,
+    "service_a": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4"
+  },
+  {
+    "similarity": 0.846,
+    "overlap": 11,
+    "service_a": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE"
+  },
+  {
+    "similarity": 0.846,
+    "overlap": 11,
+    "service_a": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4"
+  },
+  {
+    "similarity": 0.846,
+    "overlap": 11,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3",
+    "service_b": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4"
+  },
+  {
+    "similarity": 0.846,
+    "overlap": 11,
+    "service_a": "INFORMACIÓN DE ACCESO A LA EDUCACIÓN SUPERIOR EN UNEMI",
+    "service_b": "INFORMACIÓN DE INGRESO POR PRIMERA VEZ A UNA CARRERA DE TERCER NIVEL"
+  },
+  {
+    "similarity": 0.714,
+    "overlap": 10,
+    "service_a": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4"
+  },
+  {
+    "similarity": 0.714,
+    "overlap": 10,
+    "service_a": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3"
+  },
+  {
+    "similarity": 0.714,
+    "overlap": 10,
+    "service_a": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3"
+  },
+  {
+    "similarity": 0.714,
+    "overlap": 10,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3",
+    "service_b": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2"
+  },
+  {
+    "similarity": 0.714,
+    "overlap": 10,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2",
+    "service_b": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4"
+  },
+  {
+    "similarity": 0.714,
+    "overlap": 10,
+    "service_a": "INFORMACIÓN DE ACCESO A LA EDUCACIÓN SUPERIOR EN UNEMI",
+    "service_b": "CARRERAS MODALIDAD SEMIPRESENCIAL"
+  },
+  {
+    "similarity": 0.714,
+    "overlap": 10,
+    "service_a": "ASESOR SERVICIOS INFORMÁTICOS",
+    "service_b": "ASESOR GESTIÓN TÉCNICA ACADÉMICA"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "SERVICIO DE TRABAJO SOCIAL",
+    "service_b": "GESTIÓN DE INCLUSIÓN Y EQUIDAD ACADÉMICA"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2",
+    "service_b": "REPROGRAMACIÓN DE EXAMEN FINAL NIVELACIÓN"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE",
+    "service_b": "REPROGRAMACIÓN DE EXAMEN FINAL NIVELACIÓN"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE",
+    "service_b": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "REPROGRAMACIÓN DE EXAMEN FINAL NIVELACIÓN",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "REPROGRAMACIÓN DE EXAMEN FINAL NIVELACIÓN",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "REPROGRAMACIÓN DE EXAMEN FINAL NIVELACIÓN",
+    "service_b": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "PROCESO DE ADMISIÓN A UNEMI",
+    "service_b": "CARRERAS MODALIDAD PRESENCIAL"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3",
+    "service_b": "REPROGRAMACIÓN DE EXAMEN FINAL NIVELACIÓN"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "MATRICULACIÓN",
+    "service_b": "CUPOS POR ASIGNATURA"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "INFORMACIÓN DE INGRESO A SEGUNDA CARRERA EN UNEMI",
+    "service_b": "CARRERAS MODALIDAD SEMIPRESENCIAL"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "INFORMACIÓN DE ANULACIÓN/LIBERACIÓN DEL CUPO DE POSTULACIÓN",
+    "service_b": "INFORMACIÓN DE ANULACIÓN DE MATRÍCULA AL CURSO DE NIVELACIÓN"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "INFORMACIÓN DE ACCESO A LA EDUCACIÓN SUPERIOR EN UNEMI",
+    "service_b": "INFORMACIÓN DE INGRESO A SEGUNDA CARRERA EN UNEMI"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "INFORMACIÓN DE ACCESO A LA EDUCACIÓN SUPERIOR EN UNEMI",
+    "service_b": "CARRERAS MODALIDAD PRESENCIAL"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "INFORMACIÓN DE ACCESO A LA EDUCACIÓN SUPERIOR EN UNEMI",
+    "service_b": "CARRERAS MODALIDAD EN LÍNEA"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "CARRERAS MODALIDAD SEMIPRESENCIAL",
+    "service_b": "INFORMACIÓN DE INGRESO POR PRIMERA VEZ A UNA CARRERA DE TERCER NIVEL"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "CARRERAS MODALIDAD PRESENCIAL",
+    "service_b": "CARRERAS MODALIDAD SEMIPRESENCIAL"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "CARRERAS MODALIDAD EN LÍNEA",
+    "service_b": "INFORMACIÓN DE INGRESO POR PRIMERA VEZ A UNA CARRERA DE TERCER NIVEL"
+  },
+  {
+    "similarity": 0.6,
+    "overlap": 9,
+    "service_a": "ATENCIÓN ODÓNTOLÓGICA",
+    "service_b": "SERVICIO ODONTOLÓGICO"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "VALORES A CANCELAR",
+    "service_b": "DEVOLUCIÓN RUBROS"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "SOLICITUDES VARIAS INGLES",
+    "service_b": "PRUEBA UBICACIÓN DE IDIOMAS"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2",
+    "service_b": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "RECALIFICACIÓN TEST O EXAMEN",
+    "service_b": "RECTIFICACIÓN DE ACTIVIDADES"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "PROCESO DE ADMISIÓN A UNEMI",
+    "service_b": "CARRERAS MODALIDAD SEMIPRESENCIAL"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "NOVEDADES CURSO DE NIVELACIÓN",
+    "service_b": "RECTIFICACIÓN DE ACTIVIDADES"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2",
+    "service_b": "REPROGRAMACIÓN DE EXAMEN FINAL NIVELACIÓN"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "MATRICULACIÓN CURSO DE NIVELACIÓN",
+    "service_b": "INFORMACIÓN DE MATRICULACIÓN AL CURSO DE NIVELACIÓN DE UNEMI"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "MATRICULACIÓN",
+    "service_b": "REUBICACIÓN DE SALÓN"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "INFORMACIÓN PRÁCTICAS PREPROFESIONALES",
+    "service_b": "HORAS DE PRÁCTICAS"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "INFORMACIÓN PROYECTOS SERVICIOS COMUNITARIOS",
+    "service_b": "PROYECTOS DE SERVICIOS COMUNITARIOS"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "INFORMACIÓN DE RETORNO A LA EDUCACIÓN SUPERIOR/ HABILITACIÓN DE NOTA.",
+    "service_b": "INFORMACIÓN DE INGRESO POR PRIMERA VEZ A UNA CARRERA DE TERCER NIVEL"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "INFORMACIÓN DE RETORNO A LA EDUCACIÓN SUPERIOR/ HABILITACIÓN DE NOTA.",
+    "service_b": "INFORMACIÓN DE INGRESO A SEGUNDA CARRERA EN UNEMI"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "INFORMACIÓN DE INGRESO A SEGUNDA CARRERA EN UNEMI",
+    "service_b": "INFORMACIÓN DE INGRESO POR PRIMERA VEZ A UNA CARRERA DE TERCER NIVEL"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "INFORMACIÓN DE INGRESO A SEGUNDA CARRERA EN UNEMI",
+    "service_b": "INFORMACIÓN DE ANULACIÓN/LIBERACIÓN DEL CUPO DE POSTULACIÓN"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "INFORMACIÓN DE INGRESO A SEGUNDA CARRERA EN UNEMI",
+    "service_b": "CARRERAS MODALIDAD PRESENCIAL"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "INFORMACIÓN DE ACCESO A LA EDUCACIÓN SUPERIOR EN UNEMI",
+    "service_b": "PROCESO DE ADMISIÓN A UNEMI"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "INFORMACIÓN DE ACCESO A LA EDUCACIÓN SUPERIOR EN UNEMI",
+    "service_b": "INFORMACIÓN DE RETORNO A LA EDUCACIÓN SUPERIOR/ HABILITACIÓN DE NOTA."
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "INFORMACIÓN DE ACCESO A LA EDUCACIÓN SUPERIOR EN UNEMI",
+    "service_b": "INFORMACIÓN DE ANULACIÓN/LIBERACIÓN DEL CUPO DE POSTULACIÓN"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "HOMOLOGACIÓN INTERNA DE MÓDULOS DE INGLÉS",
+    "service_b": "HOMOLOGACIÓN EXTERNA DE MÓDULOS DE INGLÉS"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "CONSULTAS GENERALES DEL CURSO DE NIVELACIÓN",
+    "service_b": "NOVEDADES CURSO DE NIVELACIÓN"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "CARRERAS MODALIDAD SEMIPRESENCIAL",
+    "service_b": "INFORMACIÓN DE ANULACIÓN/LIBERACIÓN DEL CUPO DE POSTULACIÓN"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "CARRERAS MODALIDAD PRESENCIAL",
+    "service_b": "INFORMACIÓN DE INGRESO POR PRIMERA VEZ A UNA CARRERA DE TERCER NIVEL"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "CARRERAS MODALIDAD EN LÍNEA",
+    "service_b": "INFORMACIÓN DE INGRESO A SEGUNDA CARRERA EN UNEMI"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "CARRERAS MODALIDAD EN LÍNEA",
+    "service_b": "CARRERAS MODALIDAD SEMIPRESENCIAL"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "CARRERAS MODALIDAD EN LÍNEA",
+    "service_b": "CARRERAS MODALIDAD PRESENCIAL"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "CAMBIO DE CARRERA",
+    "service_b": "CAMBIO DE CARRERA O MODALIDAD DE ESTUDIOS"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "ATENCIÓN MÉDICA PRIMARIA",
+    "service_b": "SERVICIO MÉDICO"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "ASESOR SERVICIOS INFORMÁTICOS",
+    "service_b": "RECTIFICACIÓN DE ACTIVIDADES"
+  },
+  {
+    "similarity": 0.5,
+    "overlap": 8,
+    "service_a": "ASESOR GESTIÓN TÉCNICA ACADÉMICA",
+    "service_b": "RECTIFICACIÓN DE ACTIVIDADES"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "UNIDAD DE TITULACIÓN",
+    "service_b": "TITULACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "UNIDAD DE INTEGRACIÓN CURRICULAR",
+    "service_b": "UNIDAD DE TITULACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "SOLICITUDES VARIAS INGLES",
+    "service_b": "INSCRIPCIÓN A MÓDULOS DE INGLES O COMPUTACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "SOLICITUD PARA EMPRESA",
+    "service_b": "ASIGNACIÓN DE TUTOR/EMPRESA"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "RETIRO POR CASOS FORTUITOS Y/O FUERZA MAYOR",
+    "service_b": "INFORMACIÓN DE ANULACIÓN DE MATRÍCULA AL CURSO DE NIVELACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "RETIRO DEFINITIVO",
+    "service_b": "RETIRO POR CASOS FORTUITOS Y/O FUERZA MAYOR"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2",
+    "service_b": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "RECALIFICACIÓN TEST O EXAMEN",
+    "service_b": "RECALIFICACIÓN DE ACTIVIDAD"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "RECALIFICACIÓN TEST O EXAMEN",
+    "service_b": "NOVEDADES CURSO DE NIVELACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "PRUEBA UBICACIÓN DE IDIOMAS",
+    "service_b": "INSCRIPCIÓN A PRUEBA DE SUFICIENCIA DE INGLES O COMPUTACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "PRUEBA UBICACIÓN DE IDIOMAS",
+    "service_b": "INSCRIPCIÓN A MÓDULOS DE INGLES O COMPUTACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "PROCESO DE ADMISIÓN A UNEMI",
+    "service_b": "INFORMACIÓN DE INGRESO POR PRIMERA VEZ A UNA CARRERA DE TERCER NIVEL"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "PROCESO DE ADMISIÓN A UNEMI",
+    "service_b": "INFORMACIÓN DE INGRESO A SEGUNDA CARRERA EN UNEMI"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "PROCESO DE ADMISIÓN A UNEMI",
+    "service_b": "INFORMACIÓN DE ANULACIÓN/LIBERACIÓN DEL CUPO DE POSTULACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "NOVEDADES DEL PERIODO ACADÉMICO",
+    "service_b": "RECTIFICACIÓN DE ACTIVIDADES"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "NOVEDADES DEL PERIODO ACADÉMICO",
+    "service_b": "GESTIÓN DE INCLUSIÓN Y EQUIDAD ACADÉMICA"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "NOVEDADES DEL PERIODO ACADÉMICO",
+    "service_b": "ASESOR SERVICIOS INFORMÁTICOS"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "NOVEDADES DEL PERIODO ACADÉMICO",
+    "service_b": "ASESOR GESTIÓN TÉCNICA ACADÉMICA"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "NOVEDADES DEL PERIODO ACADÉMICO",
+    "service_b": "ASESOR  BIENESTAR UNIVERSITARIO"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "NOVEDADES CURSO DE NIVELACIÓN",
+    "service_b": "TRADUCCIÓN DE DOCUMENTOS ACADÉMICOS"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 4"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 3"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "NIV-2S-2021 REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE DE TEST 2",
+    "service_b": "REPROGRAMACIÓN POR ENFERMEDAD O ACCIDENTE"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "MATRICULACIÓN PREGRADO ORDINARIA",
+    "service_b": "PLANIFICACIÓN DE MATRICULA"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "MATRICULACIÓN PREGRADO ORDINARIA",
+    "service_b": "MATRICULACIÓN PREGRADO EXTRAORDINARIA"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "MATRICULACIÓN",
+    "service_b": "MATRICULACIÓN PREGRADO ORDINARIA"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INSCRIPCIÓN A MÓDULOS DE INGLES O COMPUTACIÓN",
+    "service_b": "INSCRIPCIÓN A PRUEBA DE SUFICIENCIA DE INGLES O COMPUTACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INSCRIPCIÓN A MÓDULOS DE INGLES O COMPUTACIÓN",
+    "service_b": "HOMOLOGACIÓN MÓDULOS DE COMPUTACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INFORMACIÓN SOBRE CERTIFICACIÓN DEL CURSO DE NIVELACIÓN",
+    "service_b": "INFORMACIÓN DE DOCENTES DEL CURSO DE NIVELACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INFORMACIÓN PRÁCTICAS PREPROFESIONALES",
+    "service_b": "PRACTICAS PREPROFESIONALES"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INFORMACIÓN DE RETORNO A LA EDUCACIÓN SUPERIOR/ HABILITACIÓN DE NOTA.",
+    "service_b": "CARRERAS MODALIDAD SEMIPRESENCIAL"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INFORMACIÓN DE PAGO POR CONCEPTO DE SEGUNDA MATRÍCULA EN EL CURSO DE NIVELACIÓN",
+    "service_b": "INFORMACIÓN DE INGRESO POR SEGUNDA MATRÍCULA AL CURSO DE NIVELACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INFORMACIÓN DE MATRICULACIÓN AL CURSO DE NIVELACIÓN DE UNEMI",
+    "service_b": "INFORMACIÓN SOBRE ACTUALIZACIÓN DE DATOS DE NIVELACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INFORMACIÓN DE MATRICULACIÓN AL CURSO DE NIVELACIÓN DE UNEMI",
+    "service_b": "INFORMACIÓN DE ANULACIÓN DE MATRÍCULA AL CURSO DE NIVELACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INFORMACIÓN DE INGRESO POR SEGUNDA MATRÍCULA AL CURSO DE NIVELACIÓN",
+    "service_b": "INFORMACIÓN DE ANULACIÓN DE MATRÍCULA AL CURSO DE NIVELACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INFORMACIÓN DE INGRESO POR PRIMERA VEZ A UNA CARRERA DE TERCER NIVEL",
+    "service_b": "INFORMACIÓN DE ANULACIÓN/LIBERACIÓN DEL CUPO DE POSTULACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INFORMACIÓN DE CAMBIOS DE CARRERA- MODALIDAD/IES(INSTITUCIÓN)",
+    "service_b": "CAMBIO DE IES"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INFORMACIÓN DE CAMBIOS DE CARRERA- MODALIDAD/IES(INSTITUCIÓN)",
+    "service_b": "CAMBIO DE CARRERA O MODALIDAD DE ESTUDIOS"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "INFORMACIÓN DE CAMBIOS DE CARRERA- MODALIDAD/IES(INSTITUCIÓN)",
+    "service_b": "CAMBIO DE CARRERA"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "HORAS DE PRÁCTICAS",
+    "service_b": "PRACTICAS PREPROFESIONALES"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "HOMOLOGACIÓN EXTERNA DE MÓDULOS DE INGLÉS",
+    "service_b": "HOMOLOGACION MÓDULOS INGLES"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "CUPOS POR ASIGNATURA",
+    "service_b": "REUBICACIÓN DE SALÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "CONSULTAS GENERALES DEL CURSO DE NIVELACIÓN",
+    "service_b": "RECTIFICACIÓN DE ACTIVIDADES"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "CONSULTAS GENERALES DEL CURSO DE NIVELACIÓN",
+    "service_b": "RECALIFICACIÓN TEST O EXAMEN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "CONSULTAS GENERALES DEL CURSO DE NIVELACIÓN",
+    "service_b": "CONSULTAS VARIAS"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "CARRERAS MODALIDAD PRESENCIAL",
+    "service_b": "INFORMACIÓN DE ANULACIÓN/LIBERACIÓN DEL CUPO DE POSTULACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "CARRERAS MODALIDAD EN LÍNEA",
+    "service_b": "PROCESO DE ADMISIÓN A UNEMI"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "CARRERAS MODALIDAD EN LÍNEA",
+    "service_b": "INFORMACIÓN DE RETORNO A LA EDUCACIÓN SUPERIOR/ HABILITACIÓN DE NOTA."
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "CAMBIO DE PARALELO",
+    "service_b": "REUBICACIÓN DE SALÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "ATENCIÓN NUTRICIONAL",
+    "service_b": "SERVICIO DE NUTRICIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "ASIGNACIÓN DE TUTOR/EMPRESA",
+    "service_b": "PRACTICAS PREPROFESIONALES"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "ASESOR SERVICIOS INFORMÁTICOS",
+    "service_b": "TRADUCCIÓN DE DOCUMENTOS ACADÉMICOS"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "ASESOR SERVICIOS INFORMÁTICOS",
+    "service_b": "NOVEDADES CURSO DE NIVELACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "ASESOR SERVICIOS INFORMÁTICOS",
+    "service_b": "INFORMACIÓN DE HORARIOS DE TEST Y EXÁMENES FINALES DEL CURSO DE NIVELACIÓN"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "ASESOR SERVICIOS INFORMÁTICOS",
+    "service_b": "ASESOR  BIENESTAR UNIVERSITARIO"
+  },
+  {
+    "similarity": 0.412,
+    "overlap": 7,
+    "service_a": "ASESOR GESTIÓN TÉCNICA ACADÉMICA",
+    "service_b": "INFORMACIÓN DE HORARIOS DE TEST Y EXÁMENES FINALES DEL CURSO DE NIVELACIÓN"
+  }
+]

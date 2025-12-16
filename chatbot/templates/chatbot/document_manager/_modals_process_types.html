@@ -1,0 +1,186 @@
+<div id="processTypeModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+    <div class="relative top-10 mx-auto p-0 border w-11/12 md:w-2/3 lg:w-1/2 shadow-xl rounded-lg bg-white flex flex-col"
+        style="height: 70vh;">
+
+        <div class="flex justify-between items-center p-4 border-b bg-gray-50 rounded-t-lg">
+            <div>
+                <h3 class="text-xl font-bold text-[#1e3a5f]">Tipos de Proceso</h3>
+                <p class="text-xs text-gray-500">Categorías para organizar los flujos del chatbot.</p>
+            </div>
+            <button onclick="closeProcessTypeModal()"
+                class="text-gray-500 hover:text-[#1e3a5f] text-2xl">&times;</button>
+        </div>
+
+        <div class="flex-1 overflow-hidden flex flex-col md:flex-row">
+
+            <div class="w-full md:w-1/2 border-r bg-gray-50 overflow-y-auto p-4">
+                <h4 class="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">Tipos Existentes</h4>
+
+                <div class="space-y-2">
+                    {% for pt in process_types %}
+                    <div
+                        class="bg-white p-3 rounded border shadow-sm hover:shadow-md transition-all group flex justify-between items-center">
+                        <div>
+                            <span class="block font-bold text-[#1e3a5f] text-sm">{{ pt.nombre }}</span>
+                            <div class="flex items-center gap-2 mt-1">
+                                {% if pt.requiere_documentacion_por_defecto %}
+                                <span class="text-[10px] text-[#ff6b35] flex items-center gap-0.5 font-medium">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 011.414.586l4 4a1 1 0 01.586 1.414V19a2 2 0 01-2 2z">
+                                        </path>
+                                    </svg>
+                                    Pide Docs
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div
+                            class="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            <button type="button"
+                                onclick="startEditProcessType('{{ pt.id }}', '{{ pt.nombre|escapejs }}', '{{ pt.requiere_documentacion_por_defecto|yesno:'true,false' }}')"
+                                class="p-1.5 text-gray-400 hover:text-[#ff6b35] hover:bg-blue-50 rounded transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
+                                    </path>
+                                </svg>
+                            </button>
+
+                            <form action="{% url 'chatbot:delete_process_type' pt.id %}" method="POST"
+                                onsubmit="return confirm('¿Eliminar tipo {{ pt.nombre }}?');" class="inline">
+                                {% csrf_token %}
+                                <button type="submit"
+                                    class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                        </path>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-8 text-gray-400 text-sm">No hay tipos definidos.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="w-full md:w-1/2 p-5 bg-white">
+                <div class="flex justify-between items-center mb-4 pb-2 border-b">
+                    <h4 id="ptFormTitle" class="font-bold text-lg text-[#1e3a5f]">Crear Tipo</h4>
+                    <button id="cancelPtEditBtn" type="button" onclick="resetProcessTypeForm()"
+                        class="hidden px-2 py-1 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded border border-red-200">
+                        Cancelar
+                    </button>
+                </div>
+
+                <form id="ptForm" action="{% url 'chatbot:create_process_type' %}" method="POST" class="space-y-4">
+                    {% csrf_token %}
+
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Nombre</label>
+                        <input type="text" id="ptName" name="nombre" placeholder="Ej: Trámite Urgente" required
+                            class="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-[#ff6b35] outline-none">
+                    </div>
+
+                    <div class="p-3 border rounded-lg bg-blue-50/50">
+                        <label class="flex items-center cursor-pointer gap-2">
+                            <input type="checkbox" id="ptReqDocs" name="requiere_documentacion"
+                                class="rounded text-[#ff6b35] focus:ring-[#ff6b35]">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-bold text-gray-700">¿Requiere Documentación?</span>
+                                <span class="text-xs text-gray-500">Si se marca, los procesos de este tipo pedirán
+                                    evidencia PDF por defecto.</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="pt-4 mt-auto">
+                        <button type="submit" id="ptSubmitBtn"
+                            class="w-full px-4 py-2 bg-[#ff6b35] hover:bg-[#ff8c5a] text-white font-bold rounded shadow transition-all">
+                            Guardar Tipo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Variables y URLs
+    const PT_CREATE_URL = "{% url 'chatbot:create_process_type' %}";
+    const PT_EDIT_URL_TEMPLATE = "{% url 'chatbot:edit_process_type' 0 %}";
+
+    const ptForm = document.getElementById('ptForm');
+    const ptTitle = document.getElementById('ptFormTitle');
+    const ptSubmit = document.getElementById('ptSubmitBtn');
+    const ptCancel = document.getElementById('cancelPtEditBtn');
+
+    function startEditProcessType(id, name, reqDocsStr) {
+        // UI Update
+        ptTitle.innerText = 'Editar Tipo';
+        ptSubmit.innerText = 'Actualizar Tipo';
+
+        // Cambio seguro de clases de color
+        ptSubmit.classList.remove('bg-[#ff6b35]', 'hover:bg-[#ff8c5a]');
+        ptSubmit.classList.add('bg-green-600', 'hover:bg-green-700');
+
+        ptCancel.classList.remove('hidden');
+
+        // Llenar campos
+        document.getElementById('ptName').value = name;
+
+        // Checkbox (convertir string 'true'/'false' a bool)
+        const isReq = (reqDocsStr === 'true');
+        document.getElementById('ptReqDocs').checked = isReq;
+
+        // Action
+        ptForm.action = PT_EDIT_URL_TEMPLATE.replace('0', id);
+    }
+
+    function resetProcessTypeForm() {
+        ptTitle.innerText = 'Crear Tipo';
+        ptSubmit.innerText = 'Guardar Tipo';
+
+        // Restaurar color
+        ptSubmit.classList.remove('bg-green-600', 'hover:bg-green-700');
+        ptSubmit.classList.add('bg-[#ff6b35]', 'hover:bg-[#ff8c5a]');
+
+        ptCancel.classList.add('hidden');
+
+        // Limpiar
+        ptForm.reset();
+        ptForm.action = PT_CREATE_URL;
+    }
+
+    function openProcessTypeModal() {
+        resetProcessTypeForm();
+        document.getElementById('processTypeModal').classList.remove('hidden');
+    }
+
+    function closeProcessTypeModal() {
+        document.getElementById('processTypeModal').classList.add('hidden');
+    }
+
+    // Add validation on submit
+    document.addEventListener('DOMContentLoaded', () => {
+        const ptForm = document.getElementById('ptForm');
+        if (ptForm) {
+            ptForm.addEventListener('submit', (e) => {
+                const inputs = ptForm.querySelectorAll('input, select, textarea');
+                let valid = true;
+                inputs.forEach(i => {
+                    if (!validateInput(i)) valid = false;
+                });
+
+                if (!valid) {
+                    e.preventDefault();
+                }
+            });
+        }
+    });
+</script>

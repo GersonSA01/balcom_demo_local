@@ -1,156 +1,215 @@
 <script>
-  import { Router, Route, Link } from "svelte-routing";
+  import { onMount } from "svelte";
   import Chatbot from "./lib/Chatbot.svelte";
+  import UserSelector from "./lib/UserSelector.svelte";
+  import Menu from "./lib/_menu.svelte";
+  import SolicitudesPanel from "./lib/_solicitudesinfo.svelte";
 
   export let url = "";
+
+  // Estado Global
+  let sessionData = {};
+  let serviciosEstudianteData = [];
+  let dataUnemi = {};
+  let chatOpened = false;
+  let showMenu = true;
+
+  // Refs
+  let chatbotComponent;
+
+  const API_BASE_URL = "http://localhost:9090/api/chatbot";
+
+  async function loadDataUnemi() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/`);
+      if (!response.ok) throw new Error("Error fetching users");
+      dataUnemi = await response.json();
+    } catch (e) {
+      console.error("Error cargando usuarios desde API:", e);
+    }
+  }
+
+  async function loadServiciosEstudiante() {
+    if (!sessionData) return;
+    const cedula = Object.keys(sessionData)[0];
+    if (!cedula) return;
+
+    try {
+      const resp = await fetch(
+        `${API_BASE_URL}/api/servicios-estudiante/?cedula=${cedula}`,
+      );
+      if (resp.ok) {
+        const data = await resp.json();
+        serviciosEstudianteData = data.categorias || [];
+      } else {
+        serviciosEstudianteData = [];
+      }
+    } catch (e) {
+      serviciosEstudianteData = [];
+    }
+  }
+
+  function handleSessionUpdate(event) {
+    sessionData = event.detail;
+    // Guardar en LC si es necesario, UserSelector ya lanza el evento
+    // pero idealmente UserSelector ya maneja su persistencia, aquí solo reaccionamos.
+    loadServiciosEstudiante();
+  }
+
+  function handleMenuAction(event) {
+    const { action } = event.detail;
+    if (action === "selectProceso") {
+      chatOpened = true; // Abrir Chat
+      // Podríamos llamar a un método del chatbot si fuera necesario
+      // chatbotComponent.focusInput();
+    }
+  }
+
+  onMount(() => {
+    loadDataUnemi();
+    // Recuperar sesión inicial si existe
+    const stored = localStorage.getItem("user_session_data");
+    if (stored) {
+      try {
+        sessionData = JSON.parse(stored);
+        loadServiciosEstudiante();
+      } catch (e) {}
+    }
+  });
 </script>
 
-<Router {url}>
-  <main>
-    <div class="container">
-      <div class="header">
-        <div class="logo-section">
-          <div class="logo">UNEMI</div>
-          <div class="subtitle">Balcón de Servicios</div>
-        </div>
-      </div>
-
-      <!-- Rutas -->
-      <Route path="/" component={Chatbot} />
+<div class="app-layout">
+  <!-- HEADER SUPERIOR -->
+  <div class="layout-header">
+    <div class="brand">
+      <div class="subtitle">Balcón de Servicios</div>
     </div>
+    <div class="user-controls">
+      <UserSelector {dataUnemi} on:session-update={handleSessionUpdate} />
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL (Sidebar + Chat) -->
+<div class="main-content">
+  {#if serviciosEstudianteData.length > 0 && showMenu}
+    <aside class="sidebar">
+      <div class="sidebar-inner">
+        <Menu eCategorias={serviciosEstudianteData} on:actionRun={handleMenuAction} />
+      </div>
+    </aside>
+  {/if}
+
+  <main class="chat-area">
+    <Chatbot bind:this={chatbotComponent} bind:chatOpened {sessionData} />
   </main>
-</Router>
+
+  <!-- PANEL DERECHO SIMULADO -->
+  <aside class="right-panel">
+    <div class="right-inner">
+      <SolicitudesPanel />
+    </div>
+  </aside>
+</div>
+
+</div>
 
 <style>
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
 
-  main {
-    min-height: 100vh;
-    background: #ffffff;
-    padding: 2rem 1rem;
-    position: relative;
-  }
+  body {
+  background-color: #f1f5f9;
+}
 
-  .container {
-    max-width: 1100px;
-    margin: 0 auto;
-    position: relative;
-  }
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
 
-  .header {
-    text-align: center;
-    padding: 2rem 1rem;
-  }
+.layout-header {
+  background: #ffffff;
+  height: 70px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
 
-  .logo-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
+/* ✅ AQUÍ está el cambio principal */
+.main-content {
+  flex: 1;
+  display: flex;
+  gap: 16px;          /* separación entre sidebar y chat */
+  padding: 16px;      /* separación con bordes de la pantalla */
+  background: #f1f5f9;
+  overflow: hidden;   /* evita scroll doble, el scroll vive dentro */
+  min-height: 0;
+}
 
-  .logo {
-    font-size: 3rem;
-    font-weight: 800;
-    color: #1e3a5f;
-    letter-spacing: -1px;
-  }
+.sidebar {
+  width: 300px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;   /* para que el radio recorte el contenido */
+  flex-shrink: 0;
+  min-height: 0;
+}
 
-  .subtitle {
-    font-size: 1rem;
-    font-weight: 500;
-    color: #ff6b35;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-  }
+.sidebar-inner {
+  height: 100%;
+  overflow-y: auto;   /* scroll aquí */
+  padding: 12px;      /* aire interno del menú */
+}
 
-  h1 {
-    color: #1e3a5f;
-    font-size: 2rem;
-    font-weight: 600;
-    margin: 0 0 1.5rem 0;
-    letter-spacing: -0.5px;
-  }
+.chat-area {
+  flex: 1;
+  min-width: 0;       /* 🔥 importantísimo para que no se rompa en flex */
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 
-  .nav-tabs {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 1.5rem;
-  }
+/* Responsive opcional */
+@media (max-width: 900px) {
+  .main-content { padding: 12px; gap: 12px; }
+  .sidebar { width: 260px; }
+}
+@media (max-width: 720px) {
+  .main-content { flex-direction: column; }
+  .sidebar { width: 100%; max-height: 45vh; }
+}
 
-  :global(.nav-link) {
-    padding: 0.75rem 1.5rem;
-    background: #f5f5f5;
-    color: #666;
-    text-decoration: none;
-    border-radius: 8px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
-  }
+.right-panel {
+  width: 340px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  flex-shrink: 0;
+  min-height: 0;
+}
 
-  :global(.nav-link:hover) {
-    background: #e8e8e8;
-    color: #1e3a5f;
-  }
+.right-inner {
+  height: 100%;
+  padding: 12px;
+  overflow: hidden;
+}
 
-  :global(.nav-link[aria-current="page"]) {
-    background: #ff6b35;
-    color: white;
-    border-color: #ff6b35;
-  }
+/* Responsive: en móvil lo bajas abajo */
+@media (max-width: 1100px) {
+  .right-panel { width: 300px; }
+}
+@media (max-width: 900px) {
+  .main-content { flex-direction: column; }
+  .right-panel { width: 100%; }
+}
 
-  @media (max-width: 768px) {
-    main {
-      padding: 1rem 0.5rem;
-    }
 
-    .header {
-      padding: 1.5rem 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .logo {
-      font-size: 2.5rem;
-    }
-
-    .subtitle {
-      font-size: 0.875rem;
-      letter-spacing: 1px;
-    }
-
-    h1 {
-      font-size: 1.5rem;
-    }
-
-    .nav-tabs {
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    :global(.nav-link) {
-      padding: 0.6rem 1rem;
-      font-size: 0.9rem;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .header {
-      padding: 1rem;
-      margin-bottom: 1rem;
-    }
-
-    .logo {
-      font-size: 2rem;
-    }
-
-    h1 {
-      font-size: 1.25rem;
-    }
-  }
 </style>

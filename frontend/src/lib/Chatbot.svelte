@@ -1,19 +1,27 @@
 <script>
   import { onMount, tick } from "svelte";
-  import UserSelector from "./UserSelector.svelte";
+  // Eliminadas importaciones de UserSelector y Menu
 
+  // PROPS
+  export let chatOpened = false;
+  export let sessionData = {};
+
+  let messageInputEl;
   let chatContainer; // Referencia al div de mensajes
   let messages = [];
   let inputMessage = "";
   let isLoading = false;
   let error = null;
   let isConnected = false;
-  let sessionData = {};
-  let dataUnemi = {};
 
-  // --- NUEVO: Estado para mostrar el botón de subida ---
+  // let sessionData es ahora Prop
+  // let dataUnemi Eliminado (lo maneja App)
+
+  let handoffMode = false;
   let showUploadAction = false;
   let isUploadOptional = false;
+
+  // Eliminado estado de Menu y Servicios
 
   // --- NUEVO: Estado para Subida Directa ---
   let fileInput; // Referencia al input file oculto
@@ -22,40 +30,19 @@
 
   const API_BASE_URL = "http://localhost:9090/api/chatbot";
 
-  async function loadDataUnemi() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/users/`);
-      if (!response.ok) throw new Error("Error fetching users");
-      dataUnemi = await response.json();
-    } catch (e) {
-      console.error("Error cargando usuarios desde API:", e);
-    }
+  // Eliminado loadDataUnemi
+
+  async function openChatOnly() {
+    chatOpened = true; // 👈 abre el chat (actualiza prop via bind)
+    await tick(); // esperar DOM
+    messageInputEl?.focus(); // focus al input
   }
 
-  function handleSessionUpdate(event) {
-    sessionData = event.detail;
-  }
-
-  function loadSessionFromStorage() {
-    try {
-      const stored = localStorage.getItem("user_session_data");
-      if (stored) {
-        sessionData = JSON.parse(stored);
-      }
-    } catch (e) {
-      console.error("Error cargando sesión desde localStorage:", e);
-    }
-  }
+  // Eliminado handleMenuAction
+  // Eliminado handleSessionUpdate
 
   onMount(() => {
     checkConnection();
-    loadDataUnemi();
-    loadSessionFromStorage();
-    window.addEventListener("sessionDataUpdated", handleSessionUpdate);
-
-    return () => {
-      window.removeEventListener("sessionDataUpdated", handleSessionUpdate);
-    };
   });
 
   async function checkConnection() {
@@ -78,7 +65,8 @@
 
   let loadingText = "";
   async function sendMessage(isHidden = false) {
-    if (isLoading || (!inputMessage.trim() && !isHidden)) return;
+    if (isLoading || (!inputMessage.trim() && !uploadedFile && !isHidden))
+      return;
 
     if (uploadedFile) {
       await uploadAndSend();
@@ -125,11 +113,21 @@
         content: msg.content,
       }));
 
+      // 1) Determina si esta request debe ir en modo handoff
+      const willSendHandoffMode = handoffMode === true;
+
+      // 2) Construye el body incluyendo el flag
       const requestBody = {
         message: userMessage,
         history: history,
         session_data: sessionDataToSend,
+        handoff_mode: willSendHandoffMode, // NUEVO
       };
+
+      // 3) Apaga el flag INMEDIATAMENTE (one-shot) si lo acabas de usar
+      if (willSendHandoffMode) {
+        handoffMode = false;
+      }
 
       const response = await fetch(`${API_BASE_URL}/chat/`, {
         method: "POST",
@@ -160,6 +158,9 @@
               loadingText = update.text;
             } else if (update.type === "final") {
               const data = update.data;
+              if (data.payload && data.payload.handoff_mode) {
+                handoffMode = true; // Se activa el estado para indicar que estamos en modo Handoff
+              }
 
               // LOGICA DE UPLOAD (Existente)
               if (data.payload && data.payload.need_documentation) {
@@ -299,7 +300,7 @@
       ...messages,
       {
         role: "user",
-        content: `He cargado tu archivo: ${fileToSend.name}${detailsToSend ? `\nDetalles: ${detailsToSend}` : ""}`,
+        content: `Archivo enviado: ${fileToSend.name}${detailsToSend ? `\nDetalles: ${detailsToSend}` : ""}`,
       },
     ];
     // scrollToBottom(); // Eliminado por reactividad
@@ -361,132 +362,280 @@
     lastMessage && lastMessage.offerHandoff && !lastMessage.handoffResolved;
 
   // --- NUEVA FUNCIÓN: Manejar clic en "Sí, contactar humano" ---
-  function confirmHandoff(index) {
-    // Bloqueamos los botones visualmente inmediatamente
-    messages[index].handoffResolved = true;
-    messages[index].selectedOption = "yes"; // Opcional: para estilos específicos
+  // Modificar en la sección
 
-    // Forzamos actualización de Svelte
-    messages = [...messages];
+  async function confirmHandoff(index) {
+  // 1) Bloqueo visual
+  messages[index].handoffResolved = true;
+  messages[index].selectedOption = "yes";
+  messages = [...messages];
 
-    // Procedemos con la lógica de envío
-    inputMessage = "HUMAN_HANDOFF";
-    sendMessage(true);
-  }
+  // 2) Activar modo handoff (one-shot) + mandar comando (NO vacío)
+  handoffMode = true;
+  inputMessage = "HUMAN_HANDOFF";
+  await sendMessage(true);
+}
+
 
   function cancelHandoff(index) {
-    // Bloqueamos los botones visualmente
     messages[index].handoffResolved = true;
     messages[index].selectedOption = "no";
-
-    // Forzamos actualización
     messages = [...messages];
 
-    // Agregamos mensaje de usuario manualmente
+    // Simplemente agregamos el mensaje visual y seguimos normal
     messages = [
       ...messages,
-      {
-        role: "user",
-        content: "No, gracias. Seguiré conversando.",
-      },
+      { role: "user", content: "No, gracias. Seguiré conversando." },
     ];
+  }
+
+  // --- LÓGICA DEL MENÚ ---
+  async function loadServiciosEstudiante() {
+    if (!sessionData) return;
+    const cedula = Object.keys(sessionData)[0];
+    if (!cedula) return;
+
+    try {
+      const resp = await fetch(
+        `${API_BASE_URL}/api/servicios-estudiante/?cedula=${cedula}`,
+      );
+      if (resp.ok) {
+        const data = await resp.json();
+        // El backend devuelve { categorias: [...], ... }
+        serviciosEstudianteData = data.categorias || [];
+      } else {
+        serviciosEstudianteData = [];
+      }
+    } catch (e) {
+      console.error("Error cargando servicios:", e);
+      serviciosEstudianteData = [];
+    }
   }
 </script>
 
-<div class="chatbot-container">
-  <div class="chatbot-header">
-    <div class="header-left">
-      <div class="logo">SGA<span class="logo-plus">+</span></div>
-      <h3>Asistente Virtual UNEMI</h3>
-    </div>
-    <div class="header-right">
-      <div class="status-indicator">
-        <span class="status-dot" class:connected={isConnected}></span>
-        <span class="status-text"
-          >{isConnected ? "Conectado" : "Desconectado"}</span
-        >
+<!-- EL LAYOUT SE MANEJA EN APP.SVELTE -->
+<div class="chatbot-container-wrapper">
+  {#if !chatOpened}
+  <div class="start-box">
+    <img class="start-img" src="/solicitud_balcon.jpg" alt="Seleccione un servicio para comenzar" />
+  </div>
+{:else}
+    <div class="chatbot-container">
+      <div class="chatbot-header">
+        <div class="header-left">
+          <div class="logo">SGA<span class="logo-plus">+</span></div>
+          <h3>Asistente Virtual UNEMI</h3>
+        </div>
+        <div class="header-right">
+          <div class="status-indicator">
+            <span class="status-dot" class:connected={isConnected}></span>
+            <span class="status-text"
+              >{isConnected ? "Conectado" : "Desconectado"}</span
+            >
+          </div>
+          {#if messages.length > 0}
+            <button class="clear-btn" on:click={clearChat}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M2 4h12M5 4V2a1 1 0 011-1h4a1 1 0 011 1v2m3 0v10a1 1 0 01-1 1H3a1 1 0 01-1-1V4h12z"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
+              </svg>
+              Limpiar
+            </button>
+          {/if}
+        </div>
       </div>
-      {#if messages.length > 0}
-        <button class="clear-btn" on:click={clearChat}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M2 4h12M5 4V2a1 1 0 011-1h4a1 1 0 011 1v2m3 0v10a1 1 0 01-1 1H3a1 1 0 01-1-1V4h12z"
+
+      {#if error}
+        <div class="error-message">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle
+              cx="10"
+              cy="10"
+              r="9"
               stroke="currentColor"
-              stroke-width="1.5"
+              stroke-width="2"
+            />
+            <path
+              d="M10 6v4M10 14h.01"
+              stroke="currentColor"
+              stroke-width="2"
               stroke-linecap="round"
             />
           </svg>
-          Limpiar
-        </button>
-      {/if}
-    </div>
-  </div>
-
-  <UserSelector {dataUnemi} />
-
-  {#if error}
-    <div class="error-message">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="2" />
-        <path
-          d="M10 6v4M10 14h.01"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-        />
-      </svg>
-      <span>{error}</span>
-    </div>
-  {/if}
-
-  <div class="messages-container" bind:this={chatContainer}>
-    {#if messages.length === 0}
-      <div class="empty-state">
-        <div class="empty-icon">
-          <svg
-            width="64"
-            height="64"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#cbd5e1"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path
-              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-            ></path>
-          </svg>
+          <span>{error}</span>
         </div>
-        <h4>¡Hola! 👋 Soy tu asistente virtual UNEMI</h4>
-        <p>
-          Estoy aquí para ayudarte con información sobre trámites, servicios,
-          reglamentos y más. Escríbeme tu consulta cuando quieras.
-        </p>
-      </div>
-    {:else}
-      {#each messages as message, idx (idx)}
-        <div
-          class="message"
-          class:user={message.role === "user"}
-          class:assistant={message.role === "assistant"}
-        >
-          <div class="message-avatar">
-            {#if message.role === "user"}
+      {/if}
+
+      <div class="messages-container" bind:this={chatContainer}>
+        {#if messages.length === 0}
+          <div class="empty-state">
+            <div class="empty-icon">
               <svg
-                width="20"
-                height="20"
+                width="64"
+                height="64"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="currentColor"
-                stroke-width="2"
+                stroke="#cbd5e1"
+                stroke-width="1.5"
                 stroke-linecap="round"
                 stroke-linejoin="round"
               >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
+                <path
+                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                ></path>
               </svg>
-            {:else}
+            </div>
+            <h4>¡Hola! 👋 Soy tu asistente virtual UNEMI</h4>
+            <p>
+              Estoy aquí para ayudarte con información sobre trámites,
+              servicios, reglamentos y más. Escríbeme tu consulta cuando
+              quieras.
+            </p>
+          </div>
+        {:else}
+          {#each messages as message, idx (idx)}
+            <div
+              class="message"
+              class:user={message.role === "user"}
+              class:assistant={message.role === "assistant"}
+            >
+              <div class="message-avatar">
+                {#if message.role === "user"}
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                {:else}
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M12 8V4H8"></path>
+                    <rect x="4" y="8" width="16" height="12" rx="2"></rect>
+                    <path d="M2 14h2"></path>
+                    <path d="M20 14h2"></path>
+                    <path d="M15 13v2"></path>
+                    <path d="M9 13v2"></path>
+                  </svg>
+                {/if}
+              </div>
+
+              <div class="message-content">
+                {@html message.content.replace(/\n/g, "<br>")}
+
+                {#if message.offerHandoff}
+                  <div class="handoff-buttons">
+                    <button
+                      class="btn-yes"
+                      class:selected={message.selectedOption === "yes"}
+                      on:click={() => confirmHandoff(idx)}
+                      disabled={message.handoffResolved}
+                    >
+                      🧑‍💻 Sí, contactar a un humano
+                    </button>
+
+                    <button
+                      class="btn-no"
+                      class:selected={message.selectedOption === "no"}
+                      on:click={() => cancelHandoff(idx)}
+                      disabled={message.handoffResolved}
+                    >
+                      Continuar conversando
+                    </button>
+                  </div>
+                {/if}
+
+                {#if message.isRagConfirmation}
+                  <div class="handoff-buttons">
+                    <button
+                      class="btn-yes"
+                      class:selected={message.selectedOption === "yes"}
+                      on:click={() =>
+                        confirmRag(idx, message.reformulatedQuery)}
+                      disabled={message.confirmationResolved}
+                    >
+                      Sí, buscar
+                    </button>
+
+                    <button
+                      class="btn-no"
+                      class:selected={message.selectedOption === "no"}
+                      on:click={() => rejectRag(idx)}
+                      disabled={message.confirmationResolved}
+                    >
+                      No
+                    </button>
+                  </div>
+                {/if}
+
+                {#if message.sources && message.sources.length > 0}
+                  <div class="sources-container">
+                    <p class="sources-title">Fuentes:</p>
+                    <div class="badges-wrapper">
+                      {#each message.sources as source}
+                        {#if source.url}
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="badge clickable"
+                            title="Clic para ver documento original"
+                          >
+                            {source.title || "Documento"}
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="3"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              style="margin-left:2px;"
+                            >
+                              <path
+                                d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                              ></path>
+                              <polyline points="15 3 21 3 21 9"></polyline>
+                              <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                          </a>
+                        {:else}
+                          <span class="badge" title="Fuente sin enlace">
+                            {source.title || "Documento"}
+                          </span>
+                        {/if}
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        {/if}
+
+        {#if isLoading}
+          <div class="message assistant">
+            <div class="message-avatar">
               <svg
                 width="20"
                 height="20"
@@ -504,110 +653,110 @@
                 <path d="M15 13v2"></path>
                 <path d="M9 13v2"></path>
               </svg>
-            {/if}
+            </div>
+            <div class="message-content loading">
+              {#if loadingText}
+                <span class="loading-text">{loadingText}</span>
+              {/if}
+              <div class="typing-indicator">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
           </div>
+        {/if}
+      </div>
 
-          <div class="message-content">
-            {@html message.content.replace(/\n/g, "<br>")}
+      <div class="input-container">
+        <input
+          type="file"
+          style="display: none;"
+          bind:this={fileInput}
+          on:change={handleFileSelect}
+          accept=".pdf,.jpg,.jpeg,.png"
+        />
 
-            {#if message.offerHandoff}
-              <div class="handoff-buttons">
-                <button
-                  class="btn-yes"
-                  class:selected={message.selectedOption === "yes"}
-                  on:click={() => confirmHandoff(idx)}
-                  disabled={message.handoffResolved}
+        {#if showUploadAction}
+          <button
+            class="upload-icon-btn"
+            on:click={goToUpload}
+            title="Se requiere documentación. Clic para subir."
+            disabled={isLoading || !isConnected}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
+              ></path>
+            </svg>
+            <span class="notification-dot"></span>
+          </button>
+        {/if}
+
+        <div style="flex: 1; display: flex; flex-direction: column;">
+          {#if uploadedFile}
+            <div class="file-preview">
+              <span style="display:flex; align-items:center; gap:5px;">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  ><path
+                    d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+                  ></path><polyline points="13 2 13 9 20 9"></polyline></svg
                 >
-                  🧑‍💻 Sí, contactar a un humano
-                </button>
+                {uploadedFile.name}
+              </span>
+              <button
+                class="remove-file-btn"
+                on:click={removeFile}
+                title="Quitar archivo">&times;</button
+              >
+            </div>
+          {/if}
 
-                <button
-                  class="btn-no"
-                  class:selected={message.selectedOption === "no"}
-                  on:click={() => cancelHandoff(idx)}
-                  disabled={message.handoffResolved}
-                >
-                  Continuar conversando
-                </button>
-              </div>
-            {/if}
-
-            {#if message.isRagConfirmation}
-              <div class="handoff-buttons">
-                <button
-                  class="btn-yes"
-                  class:selected={message.selectedOption === "yes"}
-                  on:click={() =>
-                    confirmRag(
-                      idx,
-                      message.reformulatedQuery,
-                      message.detectedProcess,
-                    )}
-                  disabled={message.confirmationResolved}
-                >
-                  Sí, buscar
-                </button>
-
-                <button
-                  class="btn-no"
-                  class:selected={message.selectedOption === "no"}
-                  on:click={() => rejectRag(idx)}
-                  disabled={message.confirmationResolved}
-                >
-                  No
-                </button>
-              </div>
-            {/if}
-
-            {#if message.sources && message.sources.length > 0}
-              <div class="sources-container">
-                <p class="sources-title">Fuentes:</p>
-                <div class="badges-wrapper">
-                  {#each message.sources as source}
-                    {#if source.url}
-                      <a
-                        href={source.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="badge clickable"
-                        title="Clic para ver documento original"
-                      >
-                        {source.title || "Documento"}
-                        <svg
-                          width="10"
-                          height="10"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="3"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          style="margin-left:2px;"
-                        >
-                          <path
-                            d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
-                          ></path>
-                          <polyline points="15 3 21 3 21 9"></polyline>
-                          <line x1="10" y1="14" x2="21" y2="3"></line>
-                        </svg>
-                      </a>
-                    {:else}
-                      <span class="badge" title="Fuente sin enlace">
-                        {source.title || "Documento"}
-                      </span>
-                    {/if}
-                  {/each}
-                </div>
-              </div>
-            {/if}
-          </div>
+          <textarea
+            bind:this={messageInputEl}
+            bind:value={inputMessage}
+            on:keypress={handleKeyPress}
+            placeholder={showUploadAction && !uploadedFile && !isUploadOptional
+              ? "Por favor sube el documento obligatoriamente..."
+              : showUploadAction && isUploadOptional && !uploadedFile
+                ? "Describe tu caso o sube una evidencia (opcional)..."
+                : isHandoffPending
+                  ? "Por favor selecciona una opción arriba 👆"
+                  : "Escribe aquí tu consulta… estoy listo para ayudarte 😊"}
+            disabled={isLoading ||
+              !isConnected ||
+              (showUploadAction && !uploadedFile && !isUploadOptional) ||
+              isHandoffPending}
+            rows="1"
+            style="min-height: 44px;"
+          ></textarea>
         </div>
-      {/each}
-    {/if}
 
-    {#if isLoading}
-      <div class="message assistant">
-        <div class="message-avatar">
+        <button
+          on:click={() => sendMessage(false)}
+          class="send-btn"
+          disabled={isLoading ||
+            !isConnected ||
+            (!inputMessage.trim() && !uploadedFile) ||
+            (showUploadAction && !uploadedFile && !isUploadOptional) ||
+            isHandoffPending}
+          title="Enviar mensaje"
+        >
           <svg
             width="20"
             height="20"
@@ -617,136 +766,48 @@
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
+            style="transform: translateX(-1px) translateY(1px);"
           >
-            <path d="M12 8V4H8"></path>
-            <rect x="4" y="8" width="16" height="12" rx="2"></rect>
-            <path d="M2 14h2"></path>
-            <path d="M20 14h2"></path>
-            <path d="M15 13v2"></path>
-            <path d="M9 13v2"></path>
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
           </svg>
-        </div>
-        <div class="message-content loading">
-          {#if loadingText}
-            <span class="loading-text">{loadingText}</span>
-          {/if}
-          <div class="typing-indicator">
-            <span></span><span></span><span></span>
-          </div>
-        </div>
+        </button>
       </div>
-    {/if}
-  </div>
-
-  <div class="input-container">
-    <input
-      type="file"
-      style="display: none;"
-      bind:this={fileInput}
-      on:change={handleFileSelect}
-      accept=".pdf,.jpg,.jpeg,.png"
-    />
-
-    {#if showUploadAction}
-      <button
-        class="upload-icon-btn"
-        on:click={goToUpload}
-        title="Se requiere documentación. Clic para subir."
-        disabled={isLoading || !isConnected}
-      >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path
-            d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
-          ></path>
-        </svg>
-        <span class="notification-dot"></span>
-      </button>
-    {/if}
-
-    <div style="flex: 1; display: flex; flex-direction: column;">
-      {#if uploadedFile}
-        <div class="file-preview">
-          <span style="display:flex; align-items:center; gap:5px;">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              ><path
-                d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
-              ></path><polyline points="13 2 13 9 20 9"></polyline></svg
-            >
-            {uploadedFile.name}
-          </span>
-          <button
-            class="remove-file-btn"
-            on:click={removeFile}
-            title="Quitar archivo">&times;</button
-          >
-        </div>
-      {/if}
-
-      <textarea
-        bind:value={inputMessage}
-        on:keypress={handleKeyPress}
-        placeholder={showUploadAction && !uploadedFile && !isUploadOptional
-          ? "Por favor sube el documento obligatoriamente..."
-          : showUploadAction && isUploadOptional && !uploadedFile
-            ? "Describe tu caso o sube una evidencia (opcional)..."
-            : isHandoffPending
-              ? "Por favor selecciona una opción arriba 👆"
-              : "Escribe aquí tu consulta… estoy listo para ayudarte 😊"}
-        disabled={isLoading ||
-          !isConnected ||
-          (showUploadAction && !uploadedFile && !isUploadOptional) ||
-          isHandoffPending}
-        rows="1"
-        style="min-height: 44px;"
-      ></textarea>
     </div>
-
-    <button
-      on:click={() => sendMessage(false)}
-      class="send-btn"
-      disabled={isLoading ||
-        !isConnected ||
-        (!inputMessage.trim() && !uploadedFile) ||
-        (showUploadAction && !uploadedFile && !isUploadOptional) ||
-        isHandoffPending}
-      title="Enviar mensaje"
-    >
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        style="transform: translateX(-1px) translateY(1px);"
-      >
-        <line x1="22" y1="2" x2="11" y2="13"></line>
-        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-      </svg>
-    </button>
-  </div>
+  {/if}
 </div>
 
+<!-- Fin main-layout -->
+
+<!-- Fin chatbot-wrapper y main-layout -->
+
 <style>
+  /* --- LAYOUT PRINCIPAL (Flexbox) --- */
+  /* --- LAYOUT PRINCIPAL (Flexbox) --- */
+
+  .chatbot-container-wrapper {
+    flex: 1; /* El chat toma el resto */
+    display: flex;
+    justify-content: center; /* Centramos el chat si se desea, o full width */
+    height: 100%;
+    position: relative;
+    overflow: hidden; /* Importante para que no crezca más de la cuenta */
+  }
+
+  /* Ajustes al container original del chatbot para que se comporte bien dentro del wrapper */
+  .chatbot-container {
+    width: 100%;
+    max-width: 100%; /* Quitamos max-width fijo si queremos que llene, o lo mantenemos */
+    height: 100%; /* Altura full del padre */
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+    /* Eliminamos márgenes auto o sombras externas si queremos un look "panel completo" */
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  /* --- ESTILOS ANTIGUOS --- */
   .upload-icon-btn {
     position: relative;
     display: flex;
@@ -800,19 +861,6 @@
       transform: scale(0.95);
       box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
     }
-  }
-
-  .chatbot-container {
-    display: flex;
-    flex-direction: column;
-    height: 700px;
-    max-width: 900px;
-    margin: 0 auto;
-    border: 1px solid #d0d5dd;
-    border-radius: 12px;
-    background: #ffffff;
-    box-shadow: 0 4px 20px rgba(30, 58, 95, 0.15);
-    overflow: hidden;
   }
 
   .chatbot-header {
@@ -1289,18 +1337,16 @@
     font-weight: 600;
     transition: background 0.2s;
   }
-  .btn-yes:hover {
-    background-color: #ff6b35;
-  }
+
   .btn-no {
     background-color: transparent;
-    color: #ffffff;
     border: 1px solid #cbd5e1;
     padding: 8px 16px;
     border-radius: 20px;
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
+    color: #1e293b;
   }
   .btn-no:hover {
     background-color: #f1f5f9;
@@ -1321,4 +1367,61 @@
     background-color: #e2e8f0 !important;
     color: #94a3b8;
   }
+
+  /* --- NUEVOS ESTILOS DE LAYOUT Y START PANEL --- */
+
+  .content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+    background-color: #f1f5f9;
+  }
+
+  /* .layout-header, .content-wrapper REMOVED (logic moved to App.svelte) */
+
+  .start-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: #64748b;
+    background: #f8fafc;
+    border-radius: 12px;
+    margin: 20px;
+    border: 2px dashed #cbd5e1;
+    padding: 40px;
+  }
+
+  .start-panel h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #1e293b;
+    font-size: 1.25rem;
+  }
+
+  .start-panel p {
+    margin: 0;
+    max-width: 300px;
+    line-height: 1.5;
+  }
+
+
+  .start-box{
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.start-img{
+  width: auto;
+  max-width: 750px;
+  max-height: 500px;
+  object-fit: contain;
+  background: #fff;
+}
+
 </style>

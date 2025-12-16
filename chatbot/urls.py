@@ -1,10 +1,11 @@
 from django.urls import path
 from .views import (
     ChatView, health, get_users_list, 
-    document_manager, upload_document, delete_document, update_document_role,
+    document_manager, upload_document, delete_document, update_document_role, 
     process_manager, create_process, delete_process, edit_process,
     upload_documentation, create_chatbot_role, delete_chatbot_role, edit_chatbot_role,
-    get_users_list
+    get_users_list, create_process_type, edit_process_type, delete_process_type,
+    api_get_servicios_estudiante
 )
 
 app_name = 'chatbot'
@@ -32,6 +33,11 @@ urlpatterns = [
     path('gestion/roles/edit/<int:role_id>/', edit_chatbot_role, name='edit_chatbot_role'),
     path('gestion/roles/delete/<int:role_id>/', delete_chatbot_role, name='delete_chatbot_role'),
     path('api/mi-status/', get_users_list, name='ver_mi_status'),
+    path('api/servicios-estudiante/', api_get_servicios_estudiante, name='api_servicios_estudiante'),
+
+    path('gestion/tipos/crear/', create_process_type, name='create_process_type'),
+    path('gestion/tipos/editar/<int:type_id>/', edit_process_type, name='edit_process_type'),
+    path('gestion/tipos/eliminar/<int:type_id>/', delete_process_type, name='delete_process_type'),
 ]
 
 
