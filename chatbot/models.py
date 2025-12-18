@@ -79,20 +79,19 @@ class BalconAgente(models.Model):
 
 
 class BalconServicio(models.Model):
+    id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
     nombre = models.CharField(max_length=500, blank=True, null=True)
-    descripcion = models.TextField()
+    descripcion = models.TextField(blank=True, null=True)
     estado = models.BooleanField()
-    usuario_creacion = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(
-        User, models.DO_NOTHING, related_name='balconservicio_usuario_modificacion_set', blank=True, null=True
-    )
+    usuario_creacion = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True, related_name="+")
+    usuario_modificacion = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True, related_name="+")
 
     class Meta:
         managed = False
-        db_table = 'balcon_servicio'
+        db_table = "balcon_servicio"
 
 class BalconServicioOpcsistema(models.Model):
     servicio = models.ForeignKey(BalconServicio, models.DO_NOTHING)
@@ -125,43 +124,41 @@ class BalconServiciodepartamento(models.Model):
 
 
 class BalconProcesoservicio(models.Model):
+    id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
+
+    proceso = models.ForeignKey("BalconProceso", models.DO_NOTHING, blank=True, null=True)
+    servicio = models.ForeignKey("BalconServicio", models.DO_NOTHING, blank=True, null=True)
+
     tiempomaximo = models.IntegerField()
     tiempominimo = models.IntegerField()
     minutos = models.IntegerField()
-    url = models.CharField(max_length=200, blank=True, null=True)
 
-    # IMPORTANTE: BalconProceso debe existir en tu models.py
-    proceso = models.ForeignKey('BalconProceso', models.DO_NOTHING, blank=True, null=True)
-    servicio = models.ForeignKey(BalconServicio, models.DO_NOTHING, blank=True, null=True)
+    url = models.CharField(max_length=5000, blank=True, null=True)
 
-    usuario_creacion = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(
-        User, models.DO_NOTHING, related_name='balconprocesoservicio_usuario_modificacion_set', blank=True, null=True
-    )
-    opcsistema = models.ForeignKey(SagestOpcionsistema, models.DO_NOTHING, blank=True, null=True)
+    usuario_creacion = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True, related_name="+")
+    usuario_modificacion = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True, related_name="+")
 
     class Meta:
         managed = False
-        db_table = 'balcon_procesoservicio'
+        db_table = "balcon_procesoservicio"
 
 
 class BalconRequisito(models.Model):
+    id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
     descripcion = models.TextField()
-
-    usuario_creacion = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(
-        User, models.DO_NOTHING, related_name='balconrequisito_usuario_modificacion_set', blank=True, null=True
-    )
+    estado = models.BooleanField()
+    usuario_creacion = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True, related_name="+")
+    usuario_modificacion = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True, related_name="+")
 
     class Meta:
         managed = False
-        db_table = 'balcon_requisito'
+        db_table = "balcon_requisito"
 
 
 class BalconSolicitud(models.Model):
@@ -201,23 +198,23 @@ class BalconSolicitud(models.Model):
 
 
 class BalconRequisitosconfiguracion(models.Model):
+    id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
+
     obligatorio = models.BooleanField()
     activo = models.BooleanField()
 
-    requisito = models.ForeignKey(BalconRequisito, models.DO_NOTHING, blank=True, null=True)
-    servicio = models.ForeignKey(BalconProcesoservicio, models.DO_NOTHING, blank=True, null=True)
+    requisito = models.ForeignKey("BalconRequisito", models.DO_NOTHING, blank=True, null=True)
+    servicio = models.ForeignKey("BalconProcesoservicio", models.DO_NOTHING, blank=True, null=True)
 
-    usuario_creacion = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(
-        User, models.DO_NOTHING, related_name='balconrequisitosconfiguracion_usuario_modificacion_set', blank=True, null=True
-    )
+    usuario_creacion = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True, related_name="+")
+    usuario_modificacion = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True, related_name="+")
 
     class Meta:
         managed = False
-        db_table = 'balcon_requisitosconfiguracion'
+        db_table = "balcon_requisitosconfiguracion"
 
 
 class BalconRequisitossolicitud(models.Model):

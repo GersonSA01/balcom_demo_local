@@ -5,6 +5,7 @@
   // PROPS
   export let chatOpened = false;
   export let sessionData = {};
+  export let selectedProceso = null;
 
   let messageInputEl;
   let chatContainer; // Referencia al div de mensajes
@@ -29,6 +30,25 @@
   let isUploading = false;
 
   const API_BASE_URL = "http://localhost:9090/api/chatbot";
+
+  // Función para procesar markdown básico y formatear el texto
+  function formatMessage(text) {
+    if (!text) return "";
+    
+    // Escapar HTML para seguridad
+    let formatted = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    
+    // Procesar negritas **texto** -> <strong>texto</strong>
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    
+    // Procesar saltos de línea
+    formatted = formatted.replace(/\n/g, "<br>");
+    
+    return formatted;
+  }
 
   // Eliminado loadDataUnemi
 
@@ -115,6 +135,7 @@
 
       // 1) Determina si esta request debe ir en modo handoff
       const willSendHandoffMode = handoffMode === true;
+      const currentProcessName = selectedProceso ? selectedProceso.nombre : null;
 
       // 2) Construye el body incluyendo el flag
       const requestBody = {
@@ -122,6 +143,7 @@
         history: history,
         session_data: sessionDataToSend,
         handoff_mode: willSendHandoffMode, // NUEVO
+        current_process: currentProcessName,
       };
 
       // 3) Apaga el flag INMEDIATAMENTE (one-shot) si lo acabas de usar
@@ -261,6 +283,48 @@
     if (fileInput) fileInput.value = "";
   }
 
+  let lastProcesoId = null;
+
+  async function pushSelectedProcessWelcome(proc) {
+    // (Opcional) si quieres limpiar el chat al cambiar de proceso:
+    messages = [];
+    error = null;
+    showUploadAction = false;
+
+    // Pide la lista real de servicios del proceso (endpoint nuevo, abajo)
+    let servicios = [];
+    try {
+      const r = await fetch(
+        `${API_BASE_URL}/api/proceso-servicios/?proceso_id=${proc.id}`,
+      );
+      if (r.ok) {
+        const data = await r.json();
+        servicios = data.servicios || [];
+      }
+    } catch (e) {}
+
+    const lista = servicios.length
+      ? servicios
+          .slice(0, 8)
+          .map((s) => `• ${s.nombre}`)
+          .join("\n")
+      : "• (Aún no hay servicios registrados para este proceso)";
+
+    messages = [
+      ...messages,
+      {
+        role: "assistant",
+        content:
+          `Hola 👋, veo que seleccionaste ${proc.nombre}.\n` +
+          `Actualmente disponemos de estos servicios:\n${lista}\n\n` +
+          `¿En qué te puedo ayudar? 😊`,
+      },
+    ];
+
+    await tick();
+    messageInputEl?.focus();
+  }
+
   // Función centralizada y mejorada
   async function scrollToBottom() {
     await tick(); // Espera a que el DOM se actualice con el nuevo mensaje
@@ -276,6 +340,22 @@
   // Cada vez que 'messages' cambie (longitud o contenido), se ejecuta el scroll.
   $: if (messages) {
     scrollToBottom();
+  }
+
+  $: console.log(
+    "CHATBOT selectedProceso:",
+    selectedProceso,
+    "chatOpened:",
+    chatOpened,
+  );
+
+  $: if (
+    chatOpened &&
+    selectedProceso &&
+    selectedProceso.id !== lastProcesoId
+  ) {
+    lastProcesoId = selectedProceso.id;
+    pushSelectedProcessWelcome(selectedProceso);
   }
 
   async function uploadAndSend() {
@@ -365,17 +445,16 @@
   // Modificar en la sección
 
   async function confirmHandoff(index) {
-  // 1) Bloqueo visual
-  messages[index].handoffResolved = true;
-  messages[index].selectedOption = "yes";
-  messages = [...messages];
+    // 1) Bloqueo visual
+    messages[index].handoffResolved = true;
+    messages[index].selectedOption = "yes";
+    messages = [...messages];
 
-  // 2) Activar modo handoff (one-shot) + mandar comando (NO vacío)
-  handoffMode = true;
-  inputMessage = "HUMAN_HANDOFF";
-  await sendMessage(true);
-}
-
+    // 2) Activar modo handoff (one-shot) + mandar comando (NO vacío)
+    handoffMode = true;
+    inputMessage = "HUMAN_HANDOFF";
+    await sendMessage(true);
+  }
 
   function cancelHandoff(index) {
     messages[index].handoffResolved = true;
@@ -388,38 +467,19 @@
       { role: "user", content: "No, gracias. Seguiré conversando." },
     ];
   }
-
-  // --- LÓGICA DEL MENÚ ---
-  async function loadServiciosEstudiante() {
-    if (!sessionData) return;
-    const cedula = Object.keys(sessionData)[0];
-    if (!cedula) return;
-
-    try {
-      const resp = await fetch(
-        `${API_BASE_URL}/api/servicios-estudiante/?cedula=${cedula}`,
-      );
-      if (resp.ok) {
-        const data = await resp.json();
-        // El backend devuelve { categorias: [...], ... }
-        serviciosEstudianteData = data.categorias || [];
-      } else {
-        serviciosEstudianteData = [];
-      }
-    } catch (e) {
-      console.error("Error cargando servicios:", e);
-      serviciosEstudianteData = [];
-    }
-  }
 </script>
 
 <!-- EL LAYOUT SE MANEJA EN APP.SVELTE -->
 <div class="chatbot-container-wrapper">
   {#if !chatOpened}
-  <div class="start-box">
-    <img class="start-img" src="/solicitud_balcon.jpg" alt="Seleccione un servicio para comenzar" />
-  </div>
-{:else}
+    <div class="start-box">
+      <img
+        class="start-img"
+        src="/solicitud_balcon.jpg"
+        alt="Seleccione un servicio para comenzar"
+      />
+    </div>
+  {:else}
     <div class="chatbot-container">
       <div class="chatbot-header">
         <div class="header-left">
@@ -540,7 +600,7 @@
               </div>
 
               <div class="message-content">
-                {@html message.content.replace(/\n/g, "<br>")}
+                {@html formatMessage(message.content)}
 
                 {#if message.offerHandoff}
                   <div class="handoff-buttons">
@@ -979,6 +1039,19 @@
     flex-direction: column;
     gap: 16px;
     background: #f8fafc;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Responsive: ajustar en pantallas pequeñas */
+  @media (max-width: 768px) {
+    .message-content {
+      max-width: 85%;
+    }
+    
+    .messages-container {
+      padding: 12px;
+    }
   }
 
   .empty-state {
@@ -1051,11 +1124,29 @@
 
   .message-content {
     max-width: 75%;
+    min-width: 0; /* Permite que se ajuste correctamente */
     padding: 14px 18px;
     border-radius: 16px;
     word-wrap: break-word;
-    line-height: 1.5;
+    overflow-wrap: break-word; /* Asegura que las palabras largas se corten */
+    word-break: break-word; /* Permite cortar palabras muy largas */
+    line-height: 1.6;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    hyphens: auto; /* Agrega guiones automáticos cuando sea necesario */
+  }
+  
+  /* Estilos para texto dentro del mensaje */
+  .message-content strong {
+    font-weight: 600;
+    color: inherit;
+  }
+  
+  .message.assistant .message-content strong {
+    color: #1e3a5f;
+  }
+  
+  .message.user .message-content strong {
+    color: #ffffff;
   }
   .message.user .message-content {
     background: linear-gradient(135deg, #1e3a5f 0%, #2c4a6b 100%);
@@ -1271,6 +1362,9 @@
     font-weight: 600;
     transition: all 0.2s ease;
     text-decoration: none; /* Quitar subrayado por defecto de enlaces */
+    max-width: 512px;
+    text-wrap: auto;
+    text-align: left;
   }
 
   /* Estilo específico cuando es un link */
@@ -1409,19 +1503,17 @@
     line-height: 1.5;
   }
 
+  .start-box {
+    height: 100%;
+    display: grid;
+    place-items: center;
+  }
 
-  .start-box{
-  height: 100%;
-  display: grid;
-  place-items: center;
-}
-
-.start-img{
-  width: auto;
-  max-width: 750px;
-  max-height: 500px;
-  object-fit: contain;
-  background: #fff;
-}
-
+  .start-img {
+    width: auto;
+    max-width: 750px;
+    max-height: 500px;
+    object-fit: contain;
+    background: #fff;
+  }
 </style>

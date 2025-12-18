@@ -1,8 +1,11 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, createEventDispatcher } from "svelte";
 
   // Recibimos la data completa desde la vista de Django
   export let dataUnemi = [];
+
+  // Dispatcher para eventos de Svelte
+  const dispatch = createEventDispatcher();
 
   // Listas para los desplegables
   let personasList = [];
@@ -175,7 +178,10 @@
     // Guardar en localStorage
     localStorage.setItem("user_session_data", JSON.stringify(sessionPayload));
 
-    // Emitir evento global para que otros componentes se enteren
+    // ✅ Emitir evento de Svelte (para App.svelte)
+    dispatch("session-update", sessionPayload);
+
+    // ✅ Emitir evento global para compatibilidad con otros componentes
     const event = new CustomEvent("sessionDataUpdated", {
       detail: sessionPayload,
     });

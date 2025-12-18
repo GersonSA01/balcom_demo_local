@@ -19,6 +19,7 @@
 
   // Función al hacer clic en un trámite específico
   function selectProcess(proceso) {
+    console.log("CLICK PROCESO:", proceso);
     // Despachamos el evento al padre (Chatbot.svelte)
     dispatch("actionRun", {
       action: "selectProceso",
@@ -87,7 +88,7 @@
     display: flex;
     flex-direction: column;
     background-color: #ffffff;
-    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-family: "Segoe UI", system-ui, sans-serif;
   }
 
   .menu-title {
@@ -119,7 +120,7 @@
   }
 
   .accordion-item:hover {
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   }
 
   .accordion-header {
@@ -135,7 +136,9 @@
     color: #334155;
     font-weight: 600;
     font-size: 0.95rem;
-    transition: background 0.2s, color 0.2s;
+    transition:
+      background 0.2s,
+      color 0.2s;
   }
 
   .accordion-header:hover {
@@ -218,7 +221,6 @@
     font-weight: 500;
   }
 
-
   .proc-time {
     font-size: 0.75rem;
     color: #94a3b8;
@@ -226,5 +228,4 @@
     align-items: center;
     gap: 4px;
   }
-
 </style>
