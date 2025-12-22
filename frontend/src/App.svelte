@@ -11,12 +11,7 @@
   let sessionData = {};
   let serviciosEstudianteData = [];
   let dataUnemi = {};
-  let chatOpened = false;
   let showMenu = true;
-  let selectedProceso = null;
-
-  // Refs
-  let chatbotComponent;
 
   const API_BASE_URL = "http://localhost:9090/api/chatbot";
 
@@ -71,10 +66,7 @@
 
   function handleMenuAction(e) {
     console.log("EVENTO MENU:", e.detail);
-    if (e.detail.action === "selectProceso") {
-      selectedProceso = e.detail.data.item;
-      chatOpened = true;
-    }
+    // Ya no abrimos el chat automáticamente al seleccionar un proceso
   }
 
   onMount(() => {
@@ -114,7 +106,7 @@
     </div>
   </div>
 
-  <!-- CONTENIDO PRINCIPAL (Sidebar + Chat) -->
+  <!-- CONTENIDO PRINCIPAL (Sidebar + Panel) -->
   <div class="main-content">
     {#if serviciosEstudianteData.length > 0 && showMenu}
       <aside class="sidebar">
@@ -127,14 +119,14 @@
       </aside>
     {/if}
 
-    <main class="chat-area">
-      <Chatbot
-        bind:this={chatbotComponent}
-        bind:chatOpened
-        {sessionData}
-        {selectedProceso}
+    <!-- Área central: siempre muestra la imagen -->
+    <div class="start-box">
+      <img
+        class="start-img"
+        src="/solicitud_balcon.jpg"
+        alt="Seleccione un servicio para comenzar"
       />
-    </main>
+    </div>
 
     <!-- PANEL DERECHO SIMULADO -->
     <aside class="right-panel">
@@ -143,6 +135,9 @@
       </div>
     </aside>
   </div>
+
+  <!-- CHATBOT FLOTANTE (independiente) -->
+  <Chatbot {sessionData} />
 </div>
 
 <style>
@@ -196,16 +191,6 @@
     padding: 12px; /* aire interno del menú */
   }
 
-  .chat-area {
-    flex: 1;
-    min-width: 0; /* 🔥 importantísimo para que no se rompa en flex */
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
 
   /* Responsive opcional */
   @media (max-width: 900px) {
@@ -241,6 +226,24 @@
     height: 100%;
     padding: 12px;
     overflow: hidden;
+  }
+
+  .start-box {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .start-img {
+    width: auto;
+    max-width: 750px;
+    max-height: 500px;
+    object-fit: contain;
+    background: #fff;
   }
 
   /* Responsive: en móvil lo bajas abajo */

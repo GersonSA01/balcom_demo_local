@@ -61,8 +61,7 @@
                         <div class="border-t border-gray-100 pt-2">
                             <div class="flex flex-wrap gap-1">
                                 {% for carrera in rol.carreras.all|slice:":2" %}
-                                <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px]">{{
-                                    carrera.nombre|truncatechars:15 }}</span>
+                                <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px]">{{ carrera.nombre|default:"Global (Todas)"|truncatechars:15 }}</span>
                                 {% empty %}
                                 <span class="text-[10px] text-green-600 font-medium px-1 bg-green-50 rounded">Global
                                     (Todas)</span>

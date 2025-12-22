@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 # ==============================================================================
 
 HANDOFF_TRIGGER_MESSAGE = "HUMAN_HANDOFF"
-SESSION_HANDOFF_PENDING_KEY = "handoff_pending"
+# SESSION_HANDOFF_PENDING_KEY eliminado - ya no se usa
 
 ROLES_PERMITIDOS_MAP = {
     "inscripcion": "Estudiante (Pregrado)",
@@ -248,7 +248,6 @@ def get_process_response_from_db(
             return {
                 "text": f"Por ahora no tengo información disponible sobre el proceso '{process_name}'.",
                 "status": "error",
-                "need_documentation": False,
             }
 
         # 2. VALIDACIÓN DE SEGURIDAD (Roles y Carreras)
@@ -279,33 +278,22 @@ def get_process_response_from_db(
             return {
                 "text": "Lo siento, este proceso no está disponible para tu perfil o carrera actual.",
                 "status": "unauthorized",
-                "need_documentation": False
             }
 
         # 3. Construcción de respuesta (Igual que antes)
         tipo_nombre = (process.process_type.nombre or "").strip().lower() if process.process_type else ""
 
-        # Informativo: no pedir docs
-        if tipo_nombre == "informativo":
-            friendly_text = (process.active_message or process.business_context or "").strip()
-            need_docs = False
-        else:
-            friendly_text = (
-                "Hola 👋, para continuar con tu solicitud necesito que me compartas la documentación requerida:\n"
-                f"{(process.active_message or '').strip()}\n"
-                "También necesitaré que me des de nuevo los detalles de tu solicitud."
-            ).strip()
-            need_docs = bool(process.need_documentation)
-
+        # Solo devolvemos el mensaje, sin lógica de documentación
+        friendly_text = (process.active_message or process.business_context or "").strip()
+        
         return {
             "text": friendly_text or "Por ahora no tengo un mensaje configurado para este proceso.",
-            "need_documentation": need_docs,
             "source_url": process.source_url,
         }
 
     except Exception as e:
         logger.exception("Error validando proceso: %s", e)
-        return {"text": "Error interno al procesar la solicitud.", "status": "error", "need_documentation": False}
+        return {"text": "Error interno al procesar la solicitud.", "status": "error"}
 
 
 # ==============================================================================
@@ -638,17 +626,7 @@ class ChatView(APIView):
         user_msg = (request.data.get("message", "") or "").strip()
         _history = request.data.get("history", [])  # por ahora no se usa en router (puedes usarlo luego)
 
-        # flag one-shot del frontend (solo debe enviarse en confirmHandoff)
-        handoff_mode = bool(request.data.get("handoff_mode", False))
-
-        # ✅ FIX LOOP: solo es handoff si el mensaje es exactamente el trigger
-        is_handoff_confirmation = bool(handoff_mode and user_msg == HANDOFF_TRIGGER_MESSAGE)
-
-        # fallback viejo SOLO si no vino el boolean
-        if not handoff_mode and user_msg:
-            trigger_phrases = ["sí, contactar a un humano", "contactar a un humano"]
-            if any(p in user_msg.lower() for p in trigger_phrases):
-                is_handoff_confirmation = True
+        # Lógica de handoff_mode eliminada - ya no se usa
 
         # session_data parsing
         raw_session = request.data.get("session_data", {}) or {}
@@ -698,41 +676,7 @@ class ChatView(APIView):
 
                     return out[-max_items:]
 
-                # -------------------------------------------------------------
-                # 0) Handoff inmediato (SIN IA)  ✅ blindado
-                # -------------------------------------------------------------
-                if is_handoff_confirmation:
-                    request.session[SESSION_HANDOFF_PENDING_KEY] = True
-                    request.session.modified = True
-
-                    time.sleep(0.2)
-
-                    payload_data = {
-                        "status": "success",
-                        "need_documentation": True,
-                        "upload_optional": True,
-                        "handoff_mode": True,  # solo para UI (NO para persistir frontend)
-                    }
-
-                    msg_text = (
-                        "Entendido. Para derivarte con mis compañeros, por favor descríbeme de nuevo tu caso "
-                        "y adjunta evidencia si es necesario (opcional)."
-                    )
-
-                    yield json.dumps(
-                        {
-                            "type": "final",
-                            "data": {
-                                "response": msg_text,
-                                "sources": [],
-                                "is_function": True,
-                                "action": "FUNCTION",
-                                "payload": payload_data,
-                                "offer_human_handoff": False,
-                            },
-                        }
-                    ) + "\n"
-                    return
+                
 
                 # -------------------------------------------------------------
                 # Helpers internos (RAG y filtros)
@@ -1038,8 +982,10 @@ class ChatView(APIView):
                 # -------------------------------------------------------------
                 # 4) Router: decidir acción (FUNCTION / ANSWER / OFF_TOPIC)
                 # -------------------------------------------------------------
+                # --- CORRECCIÓN: Inicializar variables por defecto ANTES del try ---
                 action = "ANSWER"
                 found_process_name = None
+                data_router = {}  # <--- ESTO EVITA EL ERROR si falla la conexión
 
                 if valid_process_details:
                     # Inyectamos también el proceso actual (si viene desde el frontend)
@@ -1103,6 +1049,9 @@ class ChatView(APIView):
                     # Manejo de OFF_TOPIC
                     if router_class == "OFF_TOPIC":
                         action = "OFF_TOPIC"
+                        
+                    elif router_class == "PLATFORM_OR_TECH_ISSUE" or router_class == "TECH_ISSUE":
+                        action = "TECH_ISSUE"
                     
                     # Manejo de AMBIGUOUS
                     elif router_class == "AMBIGUOUS":
@@ -1152,6 +1101,26 @@ class ChatView(APIView):
                 # -------------------------------------------------------------
                 # 5) Ejecutar acción
                 # -------------------------------------------------------------
+
+                if action == "TECH_ISSUE":
+                    # Solo mostramos el mensaje, sin lógica de upload
+                    yield json.dumps(
+                        {
+                            "type": "final",
+                            "data": {
+                                "response": (
+                                    "Lamento que tengas problemas con la plataforma 😟. "
+                                    "Derivaré tu caso a mis compañeros humanos. Por favor realiza una solicitud al balcón de servicios."
+                                ),
+                                "sources": [],
+                                "action": "ANSWER",
+                                "is_function": False,
+                                "offer_human_handoff": False,
+                            },
+                        }
+                    ) + "\n"
+                    return
+
                 if action == "OFF_TOPIC":
                     yield json.dumps(
                         {
@@ -1169,28 +1138,19 @@ class ChatView(APIView):
                     return
 
                 if action == "FUNCTION":
-                    # HUMAN_HANDOFF: abre modal
+                    # HUMAN_HANDOFF: solo mostramos el mensaje
                     if found_process_name == "HUMAN_HANDOFF":
-                        request.session[SESSION_HANDOFF_PENDING_KEY] = True
-                        request.session.modified = True
-
                         yield json.dumps(
                             {
                                 "type": "final",
                                 "data": {
                                     "response": (
-                                        "Entendido 😊 Enviaré tu solicitud a mis compañeros humanos. "
-                                        "Por favor cuéntame tu caso de nuevo y, si tienes evidencia, adjúntala (opcional)."
+                                        "Entendido 😊 Derivaré tu solicitud a mis compañeros humanos. "
+                                        "Por favor realiza una solicitud al balcón de servicios."
                                     ),
                                     "sources": [],
-                                    "is_function": True,
-                                    "action": "FUNCTION",
-                                    "payload": {
-                                        "status": "success",
-                                        "need_documentation": True,
-                                        "upload_optional": True,
-                                        "handoff_mode": True,
-                                    },
+                                    "action": "ANSWER",
+                                    "is_function": False,
                                     "offer_human_handoff": False,
                                 },
                             }
@@ -1285,7 +1245,7 @@ class ChatView(APIView):
                             {
                                 "type": "final",
                                 "data": {
-                                    "response": "Lo siento, no se encontraron normativas habilitadas para tu perfil en este momento.",
+                                    "response": "Lo siento, no se encontraron normativas habilitadas para tu perfil en este momento. Por favor realiza una solicitud al balcón de servicios.",
                                     "sources": [],
                                     "action": "ANSWER",
                                     "is_function": False,
@@ -1759,52 +1719,10 @@ def edit_process(request, process_id):
 
 
 # ==============================================================================
-# 6. Subida de documentación (Handoff)  ✅ archivo opcional
+# 6. Subida de documentación (Handoff) - ELIMINADO
 # ==============================================================================
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def upload_documentation(request):
-    """
-    Endpoint para finalizar la derivación humana:
-    - acepta details (texto) y file (opcional)
-    - limpia handoff_pending
-    """
-    try:
-        extra_details = (request.POST.get("details", "") or "").strip()
-        uploaded_file = request.FILES.get("file")  # opcional
-
-        file_url = None
-        if uploaded_file:
-            storage = FileSystemStorage(
-                location=os.path.join(settings.MEDIA_ROOT, "balcon_docs"),
-                base_url=settings.MEDIA_URL + "balcon_docs/",
-            )
-            filename = storage.save(uploaded_file.name, uploaded_file)
-            file_url = request.build_absolute_uri(storage.url(filename))
-
-        # limpia estado de sesión (clave para que el flujo no se quede pegado)
-        request.session.pop(SESSION_HANDOFF_PENDING_KEY, None)
-        request.session.modified = True
-
-        mensaje_para_usuario = (
-            "Perfecto. Ya envié tu solicitud a mis compañeros humanos. "
-            "¿Hay algo más en lo que te pueda ayudar?"
-        )
-
-        return JsonResponse(
-            {
-                "status": "success",
-                "message": "Solicitud recibida correctamente.",
-                "file_url": file_url,
-                "ai_response": mensaje_para_usuario,
-            }
-        )
-
-    except Exception as e:
-        logger.exception("Error subiendo documentación: %s", e)
-        return JsonResponse({"status": "error", "message": str(e)}, status=500)
-
+# Funciones crear_ticket_soporte y upload_documentation eliminadas
+# Ya no se maneja la subida de archivos ni creación de tickets
 
 # ==============================================================================
 # 7. Gestión de tipos de proceso

@@ -3,9 +3,10 @@
   // Eliminadas importaciones de UserSelector y Menu
 
   // PROPS
-  export let chatOpened = false;
   export let sessionData = {};
-  export let selectedProceso = null;
+  
+  // Estado interno para controlar si el chat está abierto
+  let chatOpened = false;
 
   let messageInputEl;
   let chatContainer; // Referencia al div de mensajes
@@ -18,16 +19,8 @@
   // let sessionData es ahora Prop
   // let dataUnemi Eliminado (lo maneja App)
 
-  let handoffMode = false;
-  let showUploadAction = false;
-  let isUploadOptional = false;
-
   // Eliminado estado de Menu y Servicios
-
-  // --- NUEVO: Estado para Subida Directa ---
-  let fileInput; // Referencia al input file oculto
-  let uploadedFile = null;
-  let isUploading = false;
+  // Eliminada toda la lógica de upload y handoff
 
   const API_BASE_URL = "http://localhost:9090/api/chatbot";
 
@@ -50,12 +43,13 @@
     return formatted;
   }
 
-  // Eliminado loadDataUnemi
-
-  async function openChatOnly() {
-    chatOpened = true; // 👈 abre el chat (actualiza prop via bind)
-    await tick(); // esperar DOM
-    messageInputEl?.focus(); // focus al input
+  // Función para abrir/cerrar el chat
+  async function toggleChat() {
+    chatOpened = !chatOpened;
+    if (chatOpened) {
+      await tick(); // esperar DOM
+      messageInputEl?.focus(); // focus al input
+    }
   }
 
   // Eliminado handleMenuAction
@@ -85,13 +79,8 @@
 
   let loadingText = "";
   async function sendMessage(isHidden = false) {
-    if (isLoading || (!inputMessage.trim() && !uploadedFile && !isHidden))
+    if (isLoading || (!inputMessage.trim() && !isHidden))
       return;
-
-    if (uploadedFile) {
-      await uploadAndSend();
-      return;
-    }
 
     const userMessage = inputMessage.trim();
     inputMessage = "";
@@ -133,23 +122,13 @@
         content: msg.content,
       }));
 
-      // 1) Determina si esta request debe ir en modo handoff
-      const willSendHandoffMode = handoffMode === true;
-      const currentProcessName = selectedProceso ? selectedProceso.nombre : null;
-
-      // 2) Construye el body incluyendo el flag
+      // Construye el body
       const requestBody = {
         message: userMessage,
         history: history,
         session_data: sessionDataToSend,
-        handoff_mode: willSendHandoffMode, // NUEVO
-        current_process: currentProcessName,
+        current_process: null, // Ya no dependemos de procesos
       };
-
-      // 3) Apaga el flag INMEDIATAMENTE (one-shot) si lo acabas de usar
-      if (willSendHandoffMode) {
-        handoffMode = false;
-      }
 
       const response = await fetch(`${API_BASE_URL}/chat/`, {
         method: "POST",
@@ -180,22 +159,9 @@
               loadingText = update.text;
             } else if (update.type === "final") {
               const data = update.data;
-              if (data.payload && data.payload.handoff_mode) {
-                handoffMode = true; // Se activa el estado para indicar que estamos en modo Handoff
-              }
-
-              // LOGICA DE UPLOAD (Existente)
-              if (data.payload && data.payload.need_documentation) {
-                showUploadAction = true;
-                isUploadOptional = data.payload.upload_optional || false;
-              } else {
-                showUploadAction = false;
-                isUploadOptional = false;
-              }
-
               const isRagConfirm = data.action === "RAG_CONFIRMATION";
 
-              // AQUÍ GUARDAMOS LA BANDERA offerHandoff
+              // Solo guardamos el mensaje, sin lógica de upload o handoff
               messages = [
                 ...messages,
                 {
@@ -260,70 +226,7 @@
     sendMessage(true);
   }
 
-  function clearChat() {
-    messages = [];
-    error = null;
-    showUploadAction = false;
-  }
-
-  function goToUpload() {
-    // Simula clic en el input file oculto
-    fileInput.click();
-  }
-
-  function handleFileSelect(e) {
-    if (e.target.files.length > 0) {
-      uploadedFile = e.target.files[0];
-      // El usuario ya seleccionó archivo, desbloqueamos el input (visual)
-    }
-  }
-
-  function removeFile() {
-    uploadedFile = null;
-    if (fileInput) fileInput.value = "";
-  }
-
-  let lastProcesoId = null;
-
-  async function pushSelectedProcessWelcome(proc) {
-    // (Opcional) si quieres limpiar el chat al cambiar de proceso:
-    messages = [];
-    error = null;
-    showUploadAction = false;
-
-    // Pide la lista real de servicios del proceso (endpoint nuevo, abajo)
-    let servicios = [];
-    try {
-      const r = await fetch(
-        `${API_BASE_URL}/api/proceso-servicios/?proceso_id=${proc.id}`,
-      );
-      if (r.ok) {
-        const data = await r.json();
-        servicios = data.servicios || [];
-      }
-    } catch (e) {}
-
-    const lista = servicios.length
-      ? servicios
-          .slice(0, 8)
-          .map((s) => `• ${s.nombre}`)
-          .join("\n")
-      : "• (Aún no hay servicios registrados para este proceso)";
-
-    messages = [
-      ...messages,
-      {
-        role: "assistant",
-        content:
-          `Hola 👋, veo que seleccionaste ${proc.nombre}.\n` +
-          `Actualmente disponemos de estos servicios:\n${lista}\n\n` +
-          `¿En qué te puedo ayudar? 😊`,
-      },
-    ];
-
-    await tick();
-    messageInputEl?.focus();
-  }
+  // Función eliminada: pushSelectedProcessWelcome - ya no dependemos de procesos
 
   // Función centralizada y mejorada
   async function scrollToBottom() {
@@ -342,148 +245,66 @@
     scrollToBottom();
   }
 
-  $: console.log(
-    "CHATBOT selectedProceso:",
-    selectedProceso,
-    "chatOpened:",
-    chatOpened,
-  );
-
-  $: if (
-    chatOpened &&
-    selectedProceso &&
-    selectedProceso.id !== lastProcesoId
-  ) {
-    lastProcesoId = selectedProceso.id;
-    pushSelectedProcessWelcome(selectedProceso);
-  }
-
-  async function uploadAndSend() {
-    if (!uploadedFile) return; // Validación extra
-
-    isUploading = true;
-    const details = inputMessage.trim();
-
-    // 1. Guardamos referencia local del archivo para enviarlo
-    const fileToSend = uploadedFile;
-    const detailsToSend = details;
-
-    // 2. LIMPIEZA INMEDIATA (Optimistic UI)
-    // Quitamos el archivo y texto de la vista del usuario AHORA MISMO
-    uploadedFile = null;
-    inputMessage = "";
-    if (fileInput) fileInput.value = "";
-    showUploadAction = false;
-
-    // 3. Agregamos el mensaje del usuario al chat visualmente
-    messages = [
-      ...messages,
-      {
-        role: "user",
-        content: `Archivo enviado: ${fileToSend.name}${detailsToSend ? `\nDetalles: ${detailsToSend}` : ""}`,
-      },
-    ];
-    // scrollToBottom(); // Eliminado por reactividad
-
-    try {
-      const formData = new FormData();
-      formData.append("file", fileToSend); // Usamos la referencia guardada
-      formData.append("details", detailsToSend);
-
-      // 4. Hacemos la petición (el usuario ya ve el chat limpio)
-      const response = await fetch(`${API_BASE_URL}/documentacion/subir/`, {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (result.status === "success") {
-        // Respuesta del Bot
-        messages = [
-          ...messages,
-          {
-            role: "assistant",
-            content:
-              result.ai_response ||
-              "¡Perfecto! Tu documento fue recibido sin problemas.",
-          },
-        ];
-        // scrollToBottom(); // Eliminado por reactividad
-      } else {
-        // Si falla, mostramos error
-        messages = [
-          ...messages,
-          {
-            role: "assistant",
-            content: `Error al subir archivo: ${result.message || "Intenta de nuevo."}`,
-          },
-        ];
-        // scrollToBottom();
-      }
-    } catch (e) {
-      console.error("Error subiendo:", e);
-      messages = [
-        ...messages,
-        {
-          role: "assistant",
-          content:
-            "No pude subir tu documento por un problema de conexión. Por favor intenta nuevamente.",
-        },
-      ];
-      // scrollToBottom();
-    } finally {
-      isUploading = false;
-    }
-  }
+  // Lógica de apertura automática eliminada - el chat se abre manualmente
 
   $: lastMessage = messages[messages.length - 1];
   $: isHandoffPending =
     lastMessage && lastMessage.offerHandoff && !lastMessage.handoffResolved;
 
-  // --- NUEVA FUNCIÓN: Manejar clic en "Sí, contactar humano" ---
-  // Modificar en la sección
-
+  // Función simplificada: solo muestra el mensaje cuando se confirma handoff
   async function confirmHandoff(index) {
-    // 1) Bloqueo visual
+    // Bloqueo visual
     messages[index].handoffResolved = true;
     messages[index].selectedOption = "yes";
     messages = [...messages];
 
-    // 2) Activar modo handoff (one-shot) + mandar comando (NO vacío)
-    handoffMode = true;
+    // Solo enviamos el comando, el backend responderá con el mensaje
     inputMessage = "HUMAN_HANDOFF";
     await sendMessage(true);
   }
 
   function cancelHandoff(index) {
+    // 1. Bloqueamos los botones visualmente
     messages[index].handoffResolved = true;
     messages[index].selectedOption = "no";
     messages = [...messages];
 
-    // Simplemente agregamos el mensaje visual y seguimos normal
+    // 2. Agregamos el mensaje del usuario
     messages = [
       ...messages,
       { role: "user", content: "No, gracias. Seguiré conversando." },
     ];
+
+    // 3. Simulamos "pensando" y respondemos tras 0.5 segundos
+    isLoading = true; 
+    
+    setTimeout(() => {
+      isLoading = false;
+      messages = [
+        ...messages,
+        { 
+          role: "assistant", 
+          content: "Perfecto. ¿En qué más te puedo ayudar 😊?" 
+        },
+      ];
+    }, 500); // 500ms = 0.5 segundos
   }
 </script>
 
-<!-- EL LAYOUT SE MANEJA EN APP.SVELTE -->
-<div class="chatbot-container-wrapper">
+<!-- CHATBOT FLOTANTE -->
+<div class="chatbot-floating-wrapper">
+  <!-- Botón flotante para abrir/cerrar -->
   {#if !chatOpened}
-    <div class="start-box">
-      <img
-        class="start-img"
-        src="/solicitud_balcon.jpg"
-        alt="Seleccione un servicio para comenzar"
-      />
-    </div>
+    <button class="chatbot-toggle-btn" on:click={toggleChat} title="Abrir asistente virtual">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span class="notification-badge" class:connected={isConnected}></span>
+    </button>
   {:else}
     <div class="chatbot-container">
       <div class="chatbot-header">
         <div class="header-left">
-          <div class="logo">SGA<span class="logo-plus">+</span></div>
           <h3>Asistente Virtual UNEMI</h3>
         </div>
         <div class="header-right">
@@ -493,19 +314,12 @@
               >{isConnected ? "Conectado" : "Desconectado"}</span
             >
           </div>
-          {#if messages.length > 0}
-            <button class="clear-btn" on:click={clearChat}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M2 4h12M5 4V2a1 1 0 011-1h4a1 1 0 011 1v2m3 0v10a1 1 0 01-1 1H3a1 1 0 01-1-1V4h12z"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                />
-              </svg>
-              Limpiar
-            </button>
-          {/if}
+          <button class="close-btn" on:click={toggleChat} title="Cerrar chat">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -727,94 +541,22 @@
       </div>
 
       <div class="input-container">
-        <input
-          type="file"
-          style="display: none;"
-          bind:this={fileInput}
-          on:change={handleFileSelect}
-          accept=".pdf,.jpg,.jpeg,.png"
-        />
-
-        {#if showUploadAction}
-          <button
-            class="upload-icon-btn"
-            on:click={goToUpload}
-            title="Se requiere documentación. Clic para subir."
-            disabled={isLoading || !isConnected}
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
-              ></path>
-            </svg>
-            <span class="notification-dot"></span>
-          </button>
-        {/if}
-
-        <div style="flex: 1; display: flex; flex-direction: column;">
-          {#if uploadedFile}
-            <div class="file-preview">
-              <span style="display:flex; align-items:center; gap:5px;">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  ><path
-                    d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
-                  ></path><polyline points="13 2 13 9 20 9"></polyline></svg
-                >
-                {uploadedFile.name}
-              </span>
-              <button
-                class="remove-file-btn"
-                on:click={removeFile}
-                title="Quitar archivo">&times;</button
-              >
-            </div>
-          {/if}
-
-          <textarea
-            bind:this={messageInputEl}
-            bind:value={inputMessage}
-            on:keypress={handleKeyPress}
-            placeholder={showUploadAction && !uploadedFile && !isUploadOptional
-              ? "Por favor sube el documento obligatoriamente..."
-              : showUploadAction && isUploadOptional && !uploadedFile
-                ? "Describe tu caso o sube una evidencia (opcional)..."
-                : isHandoffPending
-                  ? "Por favor selecciona una opción arriba 👆"
-                  : "Escribe aquí tu consulta… estoy listo para ayudarte 😊"}
-            disabled={isLoading ||
-              !isConnected ||
-              (showUploadAction && !uploadedFile && !isUploadOptional) ||
-              isHandoffPending}
-            rows="1"
-            style="min-height: 44px;"
-          ></textarea>
-        </div>
+        <textarea
+          bind:this={messageInputEl}
+          bind:value={inputMessage}
+          on:keypress={handleKeyPress}
+          placeholder={isHandoffPending
+            ? "Por favor selecciona una opción arriba 👆"
+            : "Escribe aquí tu consulta 😊… "}
+          disabled={isLoading || !isConnected || isHandoffPending}
+          rows="1"
+          style="flex: 1; min-height: 44px;"
+        ></textarea>
 
         <button
           on:click={() => sendMessage(false)}
           class="send-btn"
-          disabled={isLoading ||
-            !isConnected ||
-            (!inputMessage.trim() && !uploadedFile) ||
-            (showUploadAction && !uploadedFile && !isUploadOptional) ||
-            isHandoffPending}
+          disabled={isLoading || !isConnected || !inputMessage.trim() || isHandoffPending}
           title="Enviar mensaje"
         >
           <svg
@@ -837,91 +579,102 @@
   {/if}
 </div>
 
-<!-- Fin main-layout -->
-
-<!-- Fin chatbot-wrapper y main-layout -->
-
 <style>
-  /* --- LAYOUT PRINCIPAL (Flexbox) --- */
-  /* --- LAYOUT PRINCIPAL (Flexbox) --- */
-
-  .chatbot-container-wrapper {
-    flex: 1; /* El chat toma el resto */
-    display: flex;
-    justify-content: center; /* Centramos el chat si se desea, o full width */
-    height: 100%;
-    position: relative;
-    overflow: hidden; /* Importante para que no crezca más de la cuenta */
-  }
-
-  /* Ajustes al container original del chatbot para que se comporte bien dentro del wrapper */
-  .chatbot-container {
-    width: 100%;
-    max-width: 100%; /* Quitamos max-width fijo si queremos que llene, o lo mantenemos */
-    height: 100%; /* Altura full del padre */
+  /* --- CHATBOT FLOTANTE --- */
+  .chatbot-floating-wrapper {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999; /* Alto z-index para estar sobre todo */
     display: flex;
     flex-direction: column;
-    background-color: #ffffff;
-    /* Eliminamos márgenes auto o sombras externas si queremos un look "panel completo" */
-    box-shadow: none;
-    border-radius: 0;
+    align-items: flex-end;
   }
 
-  /* --- ESTILOS ANTIGUOS --- */
-  .upload-icon-btn {
-    position: relative;
+  /* Botón flotante para abrir el chat */
+  .chatbot-toggle-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2c4a6b 100%);
+    border: none;
+    color: white;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
-    border: 2px solid #e2e8f0;
-    background: #f8fafc;
-    border-radius: 10px; /* Cuadrado redondeado */
-    color: #64748b;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-  }
-  .upload-icon-btn svg {
-    width: 20px; /* Forzamos el ancho */
-    height: 20px; /* Forzamos el alto */
-    stroke: #64748b; /* Aseguramos el color base */
-    flex-shrink: 0; /* Evita que el flexbox lo aplaste */
+    box-shadow: 0 4px 20px rgba(30, 58, 95, 0.4);
+    transition: all 0.3s ease;
+    position: relative;
   }
 
-  .upload-icon-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    background: #f1f5f9;
+  .chatbot-toggle-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 25px rgba(30, 58, 95, 0.5);
   }
 
-  .notification-dot {
+  .chatbot-toggle-btn:active {
+    transform: scale(0.95);
+  }
+
+  .notification-badge {
     position: absolute;
-    top: -2px;
-    right: -2px;
-    width: 10px;
-    height: 10px;
-    background-color: #ef4444; /* Rojo */
-    border: 2px solid #ffffff;
+    top: 4px;
+    right: 4px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
-    animation: pulse-red 2s infinite;
+    background: #999;
+    border: 2px solid white;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
   }
 
-  @keyframes pulse-red {
-    0% {
-      transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  .notification-badge.connected {
+    background: #4ade80;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.6);
+    animation: pulse 2s infinite;
+  }
+
+  /* Container del chat cuando está abierto */
+  .chatbot-container {
+    width: 470px;
+    height: 600px;
+    max-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
     }
-    70% {
-      transform: scale(1);
-      box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
-    }
-    100% {
-      transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
     }
   }
+
+  /* Responsive: en móvil el chat ocupa más espacio */
+  @media (max-width: 480px) {
+    .chatbot-floating-wrapper {
+      bottom: 10px;
+      right: 10px;
+      left: 10px;
+    }
+
+    .chatbot-container {
+      width: 100%;
+      height: calc(100vh - 20px);
+      max-height: calc(100vh - 20px);
+    }
+  }
+
 
   .chatbot-header {
     display: flex;
@@ -998,25 +751,32 @@
     letter-spacing: 0.5px;
   }
 
-  .clear-btn {
+  .close-btn {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
     background: rgba(255, 255, 255, 0.15);
     color: #ffffff;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 6px;
     cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
     transition: all 0.2s ease;
     backdrop-filter: blur(10px);
+    flex-shrink: 0;
   }
-  .clear-btn:hover {
+  .close-btn svg {
+    flex-shrink: 0;
+    display: block;
+  }
+  .close-btn:hover {
     background: rgba(255, 107, 53, 0.2);
     border-color: #ff6b35;
     transform: translateY(-1px);
+  }
+  .close-btn:hover svg {
+    stroke: #ffffff;
   }
 
   .error-message {
@@ -1210,7 +970,6 @@
   }
 
   .input-container textarea {
-    flex: 1;
     padding: 12px 16px;
     border: 2px solid #e2e8f0;
     border-radius: 10px;
@@ -1262,60 +1021,6 @@
     opacity: 0.6;
   }
 
-  /* NUEVOS ESTILOS PARA BOTÓN UPLOAD */
-  .upload-btn {
-    position: relative;
-    padding: 12px;
-    background: #f1f5f9;
-    color: #64748b;
-    border: 2px solid #e2e8f0;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .upload-btn:hover {
-    background: #e2e8f0;
-    color: #1e3a5f;
-    border-color: #cbd5e1;
-  }
-  /* Indicador rojo de que se requiere acción */
-  .upload-dot {
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    width: 10px;
-    height: 10px;
-    background-color: #ef4444;
-    border-radius: 50%;
-    border: 2px solid white;
-    animation: pulse-red 2s infinite;
-  }
-  @keyframes pulse-red {
-    0% {
-      transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-    }
-    70% {
-      transform: scale(1);
-      box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
-    }
-    100% {
-      transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-    }
-  }
-
-  .spinner {
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
   .loading-text {
     font-size: 14px;
     color: #64748b;
@@ -1376,43 +1081,6 @@
     border-color: #ff6b35;
   }
 
-  /* Estilos para el indicador de archivo seleccionado */
-  .file-preview {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    background: #f0f9ff;
-    border: 1px solid #bae6fd;
-    border-radius: 8px;
-    margin: 0 16px 8px 16px;
-    color: #0369a1;
-    font-size: 13px;
-    animation: slideDown 0.2s ease-out;
-  }
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-5px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .remove-file-btn {
-    background: none;
-    border: none;
-    color: #0369a1;
-    font-weight: bold;
-    cursor: pointer;
-    padding: 0 4px;
-    font-size: 16px;
-  }
-  .remove-file-btn:hover {
-    color: #0c4a6e;
-  }
   /* ESTILOS NUEVOS PARA LOS BOTONES DE DECISIÓN */
   .handoff-buttons {
     display: flex;
@@ -1503,17 +1171,4 @@
     line-height: 1.5;
   }
 
-  .start-box {
-    height: 100%;
-    display: grid;
-    place-items: center;
-  }
-
-  .start-img {
-    width: auto;
-    max-width: 750px;
-    max-height: 500px;
-    object-fit: contain;
-    background: #fff;
-  }
 </style>
