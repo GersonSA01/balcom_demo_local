@@ -14,7 +14,7 @@ import requests
 from django.conf import settings
 from django.contrib import messages
 from django.core.files.storage import FileSystemStorage
-from django.db.models import Case, IntegerField, Value, When
+from django.db.models import Case, IntegerField, Q, Value, When
 from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -26,6 +26,10 @@ from chatbot.models import (
     BalconCategoria,
     BalconCategoriaCoordinaciones,
     BalconProceso,
+    BalconProcesoservicio,
+    BalconRequisito,
+    BalconRequisitosconfiguracion,
+    BalconServicio,
     BusinessProcess,
     BusinessProcessType,
     ChatbotRol,
@@ -36,7 +40,14 @@ from chatbot.models import (
     SgaMatricula,
     SgaPerfilusuario,
     SgaPersona,
-    BalconProcesoservicio
+    SgaPeriodo
+)
+from chatbot.services import (
+    q_estado_matricula, q_materias_matriculadas, q_nivel_semestre_paralelo,
+    q_horario_semanal,
+    q_rubros_pendientes, q_detalle_rubro, q_pagos_realizados,
+    q_notas_periodo, q_asistencia_periodo, q_promedio_periodo, q_estado_calificacion,
+    q_practicas
 )
 
 logger = logging.getLogger(__name__)
@@ -122,6 +133,7 @@ def _safe_parse_router_output(raw_content: str) -> dict:
             "action": obj.get("action", "ANSWER"),
             "function_name": obj.get("function_name"),
             "classification": obj.get("classification"),  # Nueva: clasificación del router
+            "data_topic": obj.get("data_topic"), # Nueva: tema de datos para consultas personales
             "clarification": obj.get("clarification"),  # Nueva: aclaración para AMBIGUOUS
             # AQUÍ ESTÁ LA CLAVE: Rescatamos la query optimizada
             "reformulated_query": obj.get("reformulated_query") or obj.get("search_query")
@@ -199,7 +211,131 @@ def api_get_proceso_servicios(request):
             "url": ps.url,
         })
 
-    return JsonResponse({"proceso_id": int(proceso_id), "servicios": servicios})
+        return JsonResponse({"proceso_id": int(proceso_id), "servicios": servicios})
+
+
+@require_http_methods(["GET"])
+def api_get_procesos_por_audiencia(request):
+    """
+    Vista AJAX que devuelve los procesos filtrados por tipo de audiencia.
+    Usado para llenar el selector de procesos cuando se selecciona tipo_audiencia.
+    Basado en la lógica del balcón externo de académico.
+    """
+    tipo_audiencia = request.GET.get("tipo_audiencia", "ambos")
+    
+    try:
+        # Filtrar procesos según tipo_audiencia (igual que en balcón externo de académico)
+        # En académico: Proceso.objects.filter(status=True, activoadmin=True, externo=True, activo=True)
+        # Base: status=True, activo=True, activoadmin=True (para procesos administrativos activos)
+        procesos_qs = BalconProceso.objects.filter(status=True, activo=True, activoadmin=True)
+        
+        if tipo_audiencia == "interno":
+            # Solo procesos que son internos (pueden ser solo internos o ambos)
+            procesos_qs = procesos_qs.filter(interno=True)
+        elif tipo_audiencia == "externo":
+            # Solo procesos que son externos (pueden ser solo externos o ambos)
+            procesos_qs = procesos_qs.filter(externo=True)
+        # Si es "ambos", mostrar todos los procesos activos que cumplan status=True, activo=True y activoadmin=True
+        
+        procesos = []
+        # Ordenar por sigla primero (como nombre), luego por descripcion (igual que en académico)
+        for p in procesos_qs.only('id', 'sigla', 'descripcion', 'interno', 'externo').order_by('sigla', 'descripcion'):
+            # Usar sigla como nombre si existe y no está vacía, sino usar descripcion (igual que en académico)
+            if p.sigla and p.sigla.strip():
+                nombre_proceso = p.sigla.strip()
+            else:
+                nombre_proceso = (p.descripcion or "").strip() if p.descripcion else "Sin nombre"
+            
+            procesos.append({
+                "id": p.id,
+                "nombre": nombre_proceso,
+                "descripcion": p.descripcion or "",
+                "sigla": p.sigla or "",
+                "interno": p.interno,
+                "externo": p.externo,
+            })
+        
+        return JsonResponse({"procesos": procesos}, safe=False)
+    except Exception as e:
+        logger.error(f"Error obteniendo procesos por audiencia {tipo_audiencia}: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def api_get_servicios_de_proceso(request):
+    """
+    Vista AJAX que devuelve los servicios asociados a un proceso.
+    Usado para llenar el selector de servicios cuando se selecciona un proceso.
+    Filtra según tipo_audiencia (interno/externo/ambos).
+    """
+    proceso_id = request.GET.get("proceso_id")
+    tipo_audiencia = request.GET.get("tipo_audiencia", "ambos")  # Por defecto ambos
+    
+    if not proceso_id:
+        return JsonResponse({"error": "Missing proceso_id"}, status=400)
+
+    try:
+        # Obtener los servicios asociados al proceso a través de BalconProcesoservicio
+        procesos_servicios = (
+            BalconProcesoservicio.objects
+            .filter(proceso_id=proceso_id, status=True, servicio__estado=True, servicio__status=True)
+            .select_related("servicio")
+            .order_by("servicio__nombre")
+        )
+
+        servicios = []
+        for ps in procesos_servicios:
+            # Filtrar según tipo_audiencia usando los campos interno/externo del proceso
+            # El proceso ya está filtrado por tipo_audiencia, así que todos los servicios
+            # asociados a este proceso son válidos para el tipo_audiencia seleccionado
+            servicios.append({
+                "id": ps.servicio.id,  # ID del servicio (BalconServicio)
+                "proceso_servicio_id": ps.id,  # ID del BalconProcesoservicio (necesario para requisitos)
+                "nombre": (ps.servicio.nombre or "").strip(),
+                "descripcion": (ps.servicio.descripcion or "").strip(),
+            })
+
+        return JsonResponse({"servicios": servicios}, safe=False)
+    except Exception as e:
+        logger.error(f"Error obteniendo servicios del proceso {proceso_id}: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def api_get_requisitos_de_servicio(request):
+    """
+    Vista AJAX que devuelve los requisitos asociados a un servicio.
+    Requiere proceso_servicio_id (ID de BalconProcesoservicio) para buscar los requisitos correctos.
+    Usado para generar el mensaje automático cuando el tipo de proceso requiere documentación.
+    """
+    proceso_servicio_id = request.GET.get("proceso_servicio_id")
+    
+    if not proceso_servicio_id:
+        return JsonResponse({"error": "Missing proceso_servicio_id"}, status=400)
+
+    try:
+        # Obtener los requisitos asociados al BalconProcesoservicio a través de BalconRequisitosconfiguracion
+        # El campo 'servicio' en BalconRequisitosconfiguracion apunta a BalconProcesoservicio, no a BalconServicio
+        requisitos_config = (
+            BalconRequisitosconfiguracion.objects
+            .filter(servicio_id=proceso_servicio_id, status=True, activo=True)
+            .select_related("requisito")
+            .order_by("obligatorio", "requisito__descripcion")
+        )
+
+        requisitos = []
+        for req_conf in requisitos_config:
+            if req_conf.requisito:
+                requisitos.append({
+                    "id": req_conf.requisito.id,
+                    "descripcion": (req_conf.requisito.descripcion or "").strip(),
+                    "obligatorio": req_conf.obligatorio,
+                })
+
+        return JsonResponse({"requisitos": requisitos}, safe=False)
+    except Exception as e:
+        logger.error(f"Error obteniendo requisitos del proceso_servicio {proceso_servicio_id}: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
 
 def get_dynamic_sga_roles() -> List[Dict[str, str]]:
     """
@@ -220,14 +356,62 @@ def get_dynamic_sga_roles() -> List[Dict[str, str]]:
     )
 
 
+def determinar_tipo_audiencia_usuario(persona: Optional[SgaPersona] = None, perfil: Optional[SgaPerfilusuario] = None) -> str:
+    """
+    Determina el tipo de audiencia del usuario (interno/externo/ambos).
+    
+    Lógica:
+    - Si tiene inscripción (estudiante) -> externo
+    - Si tiene perfil administrativo o profesor -> interno
+    - Si tiene campo externo en perfil -> externo
+    - Por defecto -> ambos (para ser inclusivo)
+    
+    Args:
+        persona: Objeto SgaPersona del usuario
+        perfil: Objeto SgaPerfilusuario del usuario
+        
+    Returns:
+        'interno', 'externo' o 'ambos'
+    """
+    if not persona:
+        return 'ambos'  # Por defecto, mostrar todos si no hay información
+    
+    # Si no hay perfil, intentar obtenerlo
+    if not perfil:
+        perfil = SgaPerfilusuario.objects.filter(persona=persona, status=True).first()
+    
+    if not perfil:
+        return 'ambos'
+    
+    # Verificar si tiene inscripción (estudiante) -> externo
+    if hasattr(perfil, 'inscripcion') and perfil.inscripcion:
+        return 'externo'
+    
+    # Verificar si tiene campo externo -> externo
+    if hasattr(perfil, 'externo') and getattr(perfil, 'externo', False):
+        return 'externo'
+    
+    # Verificar si tiene roles administrativos o profesor -> interno
+    if hasattr(perfil, 'administrativo') and getattr(perfil, 'administrativo', None):
+        return 'interno'
+    
+    if hasattr(perfil, 'profesor') and getattr(perfil, 'profesor', None):
+        return 'interno'
+    
+    # Por defecto, ambos (para ser inclusivo)
+    return 'ambos'
+
+
 def get_process_response_from_db(
     process_name: str, 
     user_role_ids: set[int] = None, 
-    user_carrera_ids: set[int] = None
+    user_carrera_ids: set[int] = None,
+    tipo_audiencia_usuario: str = 'ambos'
 ) -> dict:
     """
-    Arma la respuesta “FUNCTION” para procesos configurados en BD.
+    Arma la respuesta "FUNCTION" para procesos configurados en BD.
     Valida que el usuario tenga el rol y la carrera requerida.
+    También filtra según tipo_audiencia del usuario.
     """
     if user_role_ids is None:
         user_role_ids = set()
@@ -237,8 +421,24 @@ def get_process_response_from_db(
     try:
         # 1. Buscamos el proceso por nombre y status activo
         # Pre-cargamos roles y carreras para no hacer n queries
+        # Filtrar según tipo_audiencia del usuario
+        proceso_qs = BusinessProcess.objects.filter(nombre=process_name, status=True)
+        
+        # Filtrar según tipo_audiencia del usuario
+        if tipo_audiencia_usuario == 'interno':
+            # Solo procesos internos o ambos
+            proceso_qs = proceso_qs.filter(
+                Q(tipo_audiencia='interno') | Q(tipo_audiencia='ambos')
+            )
+        elif tipo_audiencia_usuario == 'externo':
+            # Solo procesos externos o ambos
+            proceso_qs = proceso_qs.filter(
+                Q(tipo_audiencia='externo') | Q(tipo_audiencia='ambos')
+            )
+        # Si es 'ambos', no filtramos por tipo_audiencia (mostramos todos)
+        
         process = (
-            BusinessProcess.objects.filter(nombre=process_name, status=True)
+            proceso_qs
             .select_related("process_type")
             .prefetch_related("roles_permitidos", "roles_permitidos__carreras")
             .first()
@@ -284,7 +484,7 @@ def get_process_response_from_db(
         tipo_nombre = (process.process_type.nombre or "").strip().lower() if process.process_type else ""
 
         # Solo devolvemos el mensaje, sin lógica de documentación
-        friendly_text = (process.active_message or process.business_context or "").strip()
+        friendly_text = (process.active_message or process.descripcion or "").strip()
         
         return {
             "text": friendly_text or "Por ahora no tengo un mensaje configurado para este proceso.",
@@ -353,7 +553,7 @@ def edit_chatbot_role(request, role_id):
 
 @require_http_methods(["GET"])
 def get_users_list(request):
-    TARGET_CEDULAS = ["0940153000", "0706191558", "2300371198"]
+    TARGET_CEDULAS = ["0940153000", "0706191558", "2300371198", "0703993329", "0957040132"]
 
     roles_configurados = get_dynamic_sga_roles()
     mapa_frontend = {
@@ -427,13 +627,16 @@ def get_users_list(request):
                                         "id": per.id,
                                         "nombre": per.nombre,
                                         "activo": per.activo,
-                                        "inicio": per.inicio,
+                                        "inicio": None, # per.inicio removed
                                     }
 
                         lista_periodos = list(periodos_dict.values())
-                        lista_periodos.sort(key=lambda x: x["inicio"], reverse=True)
+                        lista_periodos.sort(key=lambda x: x["id"], reverse=True)
                         perf_data["periodos"] = lista_periodos
                     except Exception as ex:
+                        import traceback
+                        traceback.print_exc()
+                        print(f"DEBUG: Error getting periodos for perf {perf.id}: {ex}")
                         logger.error("Error obteniendo periodos para perfil %s: %s", perf.id, ex)
 
                 perfiles_list.append(perf_data)
@@ -651,7 +854,7 @@ class ChatView(APIView):
                 # -------------------------------------------------------------
                 # Helper: Normalizar historial de conversación
                 # -------------------------------------------------------------
-                def _normalize_history(history, max_items=6, max_chars=1200):
+                def _normalize_history(history, max_items=10, max_chars=1200):
                     """Normaliza el historial de conversación para enviarlo al LLM."""
                     if not isinstance(history, list):
                         return []
@@ -729,7 +932,7 @@ class ChatView(APIView):
                         "context_filter": context_filter_payload,
                     }
 
-                    final_response_text = "Lo siento, no pude obtener información normativa..."
+                    final_response_text = "Lo siento, hubo un problema al procesar tu consulta. Por favor intenta de nuevo más tarde."
                     final_sources: List[dict] = []
                     answer_found = True
 
@@ -773,42 +976,40 @@ class ChatView(APIView):
                                 answer_found = False
                                 logger.warning("⚠️ RAG: No se pudo parsear JSON, answer_found=False")
 
-                            # ✅ USAR EL MENSAJE QUE VIENE DE chat_service (NO reemplazarlo)
-                            # El mensaje ya viene con la pregunta sobre contactar humanos si answer_found es False
+                            # ✅ LÓGICA: Si no hay información, igual usamos la respuesta del LLM (que ahora dice lo del balcón)
                             if not answer_found:
-                                logger.info("❌ RAG: answer_found=False, usando mensaje de chat_service con pregunta de handoff")
-                                # NO modificamos final_response_text, usamos el que viene de chat_service
+                                logger.info("❌ RAG: answer_found=False, usando respuesta conversacional del LLM")
+                                final_sources = []  # Sin fuentes cuando no hay información específica en documentos
                             else:
                                 logger.info("✅ RAG: answer_found=True, usando respuesta de chat_service")
+                                # Sources por BD local (ideal)
+                                if cited_db_ids:
+                                    docs_from_db = RagDocument.objects.filter(id__in=cited_db_ids)
+                                    for doc in docs_from_db:
+                                        full_url = request.build_absolute_uri(doc.archivo.url) if doc.archivo else None
+                                        final_sources.append({"title": doc.nombre, "url": full_url})
 
-                            # Sources por BD local (ideal)
-                            if cited_db_ids:
-                                docs_from_db = RagDocument.objects.filter(id__in=cited_db_ids)
-                                for doc in docs_from_db:
-                                    full_url = request.build_absolute_uri(doc.archivo.url) if doc.archivo else None
-                                    final_sources.append({"title": doc.nombre, "url": full_url})
-
-                            # Fallback sources (metadata de la IA)
-                            if not final_sources:
-                                api_sources = rag_resp.get("sources", []) or []
-                                for src in api_sources:
-                                    meta = src.get("document", {}).get("doc_metadata", {}) or {}
-                                    fname = meta.get("file_name") or meta.get("file_name_") or "Documento Normativo"
-                                    furl = meta.get("access_url")
-                                    if fname not in [s["title"] for s in final_sources]:
-                                        final_sources.append({"title": fname, "url": furl})
+                                # Fallback sources (metadata de la IA)
+                                if not final_sources:
+                                    api_sources = rag_resp.get("sources", []) or []
+                                    for src in api_sources:
+                                        meta = src.get("document", {}).get("doc_metadata", {}) or {}
+                                        fname = meta.get("file_name") or meta.get("file_name_") or "Documento Normativo"
+                                        furl = meta.get("access_url")
+                                        if fname not in [s["title"] for s in final_sources]:
+                                            final_sources.append({"title": fname, "url": furl})
 
                     except Exception as e:
                         logger.error("Error en RAG request: %s", e)
                         answer_found = False
+                        final_response_text = "Lo siento, no pude obtener una respuesta en este momento. Por favor intenta de nuevo o realiza tu solicitud en el balcón de servicios."
+                        final_sources = []
 
-                    if forced_intro_text:
+                    if forced_intro_text and answer_found:
                         final_response_text = f"{forced_intro_text}\n\n{final_response_text}"
 
-                    # ✅ LÓGICA FINAL: offer_human_handoff SOLO basado en answer_found
-                    # Si answer_found es True, NO ofrecemos handoff automático
-                    # Si answer_found es False, SÍ ofrecemos handoff
-                    offer_handoff = not answer_found
+                    # ✅ LÓGICA FINAL: Sin botones de handoff, solo mensaje fijo cuando no hay info
+                    offer_handoff = False  # Siempre False para no mostrar botones
                     
                     print(f"🎯 RAG Final: answer_found={answer_found}, offer_human_handoff={offer_handoff}")
 
@@ -937,10 +1138,45 @@ class ChatView(APIView):
                 print("DEBUG: ===============================================\n")
 
                 # -------------------------------------------------------------
-                # 3) Filtrar procesos autorizados (BusinessProcess) para router tools list
+                # 3) Determinar tipo_audiencia del usuario
                 # -------------------------------------------------------------
+                tipo_audiencia_usuario = 'ambos'  # Por defecto
+                persona_para_audiencia = None
+                perfil_para_audiencia = None
+                
+                if cedula:
+                    persona_para_audiencia = SgaPersona.objects.filter(cedula=cedula).first()
+                    if persona_para_audiencia:
+                        if perfil_id:
+                            perfil_para_audiencia = SgaPerfilusuario.objects.filter(
+                                id=perfil_id, persona=persona_para_audiencia, status=True
+                            ).first()
+                        if not perfil_para_audiencia:
+                            perfil_para_audiencia = SgaPerfilusuario.objects.filter(
+                                persona=persona_para_audiencia, status=True
+                            ).first()
+                        tipo_audiencia_usuario = determinar_tipo_audiencia_usuario(
+                            persona_para_audiencia, perfil_para_audiencia
+                        )
+
+                # -------------------------------------------------------------
+                # 4) Filtrar procesos autorizados (BusinessProcess) para router tools list
+                # -------------------------------------------------------------
+                proceso_qs = BusinessProcess.objects.filter(status=True)
+                
+                # Filtrar según tipo_audiencia del usuario
+                if tipo_audiencia_usuario == 'interno':
+                    proceso_qs = proceso_qs.filter(
+                        Q(tipo_audiencia='interno') | Q(tipo_audiencia='ambos')
+                    )
+                elif tipo_audiencia_usuario == 'externo':
+                    proceso_qs = proceso_qs.filter(
+                        Q(tipo_audiencia='externo') | Q(tipo_audiencia='ambos')
+                    )
+                # Si es 'ambos', no filtramos por tipo_audiencia
+                
                 all_processes = (
-                    BusinessProcess.objects.filter(status=True)
+                    proceso_qs
                     .prefetch_related("roles_permitidos", "roles_permitidos__carreras")
                 )
 
@@ -966,7 +1202,7 @@ class ChatView(APIView):
                                 break
 
                     if is_proc_allowed:
-                        desc = (proc.business_context or "Sin descripción").replace("\n", " ").strip()
+                        desc = (proc.descripcion or "Sin descripción").replace("\n", " ").strip()
                         valid_process_details.append(
                             f'FUNCTION_NAME: "{proc.nombre}"\nSCOPE: "{desc}"\n\n'
                         )
@@ -1003,7 +1239,7 @@ class ChatView(APIView):
                     system_instruction = "NO_TOOLS_AVAILABLE"
 
                 # Normalizar historial para el Router
-                router_history = _normalize_history(_history, max_items=6)
+                router_history = _normalize_history(_history, max_items=10)
                 
                 # Evitar duplicar si el frontend ya incluyó el mismo mensaje actual en history
                 if router_history and router_history[-1]["role"] == "user" and router_history[-1]["content"].strip() == user_msg.strip():
@@ -1077,7 +1313,178 @@ class ChatView(APIView):
                     # Manejo de RAG o respuestas directas
                     elif router_class == "RAG" or "RAG_MODE" in server_response:
                         action = "ANSWER"  # seguirá a RAG abajo
-                    
+
+                    # =====================================================
+                    # NUEVA LÓGICA: DATA_CONSULT
+                    # =====================================================
+                    elif router_class == "DATA_CONSULT":
+                        data_topic = data_router.get("data_topic")
+                        
+                        # 1. Validar autenticación
+                        if not cedula:
+                            yield json.dumps({
+                                "type": "final",
+                                "data": {
+                                    "response": "Para consultar tus datos personales, por favor inicia sesión primero.",
+                                    "action": "ANSWER"
+                                }
+                            }) + "\n"
+                            return
+
+                        persona = SgaPersona.objects.filter(cedula=cedula).first()
+                        if not persona:
+                             yield json.dumps({
+                                "type": "final",
+                                "data": {
+                                    "response": "No pude validar tu identidad en el sistema académico.",
+                                    "action": "ANSWER"
+                                }
+                            }) + "\n"
+                             return
+
+                        yield json.dumps({"type": "status", "text": "Consultando sistema..."}) + "\n"
+
+                        # =====================================================
+                        # OBTENCIÓN DEL PERIODO
+                        # =====================================================
+                        target_periodo_id = periodo_id 
+                        if not target_periodo_id:
+                             target_periodo_id = request.session.get('periodo_id')
+                        if not target_periodo_id:
+                            ultimo_periodo = SgaPeriodo.objects.filter(status=True).order_by('-id').first()
+                            if ultimo_periodo:
+                                target_periodo_id = ultimo_periodo.id
+                        
+                        try:
+                            target_periodo_id = int(target_periodo_id)
+                        except (ValueError, TypeError):
+                             target_periodo_id = None
+
+                        # =====================================================
+                        # EJECUCIÓN DIRECTA (ORM)
+                        # =====================================================
+
+                        raw_data = ""
+                        try:
+                            if data_topic == "GRADES":
+                                # Agregamos notas + asistencia + promedio + estado calificacion
+                                d_notas = json.loads(q_notas_periodo(persona, target_periodo_id))
+                                d_asist = json.loads(q_asistencia_periodo(persona, target_periodo_id))
+                                d_prom = json.loads(q_promedio_periodo(persona, target_periodo_id))
+                                d_estado = json.loads(q_estado_calificacion(persona, target_periodo_id))
+                                
+                                combined = {
+                                    "notas_detalle": d_notas.get("notas"),
+                                    "asistencia_promedio": d_asist.get("asistencia_promedio"),
+                                    "promedio_general_periodo": d_prom.get("promedio"),
+                                    "estado_calificacion_materias": d_estado.get("estado_calificacion")
+                                }
+                                raw_data = json.dumps(combined, ensure_ascii=False)
+
+                            elif data_topic == "FINANCIAL":
+                                # Rubros pendientes + Pagos recientes + Bloqueos
+                                d_rubros = json.loads(q_rubros_pendientes(persona))
+                                d_pagos = json.loads(q_pagos_realizados(persona, limit=10))
+                                
+                                combined = {
+                                    "deuda_pendiente": d_rubros,
+                                    "ultimos_pagos": d_pagos.get("pagos")
+                                }
+                                raw_data = json.dumps(combined, ensure_ascii=False)
+
+                            elif data_topic == "SCHEDULE":
+                                # Matricula estado + Materias + Horario + Choques + Nivel
+                                d_estado = json.loads(q_estado_matricula(persona, target_periodo_id))
+                                d_materias = json.loads(q_materias_matriculadas(persona, target_periodo_id))
+                                d_horario = json.loads(q_horario_semanal(persona, target_periodo_id))
+                                
+                                d_nivel = json.loads(q_nivel_semestre_paralelo(persona, target_periodo_id))
+                                
+                                combined = {
+                                    "resumen_matricula": d_estado,
+                                    "detalle_nivel": d_nivel,
+                                    "lista_materias": d_materias.get("materias"),
+                                    "horario_semanal": d_horario.get("horario")
+                                }
+                                raw_data = json.dumps(combined, ensure_ascii=False)
+
+                            elif data_topic == "PRACTICAS":
+                                raw_data = q_practicas(persona)
+
+                            else:
+                                raw_data = "No se identificó qué datos consultar (Topic desconocido)."
+
+                            # SÍNTESIS CON LLM - ESTRICTO JSON
+                            synthesis_messages = [
+                                {
+                                    "role": "system", 
+                                    "content": (
+                                        "ROLE: UNEMI Academic Assistant.\n"
+                                        "TASK: Explain the database results to the student.\n\n"
+                                        
+                                        "### OUTPUT FORMAT (STRICT JSON):\n"
+                                        "You must return a SINGLE JSON object. Do not include markdown formatting (like ```json).\n"
+                                        "The JSON must have this exact structure:\n"
+                                        "{\n"
+                                        '    "message": "Tu respuesta amable y explicativa en texto plano aquí.",\n'
+                                        '    "has_data": true/false\n'
+                                        "}\n\n"
+
+                                        "### CONTENT RULES:\n"
+                                        "1. If 'has_data' is false (e.g. 'No records found'): The 'message' must be polite, e.g., 'No encontré registros de notas para el periodo solicitado.'\n"
+                                        "2. If 'has_data' is true: The 'message' must summarize the data using bullet points inside the string.\n"
+                                        "3. LANGUAGE: Spanish."
+                                    )
+                                },
+                                {
+                                    "role": "user", 
+                                    "content": f"Consulta del estudiante: {user_msg}\nDatos recuperados: {raw_data}"
+                                }
+                            ]
+
+                            # Respuesta rápida
+                            response_synth = requests.post(
+                                f"{settings.PRIVATE_GPT_API_URL}/v1/chat/completions", 
+                                json={"messages": synthesis_messages, "stream": False, "temperature": 0.1, "use_context": False},
+                                timeout=600
+                            )
+                            
+                            raw_llm_response = response_synth.json()['choices'][0]['message']['content']
+                            final_text = raw_llm_response # Fallback
+
+                            # --- PARSEO DE RESPUESTA ---
+                            try:
+                                # 1. Limpieza básica
+                                clean_text = raw_llm_response.replace("```json", "").replace("```", "").strip()
+                                # 2. Parseo
+                                json_data = json.loads(clean_text)
+                                # 3. Extracción segura
+                                if isinstance(json_data, dict):
+                                    final_text = json_data.get("message", clean_text)
+                            except Exception as e:
+                                # Si falla, usamos el texto limpio (por si el LLM ignoró el JSON y mandó texto)
+                                final_text = clean_text
+
+                            yield json.dumps({
+                                "type": "final",
+                                "data": {
+                                    "response": final_text,
+                                    "action": "ANSWER"
+                                }
+                            }) + "\n"
+                            return
+
+                        except Exception as e:
+                            logger.error(f"Error synthesis data consult: {e}")
+                            yield json.dumps({
+                                "type": "final",
+                                "data": {
+                                    "response": "Lo siento, hubo un error procesando tus datos.",
+                                    "action": "ANSWER"
+                                }
+                            }) + "\n"
+                            return
+
                     # Respuesta directa del router (saludo / etc)
                     else:
                         yield json.dumps(
@@ -1110,7 +1517,7 @@ class ChatView(APIView):
                             "data": {
                                 "response": (
                                     "Lamento que tengas problemas con la plataforma 😟. "
-                                    "Derivaré tu caso a mis compañeros humanos. Por favor realiza una solicitud al balcón de servicios."
+                                    "Por favor realiza la solicitud al balcón de servicios y mis compañeros humanos te atenderán. ¿Hay algo más en que te pueda ayudar?"
                                 ),
                                 "sources": [],
                                 "action": "ANSWER",
@@ -1145,9 +1552,9 @@ class ChatView(APIView):
                                 "type": "final",
                                 "data": {
                                     "response": (
-                                        "Entendido 😊 Derivaré tu solicitud a mis compañeros humanos. "
-                                        "Por favor realiza una solicitud al balcón de servicios."
-                                    ),
+                                            "Entendido. "
+                                            "Por favor registra tu solicitud en el Balcón de Servicios para que mis compañeros humanos la atiendan."
+                                        ),
                                     "sources": [],
                                     "action": "ANSWER",
                                     "is_function": False,
@@ -1158,10 +1565,22 @@ class ChatView(APIView):
                         return
 
                     # Proceso real
-                    # Primero validamos que exista en BD
-                    proc_check = BusinessProcess.objects.filter(
+                    # Primero validamos que exista en BD y filtra por tipo_audiencia
+                    proc_qs_check = BusinessProcess.objects.filter(
                         nombre=found_process_name, status=True
-                    ).first()
+                    )
+                    
+                    # Filtrar según tipo_audiencia del usuario
+                    if tipo_audiencia_usuario == 'interno':
+                        proc_qs_check = proc_qs_check.filter(
+                            Q(tipo_audiencia='interno') | Q(tipo_audiencia='ambos')
+                        )
+                    elif tipo_audiencia_usuario == 'externo':
+                        proc_qs_check = proc_qs_check.filter(
+                            Q(tipo_audiencia='externo') | Q(tipo_audiencia='ambos')
+                        )
+                    
+                    proc_check = proc_qs_check.first()
 
                     if not proc_check:
                         # Si el router alucinó un nombre que no existe, fallback a RAG
@@ -1185,11 +1604,12 @@ class ChatView(APIView):
                             )
                             return
 
-                        # === CAMBIO CLAVE: pasamos roles y carreras detectados ===
+                        # === CAMBIO CLAVE: pasamos roles y carreras detectados, y tipo_audiencia ===
                         res = get_process_response_from_db(
                             found_process_name,
                             user_role_ids=user_matched_role_ids,
                             user_carrera_ids=user_carrera_ids,
+                            tipo_audiencia_usuario=tipo_audiencia_usuario,
                         )
 
                         # Si devolvió unauthorized, mostramos el mensaje y no ejecutamos función
@@ -1245,7 +1665,7 @@ class ChatView(APIView):
                             {
                                 "type": "final",
                                 "data": {
-                                    "response": "Lo siento, no se encontraron normativas habilitadas para tu perfil en este momento. Por favor realiza una solicitud al balcón de servicios.",
+                                    "response": "Lo siento, no se encontraron normativas en este momento. Por favor realiza una solicitud al balcón de servicios.",
                                     "sources": [],
                                     "action": "ANSWER",
                                     "is_function": False,
@@ -1343,6 +1763,8 @@ def document_manager(request):
     tipos_catalogo = get_dynamic_sga_roles()
     carreras_reales = SgaCarrera.objects.all().values("id", "nombre").order_by("nombre")
     process_types = BusinessProcessType.objects.filter(status=True).order_by("nombre")
+    
+    procesos_disponibles = BalconProceso.objects.filter(status=True, activo=True, activoadmin=True).only('id', 'sigla', 'descripcion', 'interno', 'externo').order_by('sigla', 'descripcion')
 
     return render(
         request,
@@ -1354,6 +1776,7 @@ def document_manager(request):
             "tipos_base": tipos_catalogo,
             "carreras_list": carreras_reales,
             "process_types": process_types,
+            "procesos_sga": procesos_disponibles,
         },
     )
 
@@ -1610,15 +2033,36 @@ def process_manager(request):
 @require_http_methods(["POST"])
 def create_process(request):
     try:
+        # 1. Capturamos los IDs del proceso y servicio del formulario
+        proceso_id = request.POST.get('proceso_id')
+        servicio_id = request.POST.get('servicio_id')
+        tipo_audiencia = request.POST.get('tipo_audiencia', 'ambos')
+        
         name_input = request.POST.get("name")
+        descripcion = request.POST.get("descripcion")
+        
+        # 2. Lógica de "Amarre": Si eligió proceso y servicio, sobrescribimos
+        proceso_obj = None
+        servicio_obj = None
+        
+        if proceso_id:
+            proceso_obj = get_object_or_404(BalconProceso, id=proceso_id)
+            # Si también hay servicio seleccionado, usar datos del servicio
+            if servicio_id:
+                servicio_obj = get_object_or_404(BalconServicio, id=servicio_id)
+                name_input = servicio_obj.nombre  # Forzamos el nombre del servicio
+                descripcion = servicio_obj.descripcion or ""  # Forzamos la descripción
+            else:
+                # Si solo hay proceso, usar datos del proceso
+                name_input = proceso_obj.descripcion or name_input
+                descripcion = proceso_obj.descripcion or descripcion
+        
         type_id = request.POST.get("process_type")
         process_type_obj = get_object_or_404(BusinessProcessType, id=type_id)
 
         source_url = request.POST.get("source_url")
-        business_context = request.POST.get("business_context")
         active_msg = request.POST.get("active_message")
         is_infinite = request.POST.get("is_infinite") == "on"
-        need_documentation = request.POST.get("need_documentation") == "on"
 
         start_date = request.POST.get("start_date") or None
         end_date = request.POST.get("end_date") or None
@@ -1638,12 +2082,14 @@ def create_process(request):
             process_type=process_type_obj,
             source_url=source_url,
             is_infinite=is_infinite,
-            business_context=business_context,
+            descripcion=descripcion,
             closed_message=closed_msg,
-            need_documentation=need_documentation,
             start_date=start_date,
             end_date=end_date,
             active_message=active_msg,
+            proceso_origen=proceso_obj,  # Guardamos la relación con el proceso
+            servicio_origen=servicio_obj,  # Guardamos la relación con el servicio (si existe)
+            tipo_audiencia=tipo_audiencia,  # Guardamos el tipo de audiencia
             status=True,
         )
 
@@ -1678,8 +2124,35 @@ def edit_process(request, process_id):
     try:
         proc = BusinessProcess.objects.get(id=process_id)
 
-        proc.nombre = request.POST.get("name")
-        proc.business_context = request.POST.get("business_context")
+        # 1. Capturamos los IDs del proceso y servicio del formulario
+        proceso_id = request.POST.get('proceso_id')
+        servicio_id = request.POST.get('servicio_id')
+        tipo_audiencia = request.POST.get('tipo_audiencia', 'ambos')
+        
+        name_input = request.POST.get("name")
+        descripcion = request.POST.get("descripcion")
+        
+        # 2. Lógica de "Amarre": Si eligió proceso y servicio, sobrescribimos
+        proceso_obj = None
+        servicio_obj = None
+        
+        if proceso_id:
+            proceso_obj = get_object_or_404(BalconProceso, id=proceso_id)
+            # Si también hay servicio seleccionado, usar datos del servicio
+            if servicio_id:
+                servicio_obj = get_object_or_404(BalconServicio, id=servicio_id)
+                name_input = servicio_obj.nombre  # Forzamos el nombre del servicio
+                descripcion = servicio_obj.descripcion or ""  # Forzamos la descripción
+            else:
+                # Si solo hay proceso, usar datos del proceso
+                name_input = proceso_obj.descripcion or name_input
+                descripcion = proceso_obj.descripcion or descripcion
+        
+        proc.nombre = name_input
+        proc.descripcion = descripcion
+        proc.proceso_origen = proceso_obj  # Guardamos la relación con el proceso
+        proc.servicio_origen = servicio_obj  # Guardamos la relación con el servicio (si existe)
+        proc.tipo_audiencia = tipo_audiencia  # Guardamos el tipo de audiencia
 
         type_id = request.POST.get("process_type")
         if type_id:
@@ -1688,7 +2161,6 @@ def edit_process(request, process_id):
         proc.source_url = request.POST.get("source_url") or None
 
         proc.is_infinite = request.POST.get("is_infinite") in ["on", "true", "1", "True"]
-        proc.need_documentation = request.POST.get("need_documentation") in ["on", "true", "1", "True"]
 
         start_date = request.POST.get("start_date") or None
         end_date = request.POST.get("end_date") or None

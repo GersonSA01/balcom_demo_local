@@ -74,28 +74,24 @@
                     <p class="text-xs text-slate-500 truncate max-w-[150px]" title="{{ process.active_message }}">
                         {{ process.active_message }}
                     </p>
-                    {% if process.need_documentation %}
-                    <span class="text-[10px] text-[#ff6b35] flex items-center gap-1 mt-1 font-medium">
-                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 011.414.586l4 4a1 1 0 01.586 1.414V19a2 2 0 01-2 2z"></path></svg>
-                        Pide PDF
-                    </span>
-                    {% endif %}
                 </td>
 
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button onclick="openEditProcessModal(
                         '{{ process.id }}', 
                         '{{ process.nombre|escapejs }}', 
-                        '{{ process.business_context|escapejs }}', 
+                        '{{ process.descripcion|escapejs }}', 
                         '{{ process.process_type.id }}', 
                         '{{ process.source_url|default:''|escapejs }}', 
                         '{{ process.is_infinite|lower }}', 
-                        '{{ process.need_documentation|lower }}', 
                         '{{ process.start_date|date:'Y-m-d' }}', 
                         '{{ process.end_date|date:'Y-m-d' }}', 
                         '{{ process.active_message|escapejs }}', 
                         [{% for r in process.roles_permitidos.all %}{{ r.id }}{% if not forloop.last %},{% endif %}{% endfor %}],
-                        '{{ process.closed_message|default:''|escapejs }}'
+                        '{{ process.closed_message|default:''|escapejs }}',
+                        '{{ process.servicio_origen.id|default:'' }}',
+                        '{{ process.proceso_origen.id|default:'' }}',
+                        '{{ process.tipo_audiencia|default:'ambos' }}'
                     )" 
                     class="text-[#1e3a5f] hover:text-[#ff6b35] font-medium mr-3 text-xs uppercase tracking-wide transition-colors">
                         Editar

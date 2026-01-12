@@ -20,5 +20,5 @@ class BusinessProcessAdmin(admin.ModelAdmin):
     # CORRECCIÓN: Usamos 'nombre' en vez de 'name'
     list_display = ('nombre', 'process_type', 'status', 'start_date', 'end_date') # <-- Arregla admin.E108
     list_filter = ('status', 'process_type', 'is_infinite')
-    search_fields = ('nombre', 'business_context')
+    search_fields = ('nombre', 'descripcion')
     filter_horizontal = ('roles_permitidos',)

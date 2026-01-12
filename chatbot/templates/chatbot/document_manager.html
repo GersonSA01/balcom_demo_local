@@ -1,5 +1,115 @@
 {% extends 'chatbot/base.html' %}
 
+{% block extra_head %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<style>
+    /* Contenedor principal */
+    .select2-container--bootstrap-5 {
+        position: relative;
+    }
+    
+    /* Selección principal */
+    .select2-container--bootstrap-5 .select2-selection {
+        border-radius: 0.5rem;
+        border-color: #cbd5e1;
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        position: relative;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection:focus {
+        border-color: #1e3a5f;
+        box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+    }
+    
+    /* Valor renderizado - debe estar alineado verticalmente */
+    .select2-container--bootstrap-5 .select2-selection__rendered {
+        color: #1e293b;
+        line-height: 38px;
+        padding-left: 8px;
+        padding-right: 30px; /* Espacio para la flecha */
+        display: block;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    /* Opciones seleccionadas (tags) */
+    .select2-container--bootstrap-5 .select2-selection__choice {
+        background-color: #f1f5f9;
+        border-color: #cbd5e1;
+        color: #1e293b;
+        display: inline-flex;
+        align-items: center;
+        margin-top: 2px;
+        margin-bottom: 2px;
+        margin-right: 4px;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection__choice__remove {
+        color: #64748b;
+        margin-right: 4px;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection__choice__remove:hover {
+        color: #1e293b;
+    }
+    
+    /* Flecha del dropdown - debe estar a la derecha */
+    .select2-container--bootstrap-5 .select2-selection__arrow {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        height: auto;
+        width: 20px;
+    }
+    
+    .select2-container--bootstrap-5.select2-container--open .select2-selection__arrow {
+        transform: translateY(-50%) rotate(180deg);
+    }
+    
+    /* Color de hover más claro - usando el naranja del tema */
+    .select2-container--bootstrap-5 .select2-results__option--highlighted {
+        background-color: #ff6b35 !important;
+        color: white !important;
+    }
+    /* Limitar altura del dropdown y agregar scroll vertical */
+    .select2-container--bootstrap-5 .select2-dropdown {
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 9999 !important;
+    }
+    .select2-container--bootstrap-5 .select2-results {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    /* Asegurar que el dropdown se mantenga dentro del modal */
+    .select2-container--bootstrap-5.select2-container--open {
+        z-index: 9999 !important;
+    }
+    /* Estilos para el scrollbar del dropdown */
+    .select2-container--bootstrap-5 .select2-results::-webkit-scrollbar {
+        width: 8px;
+    }
+    .select2-container--bootstrap-5 .select2-results::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+    }
+    .select2-container--bootstrap-5 .select2-results::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    .select2-container--bootstrap-5 .select2-results::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <div class="flex justify-between items-center mb-6">
@@ -78,7 +188,6 @@
     const epInfiniteCheckbox = document.getElementById('ep_infinite');
 
     // Elementos de edición de documentos
-    const epDocsCheckbox = document.getElementById('ep_docs'); // Checkbox Requiere Documentación (Edit Proc)
 
     // Elementos de edición de procesos
     const epHasClosedCheckbox = document.getElementById('ep_has_closed'); // Checkbox Mensaje Cerrado (Edit Proc)
@@ -106,7 +215,6 @@
     // Lógica para la vista previa de Documentos/Procesos
     function applyPreview(config) {
         const input = document.getElementById(config.textareaId);
-        const checkbox = document.getElementById(config.checkboxId);
         const previewText = document.getElementById(config.previewId);
         const greeting = document.getElementById(config.greetingId);
         const closing = document.getElementById(config.closingId);
@@ -116,21 +224,13 @@
         const text = input.value.trim();
         previewText.innerText = text || config.placeholder;
 
-        if (checkbox && checkbox.checked) {
-            greeting.classList.remove('hidden');
-            closing.classList.remove('hidden');
+        // Siempre ocultar greeting y closing ya que no hay checkbox de documentación
+        greeting.classList.add('hidden');
+        closing.classList.add('hidden');
 
-            previewText.classList.add(
-                'border-l-2', 'border-orange-400', 'pl-2', 'bg-orange-50', 'p-1'
-            );
-        } else {
-            greeting.classList.add('hidden');
-            closing.classList.add('hidden');
-
-            previewText.classList.remove(
-                'border-l-2', 'border-orange-400', 'pl-2', 'bg-orange-50', 'p-1'
-            );
-        }
+        previewText.classList.remove(
+            'border-l-2', 'border-orange-400', 'pl-2', 'bg-orange-50', 'p-1'
+        );
     }
 
 
@@ -352,31 +452,6 @@
     // TOGGLE DE REQUISITOS (DOCS) BASADO EN TIPO
     // =========================================================
 
-    function toggleDocRequirement(prefix) {
-        const typeSelectId = prefix + '_type';
-        const containerId = prefix + '_docs_container';
-        const checkboxId = (prefix === 'cp') ? 'proc_docs' : 'ep_docs';
-
-        const typeSelect = document.getElementById(typeSelectId);
-        const container = document.getElementById(containerId);
-        const checkbox = document.getElementById(checkboxId);
-
-        if (!typeSelect || !container || !checkbox) return;
-
-        const selectedOption = typeSelect.options[typeSelect.selectedIndex];
-        const requiresDoc = selectedOption.getAttribute('data-req-doc') === 'true';
-
-        if (requiresDoc) {
-            container.classList.remove('hidden');
-            checkbox.checked = true;
-        } else {
-            container.classList.add('hidden');
-            checkbox.checked = false;
-        }
-
-        if (prefix === 'cp') updateCreatePreview();
-        else updateEditPreview();
-    }
 
     // =========================================================
     // LÓGICA DE APERTURA DE MODALES
@@ -394,7 +469,6 @@
         updateWizardUI('cp', 1);
 
         toggleVigencyUI('cp', true);
-        toggleDocRequirement('cp');
         updateCreatePreview();
         showModal('createProcessModal');
     }
@@ -403,25 +477,96 @@
         hideModal('createProcessModal');
     }
 
-    function openEditProcessModal(id, name, business_context, process_type, source_url, isInfiniteStr, needDocStr, start, end, activeMsg, rolesList, closedMsg) {
+    function openEditProcessModal(id, name, descripcion, process_type, source_url, isInfiniteStr, start, end, activeMsg, rolesList, closedMsg, servicioId, procesoId, tipoAudiencia) {
         if (!epModal || !epForm) return;
 
         // Asignación de valores
         epForm.action = `/api/chatbot/procesos/editar/${id}/`;
         document.getElementById('ep_name').value = name;
-        document.getElementById('ep_context').value = business_context ?? '';
+        document.getElementById('ep_context').value = descripcion ?? '';
         document.getElementById('ep_type').value = process_type;
         document.getElementById('ep_source').value = source_url || '';
-        document.getElementById('ep_active_msg').value = activeMsg || '';
+        
+        // Verificar si el tipo requiere documentación antes de establecer el mensaje inicial
+        // Si requiere docs y hay servicio vinculado, el mensaje se generará automáticamente
+        const epTypeSelect = document.getElementById('ep_type');
+        const tipoRequiereDocs = epTypeSelect && epTypeSelect.options[epTypeSelect.selectedIndex] && 
+                                 epTypeSelect.options[epTypeSelect.selectedIndex].getAttribute('data-req-doc') === 'true';
+        
+        // Solo establecer el mensaje inicial si NO requiere documentación o no hay servicio vinculado
+        // Si requiere docs y hay servicio, verificarYGenerarMensajeRequisitos lo establecerá
+        if (!tipoRequiereDocs || !servicioId) {
+            document.getElementById('ep_active_msg').value = activeMsg || '';
+        }
+        
+        // Manejar tipo de audiencia, proceso y servicio vinculados
+        const tipoAudienciaSelector = document.getElementById('ep_tipo_audiencia_selector');
+        const procesoSelector = document.getElementById('ep_proceso_selector');
+        const servicioSelector = document.getElementById('ep_servicio_selector');
+        
+        // Establecer tipo de audiencia primero
+        if (tipoAudienciaSelector && tipoAudiencia) {
+            tipoAudienciaSelector.value = tipoAudiencia || 'ambos';
+            // Cargar procesos según tipo de audiencia
+            if (typeof $ !== 'undefined') {
+                setTimeout(function() {
+                    cargarProcesosPorAudiencia(tipoAudiencia, 'ep_proceso_selector', 'ep');
+                    // Después de cargar procesos, seleccionar el proceso si existe
+                    if (procesoId) {
+                        setTimeout(function() {
+                            if ($(procesoSelector).hasClass('select2-hidden-accessible')) {
+                                $(procesoSelector).val(procesoId).trigger('change');
+                            } else {
+                                procesoSelector.value = procesoId;
+                            }
+                            // Cargar servicios del proceso con el servicio seleccionado
+                            setTimeout(function() {
+                                cargarServiciosDeProceso(procesoId, 'ep_servicio_selector', 'ep', servicioId);
+                                // Si hay servicio vinculado, activar toggleServiceFields después de cargar
+                                // verificarYGenerarMensajeRequisitos se llama dentro de cargarServiciosDeProceso
+                                if (servicioId) {
+                                    setTimeout(function() {
+                                        toggleServiceFields(servicioSelector, 'ep');
+                                    }, 300);
+                                }
+                            }, 200);
+                        }, 200);
+                    }
+                }, 100);
+            }
+        } else if (procesoSelector && procesoId) {
+            // Si no hay tipo_audiencia pero hay proceso (caso legacy)
+            procesoSelector.value = procesoId;
+            if (typeof $ !== 'undefined' && $(procesoSelector).hasClass('select2-hidden-accessible')) {
+                $(procesoSelector).val(procesoId).trigger('change');
+                setTimeout(function() {
+                    cargarServiciosDeProceso(procesoId, 'ep_servicio_selector', 'ep', servicioId);
+                    if (servicioId) {
+                        setTimeout(function() {
+                            toggleServiceFields(servicioSelector, 'ep');
+                        }, 300);
+                    }
+                }, 100);
+            }
+        } else if (servicioSelector && servicioId) {
+            // Si solo hay servicio sin proceso (caso legacy)
+            servicioSelector.value = servicioId || '';
+            if (typeof $ !== 'undefined' && $(servicioSelector).hasClass('select2-hidden-accessible')) {
+                $(servicioSelector).val(servicioId || '').trigger('change');
+            }
+            if (servicioId) {
+                setTimeout(function() {
+                    toggleServiceFields(servicioSelector, 'ep');
+                }, 50);
+            }
+        }
 
         const isInfinite = (String(isInfiniteStr).trim() === 'true');
-        const needDoc = (String(needDocStr).trim() === 'true');
 
         if (epInfiniteCheckbox) epInfiniteCheckbox.checked = isInfinite;
-        if (epDocsCheckbox) epDocsCheckbox.checked = needDoc;
 
         toggleVigencyUI('ep', isInfinite);
-
+        
         if (!isInfinite) {
             document.getElementById('ep_start_date').value = start || '';
             document.getElementById('ep_end_date').value = end || '';
@@ -446,9 +591,14 @@
         // Inicializar Wizard y Previews
         document.body.setAttribute('data-ep-step', 1);
         updateWizardUI('ep', 1);
-        toggleDocRequirement('ep');
         updateEditPreview();
         updateClosedPreview('ep');
+        
+        // Verificar si debe bloquearse el mensaje por requisitos después de cargar todo
+        // Aumentar el timeout para asegurar que todos los selectores estén completamente cargados
+        setTimeout(function() {
+            verificarYGenerarMensajeRequisitos('ep');
+        }, 800);
 
         showModal('editProcessModal');
     }
@@ -576,12 +726,12 @@
 
     // VISTA PREVIA DINÁMICA DE PROCESOS
     const createPreviewConfig = {
-        textareaId: 'create_active_msg', checkboxId: 'proc_docs', previewId: 'create_msg_preview',
+        textareaId: 'create_active_msg', previewId: 'create_msg_preview',
         greetingId: 'preview_greeting', closingId: 'preview_closing', placeholder: '(El mensaje aparecerá aquí...)'
     };
 
     const editPreviewConfig = {
-        textareaId: 'ep_active_msg', checkboxId: 'ep_docs', previewId: 'ep_msg_preview',
+        textareaId: 'ep_active_msg', previewId: 'ep_msg_preview',
         greetingId: 'ep_preview_greeting', closingId: 'ep_preview_closing', placeholder: '(El mensaje aparecerá aquí...)'
     };
 
@@ -724,5 +874,554 @@
         if (event.target === processTypeModal) hideModal('processTypeModal');
     };
 
+</script>
+<!-- jQuery (requerido por Select2) -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    // Función para cargar servicios de un proceso
+    function cargarServiciosDeProceso(procesoId, servicioSelectorId, prefix, selectedServicioId = null) {
+        const servicioSelector = $('#' + servicioSelectorId);
+        const tipoAudienciaSelector = $('#' + prefix + '_tipo_audiencia_selector');
+        const tipoAudiencia = tipoAudienciaSelector.length ? tipoAudienciaSelector.val() : 'ambos';
+        
+        // Guardar el valor seleccionado antes de limpiar (si existe y no se pasó como parámetro)
+        if (!selectedServicioId && servicioSelector.val()) {
+            selectedServicioId = servicioSelector.val();
+        }
+        
+        if (!procesoId) {
+            servicioSelector.empty().append('<option value="">-- Seleccione primero un proceso --</option>');
+            servicioSelector.prop('disabled', true);
+            if (servicioSelector.hasClass('select2-hidden-accessible')) {
+                servicioSelector.select2('destroy');
+                servicioSelector.select2({
+                    theme: 'bootstrap-5',
+                    placeholder: '-- Seleccione primero un proceso --',
+                    width: '100%',
+                    dropdownParent: prefix === 'cp' ? $('#createProcessModal') : $('#editProcessModal'),
+                    disabled: true
+                });
+                servicioSelector.trigger('change.select2');
+            }
+            return;
+        }
+        
+        // Hacer llamada AJAX para obtener servicios
+        $.ajax({
+            url: '{% url "chatbot:api_servicios_de_proceso" %}',
+            method: 'GET',
+            data: { 
+                proceso_id: procesoId,
+                tipo_audiencia: tipoAudiencia
+            },
+            success: function(response) {
+                servicioSelector.empty();
+                servicioSelector.append('<option value="">-- Seleccione un servicio --</option>');
+                
+                if (response.servicios && response.servicios.length > 0) {
+                    response.servicios.forEach(function(servicio) {
+                        servicioSelector.append(
+                            $('<option></option>')
+                                .attr('value', servicio.id)  // ID del BalconServicio
+                                .attr('data-proceso-servicio-id', servicio.proceso_servicio_id || '')  // ID del BalconProcesoservicio (necesario para requisitos)
+                                .attr('data-nombre', servicio.nombre || '')
+                                .attr('data-desc', servicio.descripcion || '')
+                                .text(servicio.nombre || servicio.descripcion || 'Sin nombre')
+                        );
+                    });
+                    servicioSelector.prop('disabled', false);
+                } else {
+                    servicioSelector.append('<option value="">-- No hay servicios disponibles --</option>');
+                    servicioSelector.prop('disabled', true);
+                }
+                
+                // Reinicializar Select2
+                if (servicioSelector.hasClass('select2-hidden-accessible')) {
+                    servicioSelector.select2('destroy');
+                }
+                servicioSelector.select2({
+                    theme: 'bootstrap-5',
+                    placeholder: '-- Seleccione un servicio --',
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: prefix === 'cp' ? $('#createProcessModal') : $('#editProcessModal'),
+                    language: {
+                        noResults: function() {
+                            return "No se encontraron servicios";
+                        },
+                        searching: function() {
+                            return "Buscando...";
+                        }
+                    }
+                });
+                
+                // Establecer el valor seleccionado si existe (igual que en procesos)
+                if (selectedServicioId) {
+                    servicioSelector.val(selectedServicioId).trigger('change.select2');
+                    // Verificar requisitos después de que Select2 haya renderizado completamente
+                    setTimeout(function() {
+                        verificarYGenerarMensajeRequisitos(prefix);
+                    }, 300);
+                } else {
+                    servicioSelector.trigger('change.select2');
+                }
+                
+                // Evento change para bloquear campos y verificar requisitos
+                servicioSelector.off('change').on('change', function() {
+                    toggleServiceFields(this, prefix);
+                    // Pequeño delay para asegurar que Select2 haya actualizado el DOM
+                    setTimeout(function() {
+                        verificarYGenerarMensajeRequisitos(prefix);
+                    }, 100);
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error('Error cargando servicios:', error);
+                servicioSelector.empty().append('<option value="">-- Error al cargar servicios --</option>');
+                servicioSelector.prop('disabled', true);
+                if (servicioSelector.hasClass('select2-hidden-accessible')) {
+                    servicioSelector.select2('destroy');
+                    servicioSelector.select2({
+                        theme: 'bootstrap-5',
+                        placeholder: '-- Error al cargar servicios --',
+                        width: '100%',
+                        dropdownParent: prefix === 'cp' ? $('#createProcessModal') : $('#editProcessModal'),
+                        disabled: true
+                    });
+                    servicioSelector.trigger('change.select2');
+                }
+            }
+        });
+    }
+    
+    // Función para verificar si el tipo requiere docs y ocultar/mostrar textarea y actualizar vista previa
+    function verificarYGenerarMensajeRequisitos(prefix) {
+        const typeSelect = document.getElementById(prefix + '_type');
+        const servicioSelector = $('#' + prefix + '_servicio_selector');
+        const mensajeTextarea = document.getElementById(prefix === 'cp' ? 'create_active_msg' : 'ep_active_msg');
+        const textareaContainer = document.getElementById(prefix === 'cp' ? 'cp_msg_textarea_container' : 'ep_msg_textarea_container');
+        const previewElement = document.getElementById(prefix === 'cp' ? 'create_msg_preview' : 'ep_msg_preview');
+        const previewContainer = document.getElementById(prefix === 'cp' ? 'cp_preview_container' : 'ep_preview_container');
+        const gridContainer = document.getElementById(prefix === 'cp' ? 'cp_msg_grid_container' : 'ep_msg_grid_container');
+        const tipoProcesoLabel = document.getElementById(prefix === 'cp' ? 'cp_tipo_proceso_label' : 'ep_tipo_proceso_label');
+        
+        if (!typeSelect || !servicioSelector.length || !mensajeTextarea || !textareaContainer || !previewElement || !previewContainer || !gridContainer || !tipoProcesoLabel) return;
+        
+        const selectedTypeOption = typeSelect.options[typeSelect.selectedIndex];
+        const requiereDocs = selectedTypeOption && selectedTypeOption.getAttribute('data-req-doc') === 'true';
+        const tipoNombre = selectedTypeOption ? selectedTypeOption.text.trim() : '';
+        const servicioId = servicioSelector.val();
+        
+        if (requiereDocs && servicioId) {
+            // Ocultar el textarea
+            textareaContainer.style.display = 'none';
+            // Cambiar el grid a una sola columna y centrar la vista previa cuando el textarea está oculto
+            gridContainer.className = 'grid grid-cols-1 gap-6 mt-2';
+            previewContainer.className = 'flex flex-col items-center';
+            // Mostrar el label del tipo de proceso
+            tipoProcesoLabel.textContent = `(Este es un proceso ${tipoNombre.toLowerCase()})`;
+            tipoProcesoLabel.classList.remove('hidden');
+            
+            // Obtener el proceso_servicio_id del option seleccionado
+            const selectedOption = servicioSelector.find('option:selected');
+            const procesoServicioId = selectedOption.attr('data-proceso-servicio-id');
+            
+            if (!procesoServicioId) {
+                console.warn('No se encontró proceso_servicio_id para el servicio seleccionado. Esperando a que se carguen las opciones...');
+                // Mostrar mensaje temporal mientras se carga
+                previewElement.innerText = `(Este es un proceso ${tipoNombre.toLowerCase()})`;
+                // Si no se encuentra, intentar de nuevo después de un breve delay
+                setTimeout(function() {
+                    verificarYGenerarMensajeRequisitos(prefix);
+                }, 200);
+                return;
+            }
+            
+            // Cargar requisitos del servicio usando proceso_servicio_id
+            $.ajax({
+                url: '{% url "chatbot:api_requisitos_de_servicio" %}',
+                method: 'GET',
+                data: { proceso_servicio_id: procesoServicioId },
+                success: function(response) {
+                    // Generar mensaje para la vista previa
+                    let mensajePreview = `(Este es un proceso ${tipoNombre.toLowerCase()})`;
+                    
+                    if (response.requisitos && response.requisitos.length > 0) {
+                        // Generar mensaje completo con lista de requisitos para guardar en el textarea oculto
+                        let mensaje = 'Este caso lo deben atender mis compañeros humanos, por favor realiza tu solicitud en el balcón de servicios.\n\n';
+                        mensaje += 'Estos son los requisitos que se pide:\n';
+                        
+                        response.requisitos.forEach(function(requisito, index) {
+                            const indicador = requisito.obligatorio ? '✓' : '○';
+                            mensaje += `${index + 1}. ${indicador} ${requisito.descripcion}\n`;
+                        });
+                        
+                        // Establecer el valor en el textarea oculto (para que se guarde al enviar)
+                        mensajeTextarea.value = mensaje;
+                        // Actualizar vista previa
+                        previewElement.innerText = mensajePreview;
+                        if (prefix === 'cp') updateCreatePreview();
+                        else updateEditPreview();
+                    } else {
+                        // Si no hay requisitos, mensaje genérico
+                        const mensajeGenerico = 'Este caso lo deben atender mis compañeros humanos, por favor realiza tu solicitud en el balcón de servicios.';
+                        mensajeTextarea.value = mensajeGenerico;
+                        previewElement.innerText = mensajePreview;
+                        if (prefix === 'cp') updateCreatePreview();
+                        else updateEditPreview();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error cargando requisitos:', error);
+                    // Mensaje genérico si hay error
+                    const mensajeError = 'Este caso lo deben atender mis compañeros humanos, por favor realiza tu solicitud en el balcón de servicios.';
+                    mensajeTextarea.value = mensajeError;
+                    previewElement.innerText = `(Este es un proceso ${tipoNombre.toLowerCase()})`;
+                    if (prefix === 'cp') updateCreatePreview();
+                    else updateEditPreview();
+                }
+            });
+        } else {
+            // Mostrar el textarea si no requiere docs o no hay servicio
+            textareaContainer.style.display = 'block';
+            // Restaurar el grid de 2 columnas
+            gridContainer.className = 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-2';
+            previewContainer.className = '';
+            // Ocultar el label del tipo de proceso
+            tipoProcesoLabel.classList.add('hidden');
+            
+            // Si estaba oculto y ahora se muestra, limpiar solo si el contenido es el mensaje automático
+            const contenidoActual = mensajeTextarea.value.trim();
+            if (contenidoActual.startsWith('Este caso lo deben atender mis compañeros humanos')) {
+                mensajeTextarea.value = '';
+            }
+            if (prefix === 'cp') updateCreatePreview();
+            else updateEditPreview();
+        }
+    }
+    
+    // Función para cargar procesos según tipo de audiencia
+    function cargarProcesosPorAudiencia(tipoAudiencia, procesoSelectorId, prefix) {
+        const procesoSelector = $('#' + procesoSelectorId);
+        
+        if (!tipoAudiencia || tipoAudiencia === '') {
+            procesoSelector.empty().append('<option value="">-- Seleccione primero el tipo de audiencia --</option>');
+            procesoSelector.prop('disabled', true);
+            if (procesoSelector.hasClass('select2-hidden-accessible')) {
+                procesoSelector.select2('destroy');
+                procesoSelector.select2({
+                    theme: 'bootstrap-5',
+                    placeholder: '-- Seleccione primero el tipo de audiencia --',
+                    width: '100%',
+                    dropdownParent: prefix === 'cp' ? $('#createProcessModal') : $('#editProcessModal'),
+                    disabled: true
+                });
+            }
+            // Limpiar también el selector de servicios
+            const servicioSelector = $('#' + prefix + '_servicio_selector');
+            servicioSelector.empty().append('<option value="">-- Seleccione primero un proceso --</option>');
+            servicioSelector.prop('disabled', true);
+            return;
+        }
+        
+        // Hacer llamada AJAX para obtener procesos filtrados
+        $.ajax({
+            url: '{% url "chatbot:api_procesos_por_audiencia" %}',
+            method: 'GET',
+            data: { tipo_audiencia: tipoAudiencia },
+            success: function(response) {
+                procesoSelector.empty();
+                procesoSelector.append('<option value="">-- Ninguno (Creación Manual) --</option>');
+                
+                if (response.procesos && response.procesos.length > 0) {
+                    response.procesos.forEach(function(proceso) {
+                        procesoSelector.append(
+                            $('<option></option>')
+                                .attr('value', proceso.id)
+                                .attr('data-desc', proceso.descripcion || '')
+                                .text(proceso.nombre || proceso.descripcion || 'Sin nombre')
+                        );
+                    });
+                    procesoSelector.prop('disabled', false);
+                } else {
+                    procesoSelector.append('<option value="">-- No hay procesos disponibles --</option>');
+                    procesoSelector.prop('disabled', true);
+                }
+                
+                // Reinicializar Select2
+                if (procesoSelector.hasClass('select2-hidden-accessible')) {
+                    procesoSelector.select2('destroy');
+                }
+                procesoSelector.select2({
+                    theme: 'bootstrap-5',
+                    placeholder: '-- Ninguno (Creación Manual) --',
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: prefix === 'cp' ? $('#createProcessModal') : $('#editProcessModal'),
+                    language: {
+                        noResults: function() {
+                            return "No se encontraron procesos";
+                        },
+                        searching: function() {
+                            return "Buscando...";
+                        }
+                    }
+                });
+                
+                // Asegurar que el valor seleccionado se muestre correctamente
+                procesoSelector.trigger('change.select2');
+            },
+            error: function(xhr, status, error) {
+                console.error('Error cargando procesos:', error);
+                procesoSelector.empty().append('<option value="">-- Error al cargar procesos --</option>');
+                procesoSelector.prop('disabled', true);
+            }
+        });
+    }
+    
+    // Inicializar Select2 en los selectores de procesos y servicios
+    function initializeServiceSelectors() {
+        // Selector de tipo de audiencia - Creación
+        const cpTipoAudienciaSelector = $('#cp_tipo_audiencia_selector');
+        if (cpTipoAudienciaSelector.length) {
+            cpTipoAudienciaSelector.off('change').on('change', function() {
+                const tipoAudiencia = $(this).val();
+                cargarProcesosPorAudiencia(tipoAudiencia, 'cp_proceso_selector', 'cp');
+                // Limpiar selector de servicios cuando cambia tipo de audiencia
+                const servicioSelector = $('#cp_servicio_selector');
+                servicioSelector.empty().append('<option value="">-- Seleccione primero un proceso --</option>');
+                servicioSelector.prop('disabled', true);
+                servicioSelector.val('').trigger('change.select2');
+                
+                // Desbloquear campos de nombre y descripción cuando se limpia el proceso
+                const nameInput = document.getElementById('cp_name');
+                const descInput = document.getElementById('cp_context');
+                if (nameInput && descInput) {
+                    nameInput.removeAttribute('readonly');
+                    descInput.removeAttribute('readonly');
+                    nameInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+                    descInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+                }
+            });
+            // Cargar procesos iniciales si hay un valor por defecto
+            const tipoAudienciaInicial = cpTipoAudienciaSelector.val();
+            if (tipoAudienciaInicial) {
+                cargarProcesosPorAudiencia(tipoAudienciaInicial, 'cp_proceso_selector', 'cp');
+            }
+        }
+        
+        // Selector de proceso - Creación
+        const cpProcesoSelector = $('#cp_proceso_selector');
+        if (cpProcesoSelector.length) {
+            if (cpProcesoSelector.hasClass('select2-hidden-accessible')) {
+                cpProcesoSelector.select2('destroy');
+            }
+            
+            cpProcesoSelector.select2({
+                theme: 'bootstrap-5',
+                placeholder: '-- Seleccione primero el tipo de audiencia --',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#createProcessModal'),
+                disabled: true
+            });
+            
+            // Asegurar que el valor se muestre correctamente
+            cpProcesoSelector.trigger('change.select2');
+            
+            cpProcesoSelector.off('change').on('change', function() {
+                const procesoId = $(this).val();
+                const servicioSelector = $('#cp_servicio_selector');
+                
+                // Si no hay proceso seleccionado, desbloquear campos y limpiar servicio
+                if (!procesoId) {
+                    servicioSelector.val('').trigger('change.select2');
+                    // Desbloquear campos de nombre y descripción
+                    const nameInput = document.getElementById('cp_name');
+                    const descInput = document.getElementById('cp_context');
+                    if (nameInput && descInput) {
+                        nameInput.removeAttribute('readonly');
+                        descInput.removeAttribute('readonly');
+                        nameInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+                        descInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+                    }
+                } else {
+                    // Limpiar el servicio cuando cambia el proceso
+                    servicioSelector.val('').trigger('change.select2');
+                    cargarServiciosDeProceso(procesoId, 'cp_servicio_selector', 'cp');
+                }
+                // Limpiar mensaje bloqueado si había uno
+                verificarYGenerarMensajeRequisitos('cp');
+            });
+            
+            // Detectar cambio en tipo de proceso para verificar requisitos
+            $('#cp_type').off('change').on('change', function() {
+                verificarYGenerarMensajeRequisitos('cp');
+            });
+        }
+        
+        // Selector de servicio - Creación
+        const cpServicioSelector = $('#cp_servicio_selector');
+        if (cpServicioSelector.length) {
+            if (cpServicioSelector.hasClass('select2-hidden-accessible')) {
+                cpServicioSelector.select2('destroy');
+            }
+            
+            cpServicioSelector.select2({
+                theme: 'bootstrap-5',
+                placeholder: '-- Seleccione primero un proceso --',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#createProcessModal'),
+                disabled: true
+            });
+            
+            // Asegurar que el valor seleccionado se muestre
+            cpServicioSelector.trigger('change.select2');
+            
+            cpServicioSelector.off('change').on('change', function() {
+                toggleServiceFields(this, 'cp');
+                verificarYGenerarMensajeRequisitos('cp');
+            });
+        }
+        
+        // Selector de proceso - Edición
+        const epProcesoSelector = $('#ep_proceso_selector');
+        if (epProcesoSelector.length) {
+            if (epProcesoSelector.hasClass('select2-hidden-accessible')) {
+                epProcesoSelector.select2('destroy');
+            }
+            
+            epProcesoSelector.select2({
+                theme: 'bootstrap-5',
+                placeholder: '-- Seleccione primero el tipo de audiencia --',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#editProcessModal'),
+                disabled: true
+            });
+            
+            // Asegurar que el valor se muestre correctamente
+            epProcesoSelector.trigger('change.select2');
+            
+            epProcesoSelector.off('change').on('change', function() {
+                const procesoId = $(this).val();
+                const servicioSelector = $('#ep_servicio_selector');
+                
+                // Si no hay proceso seleccionado, desbloquear campos y limpiar servicio
+                if (!procesoId) {
+                    servicioSelector.val('').trigger('change.select2');
+                    // Desbloquear campos de nombre y descripción
+                    const nameInput = document.getElementById('ep_name');
+                    const descInput = document.getElementById('ep_context');
+                    if (nameInput && descInput) {
+                        nameInput.removeAttribute('readonly');
+                        descInput.removeAttribute('readonly');
+                        nameInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+                        descInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+                    }
+                } else {
+                    // Limpiar el servicio cuando cambia el proceso
+                    servicioSelector.val('').trigger('change.select2');
+                    cargarServiciosDeProceso(procesoId, 'ep_servicio_selector', 'ep');
+                }
+                // Limpiar mensaje bloqueado si había uno
+                verificarYGenerarMensajeRequisitos('ep');
+            });
+            
+            // Detectar cambio en tipo de proceso para verificar requisitos
+            $('#ep_type').off('change').on('change', function() {
+                verificarYGenerarMensajeRequisitos('ep');
+            });
+            
+            // Selector de tipo de audiencia - Edición
+            const epTipoAudienciaSelector = $('#ep_tipo_audiencia_selector');
+            if (epTipoAudienciaSelector.length) {
+                epTipoAudienciaSelector.off('change').on('change', function() {
+                    const tipoAudiencia = $(this).val();
+                    cargarProcesosPorAudiencia(tipoAudiencia, 'ep_proceso_selector', 'ep');
+                    // Limpiar selector de servicios cuando cambia tipo de audiencia
+                    const servicioSelector = $('#ep_servicio_selector');
+                    servicioSelector.empty().append('<option value="">-- Seleccione primero un proceso --</option>');
+                    servicioSelector.prop('disabled', true);
+                    servicioSelector.val('').trigger('change.select2');
+                    
+                    // Desbloquear campos de nombre y descripción cuando se limpia el proceso
+                    const nameInput = document.getElementById('ep_name');
+                    const descInput = document.getElementById('ep_context');
+                    if (nameInput && descInput) {
+                        nameInput.removeAttribute('readonly');
+                        descInput.removeAttribute('readonly');
+                        nameInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+                        descInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+                    }
+                });
+            }
+        }
+        
+        // Selector de servicio - Edición
+        const epServicioSelector = $('#ep_servicio_selector');
+        if (epServicioSelector.length) {
+            if (epServicioSelector.hasClass('select2-hidden-accessible')) {
+                epServicioSelector.select2('destroy');
+            }
+            
+            epServicioSelector.select2({
+                theme: 'bootstrap-5',
+                placeholder: '-- Seleccione primero un proceso --',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#editProcessModal'),
+                disabled: true
+            });
+            
+            // Asegurar que el valor seleccionado se muestre correctamente
+            epServicioSelector.trigger('change.select2');
+            
+            epServicioSelector.off('change').on('change', function() {
+                toggleServiceFields(this, 'ep');
+                verificarYGenerarMensajeRequisitos('ep');
+            });
+        }
+    }
+    
+    // Extender la función openCreateProcessModal existente para inicializar Select2
+    const originalOpenCreateProcessModal = window.openCreateProcessModal;
+    if (originalOpenCreateProcessModal) {
+        window.openCreateProcessModal = function() {
+            originalOpenCreateProcessModal.apply(this, arguments);
+            // Esperar un poco para que el modal se renderice completamente
+            setTimeout(function() {
+                initializeServiceSelectors();
+            }, 100);
+        };
+    }
+    
+    // Extender la función openEditProcessModal para inicializar Select2
+    const originalOpenEditProcessModal = window.openEditProcessModal;
+    if (originalOpenEditProcessModal) {
+        window.openEditProcessModal = function(...args) {
+            originalOpenEditProcessModal.apply(this, args);
+            // Esperar un poco para que el modal se renderice completamente
+            setTimeout(function() {
+                initializeServiceSelectors();
+                // Si hay servicio vinculado (último argumento), establecer el valor en Select2
+                if (args.length > 12 && args[12]) {
+                    const servicioId = args[12];
+                    const epSelector = $('#ep_servicio_selector');
+                    if (epSelector.length && epSelector.hasClass('select2-hidden-accessible')) {
+                        epSelector.val(servicioId).trigger('change');
+                    }
+                }
+            }, 100);
+        };
+    }
+    
+    // Inicializar cuando el DOM esté listo
+    $(document).ready(function() {
+        initializeServiceSelectors();
+    });
 </script>
 {% endblock %}

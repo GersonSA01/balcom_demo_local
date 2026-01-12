@@ -5,7 +5,8 @@ from .views import (
     process_manager, create_process, delete_process, edit_process,
     create_chatbot_role, delete_chatbot_role, edit_chatbot_role,
     get_users_list, create_process_type, edit_process_type, delete_process_type,
-    api_get_servicios_estudiante, api_get_proceso_servicios
+    api_get_servicios_estudiante, api_get_proceso_servicios, api_get_servicios_de_proceso,
+    api_get_procesos_por_audiencia, api_get_requisitos_de_servicio
 )
 
 app_name = 'chatbot'
@@ -39,6 +40,9 @@ urlpatterns = [
     path('gestion/tipos/eliminar/<int:type_id>/', delete_process_type, name='delete_process_type'),
 
     path("api/proceso-servicios/", api_get_proceso_servicios),
+    path("api/servicios-de-proceso/", api_get_servicios_de_proceso, name="api_servicios_de_proceso"),
+    path("api/procesos-por-audiencia/", api_get_procesos_por_audiencia, name="api_procesos_por_audiencia"),
+    path("api/requisitos-de-servicio/", api_get_requisitos_de_servicio, name="api_requisitos_de_servicio"),
 
 ]
 

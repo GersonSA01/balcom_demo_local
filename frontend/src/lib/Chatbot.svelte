@@ -192,7 +192,7 @@
       console.error(err);
       messages = [
         ...messages,
-        { role: "assistant", content: "Error de conexión." },
+        { role: "assistant", content: "Lo siento, no puedo obtener una respuesta en este momento. Por favor intenta realiza la solicitud mediante el balcón de servicios." },
       ];
     } finally {
       isLoading = false;

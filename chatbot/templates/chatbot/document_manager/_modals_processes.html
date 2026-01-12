@@ -17,6 +17,29 @@
             {% csrf_token %}
 
             <div id="cp_step_content_1" class="step-content space-y-4">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Tipo de Audiencia</label>
+                    <select name="tipo_audiencia" id="cp_tipo_audiencia_selector" 
+                        class="w-full rounded-lg border-slate-300 focus:border-[#1e3a5f] focus:ring focus:ring-[#1e3a5f]/30">
+                        <option value="ambos" selected>Ambos (Interno y Externo)</option>
+                        <option value="interno">Interno</option>
+                        <option value="externo">Externo</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Vincular con Proceso SGA (Opcional)</label>
+                    <select name="proceso_id" id="cp_proceso_selector" disabled
+                        class="w-full rounded-lg border-slate-300 focus:border-[#1e3a5f] focus:ring focus:ring-[#1e3a5f]/30">
+                        <option value="">-- Seleccione primero el tipo de audiencia --</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Servicio del Proceso</label>
+                    <select name="servicio_id" id="cp_servicio_selector" disabled
+                        class="w-full rounded-lg border-slate-300 focus:border-[#1e3a5f] focus:ring focus:ring-[#1e3a5f]/30">
+                        <option value="">-- Seleccione primero un proceso --</option>
+                    </select>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Nombre del Proceso</label>
@@ -25,7 +48,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Tipo de Proceso</label>
-                        <select name="process_type" id="cp_type" onchange="toggleDocRequirement('cp')" required
+                        <select name="process_type" id="cp_type" required
                             class="w-full rounded-lg border-slate-300 focus:ring-[#ff6b35] focus:border-[#ff6b35]">
                             <option value="" disabled selected>Seleccione...</option>
                             {% for pt in process_types %}
@@ -43,15 +66,9 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">¿Qué solicita exactamente?</label>
-                        <textarea name="business_context" id="cp_context" rows="3" required
+                        <textarea name="descripcion" id="cp_context" rows="3" required
                             class="w-full rounded-lg border-slate-300 focus:ring-[#ff6b35] focus:border-[#ff6b35] font-mono text-sm"></textarea>
                     </div>
-                </div>
-                <div id="cp_docs_container" class="flex items-center gap-2 py-2 hidden transition-all border-t pt-4">
-                    <input type="checkbox" id="proc_docs" name="need_documentation" onchange="updateCreatePreview()"
-                        class="rounded text-[#ff6b35] focus:ring-[#ff6b35] border-slate-300">
-                    <label for="proc_docs" class="text-sm font-medium text-[#1e3a5f]">Este proceso requiere subir
-                        evidencia PDF</label>
                 </div>
             </div>
 
@@ -118,15 +135,18 @@
             </div>
 
             <div id="cp_step_content_3" class="step-content space-y-4 hidden">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-                    <div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2" id="cp_msg_grid_container">
+                    <div id="cp_msg_textarea_container">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Mensaje de Respuesta</label>
                         <textarea name="active_message" id="create_active_msg" rows="5" required
                             placeholder="Escribe requisitos..." oninput="updateCreatePreview()"
                             class="w-full rounded-lg border-slate-300 focus:ring-[#ff6b35] focus:border-[#ff6b35] font-mono text-sm"></textarea>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Vista Previa Chat</label>
+                    <div id="cp_preview_container">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">
+                            Vista Previa Chat
+                            <span id="cp_tipo_proceso_label" class="text-xs font-normal text-slate-500 ml-2 hidden"></span>
+                        </label>
                         <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 h-full">
                             <div
                                 class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 text-sm text-slate-800">
@@ -176,6 +196,34 @@
             {% csrf_token %}
 
             <div id="ep_step_content_1" class="step-content space-y-4">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Vincular con Proceso SGA (Opcional)</label>
+                    <select name="proceso_id" id="ep_proceso_selector" 
+                        class="w-full rounded-lg border-slate-300 focus:border-[#1e3a5f] focus:ring focus:ring-[#1e3a5f]/30">
+                        <option value="">-- Ninguno (Creación Manual) --</option>
+                        {% for p in procesos_sga %}
+                            <option value="{{ p.id }}" data-desc="{{ p.descripcion|escapejs }}">
+                                {{ p.descripcion }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Tipo de Audiencia</label>
+                    <select name="tipo_audiencia" id="ep_tipo_audiencia_selector" 
+                        class="w-full rounded-lg border-slate-300 focus:border-[#1e3a5f] focus:ring focus:ring-[#1e3a5f]/30">
+                        <option value="ambos">Ambos (Interno y Externo)</option>
+                        <option value="interno">Interno</option>
+                        <option value="externo">Externo</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Servicio del Proceso</label>
+                    <select name="servicio_id" id="ep_servicio_selector" disabled
+                        class="w-full rounded-lg border-slate-300 focus:border-[#1e3a5f] focus:ring focus:ring-[#1e3a5f]/30">
+                        <option value="">-- Seleccione primero un proceso --</option>
+                    </select>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Nombre del Proceso</label>
@@ -184,7 +232,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Tipo de Proceso</label>
-                        <select name="process_type" id="ep_type" onchange="toggleDocRequirement('ep')" required
+                        <select name="process_type" id="ep_type" required
                             class="w-full rounded-lg border-slate-300 focus:ring-green-500 focus:border-green-500">
                             <option value="" disabled selected>Seleccione...</option>
                             {% for pt in process_types %}
@@ -202,15 +250,9 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">¿Qué solicita exactamente?</label>
-                        <textarea name="business_context" id="ep_context" rows="3" required
+                        <textarea name="descripcion" id="ep_context" rows="3" required
                             class="w-full rounded-lg border-slate-300 focus:ring-green-500 focus:border-green-500 font-mono text-sm"></textarea>
                     </div>
-                </div>
-                <div id="ep_docs_container" class="flex items-center gap-2 py-2 transition-all border-t pt-4">
-                    <input type="checkbox" id="ep_docs" name="need_documentation" onchange="updateEditPreview()"
-                        class="rounded text-green-600 focus:ring-green-500 border-slate-300">
-                    <label for="ep_docs" class="text-sm font-medium text-[#1e3a5f]">Este proceso requiere subir
-                        evidencia PDF</label>
                 </div>
             </div>
 
@@ -277,15 +319,18 @@
             </div>
 
             <div id="ep_step_content_3" class="step-content space-y-4 hidden">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-                    <div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2" id="ep_msg_grid_container">
+                    <div id="ep_msg_textarea_container">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Mensaje de Respuesta</label>
                         <textarea name="active_message" id="ep_active_msg" rows="5" required
                             placeholder="Escribe requisitos..." oninput="updateEditPreview()"
                             class="w-full rounded-lg border-slate-300 focus:ring-green-500 focus:border-green-500 font-mono text-sm"></textarea>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Vista Previa Chat</label>
+                    <div id="ep_preview_container">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">
+                            Vista Previa Chat
+                            <span id="ep_tipo_proceso_label" class="text-xs font-normal text-slate-500 ml-2 hidden"></span>
+                        </label>
                         <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 h-full">
                             <div
                                 class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 text-sm text-slate-800">
@@ -315,3 +360,42 @@
         </form>
     </div>
 </div>
+
+<script>
+    function toggleServiceFields(selectElement, prefix) {
+        // Obtenemos los inputs basados en el prefijo (cp_ o ep_)
+        const nameInput = document.getElementById(prefix + '_name');
+        const descInput = document.getElementById(prefix + '_context');
+        
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        const isServiceSelected = selectElement.value !== "";
+
+        if (isServiceSelected) {
+            // 1. Tomar valores del data-attribute
+            const nombreServicio = selectedOption.getAttribute('data-nombre');
+            const descServicio = selectedOption.getAttribute('data-desc');
+
+            // 2. Rellenar campos
+            nameInput.value = nombreServicio || "";
+            descInput.value = descServicio || "";
+
+            // 3. Bloquear campos (readonly es mejor que disabled para que viajen en el POST)
+            nameInput.setAttribute('readonly', true);
+            descInput.setAttribute('readonly', true);
+            
+            // Estilo visual para indicar bloqueo
+            nameInput.classList.add('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+            descInput.classList.add('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+        } else {
+            // Si selecciona "Ninguno", desbloquear y limpiar
+            nameInput.removeAttribute('readonly');
+            descInput.removeAttribute('readonly');
+            
+            nameInput.value = ""; 
+            descInput.value = "";
+            
+            nameInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+            descInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+        }
+    }
+</script>
