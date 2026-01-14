@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     ChatView, health, get_users_list, 
     document_manager, upload_document, delete_document, update_document_role, 
+    bulk_delete_documents, bulk_update_roles,
     process_manager, create_process, delete_process, edit_process,
     create_chatbot_role, delete_chatbot_role, edit_chatbot_role,
     get_users_list, create_process_type, edit_process_type, delete_process_type,
@@ -21,6 +22,8 @@ urlpatterns = [
     path('gestion/upload/', upload_document, name='upload_document'),
     path('gestion/delete/<str:doc_id>/', delete_document, name='delete_document'),
     path('gestion/update-role/<str:doc_id>/', update_document_role, name='update_document_role'),
+    path('gestion/bulk-delete/', bulk_delete_documents, name='bulk_delete_documents'),
+    path('gestion/bulk-update-roles/', bulk_update_roles, name='bulk_update_roles'),
 
     # --- NUEVAS RUTAS: GESTIÓN DE PROCESOS ---
     path('procesos/', process_manager, name='process_manager'),

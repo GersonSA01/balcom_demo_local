@@ -58,14 +58,18 @@ def _get_materias_asignadas(persona, periodo_id=None):
 def q_estado_matricula(persona, periodo_id=None):
     matricula, err = _get_matricula(persona, periodo_id)
     if err:
-        return err
+        # CORRECCIÓN: Devolver JSON incluso en error
+        return json.dumps({"error": err, "estado": "SIN_DATOS"}, ensure_ascii=False)
 
-    estado = "MATRICULADO"
+    # Prioridad: estado_matricula (Choices) > aprobado (Boolean)
+    if hasattr(matricula, "get_estado_matricula_display"):
+        estado = matricula.get_estado_matricula_display()
+    else:
+        estado = "MATRICULADO"
+
     if getattr(matricula, "retiradomatricula", False):
         estado = "RETIRADO"
-    if not getattr(matricula, "aprobado", True):
-        estado = "PENDIENTE / NO APROBADO"
-
+    
     data = {
         "estado": estado,
         "periodo": getattr(matricula.nivel.periodo, "nombre", None),
@@ -76,7 +80,8 @@ def q_estado_matricula(persona, periodo_id=None):
 def q_materias_matriculadas(persona, periodo_id=None):
     materias_asignadas, err = _get_materias_asignadas(persona, periodo_id)
     if err:
-        return err
+        # CORRECCIÓN: Devolver JSON incluso en error
+        return json.dumps({"error": err, "materias": []}, ensure_ascii=False)
 
     materias_asignadas = materias_asignadas.select_related("materia__asignatura")
 
@@ -91,7 +96,8 @@ def q_materias_matriculadas(persona, periodo_id=None):
 def q_nivel_semestre_paralelo(persona, periodo_id=None):
     matricula, err = _get_matricula(persona, periodo_id)
     if err:
-        return err
+        # CORRECCIÓN: Devolver JSON incluso en error
+        return json.dumps({"error": err}, ensure_ascii=False)
 
     paralelo = getattr(matricula.nivel, "paralelo", None)
     nivel_nombre = None
@@ -138,7 +144,8 @@ def q_nivel_semestre_paralelo(persona, periodo_id=None):
 def q_horario_semanal(persona, periodo_id=None):
     materias_asignadas, err = _get_materias_asignadas(persona, periodo_id)
     if err:
-        return err
+        # CORRECCIÓN: Devolver JSON incluso en error
+        return json.dumps({"error": err, "horario": []}, ensure_ascii=False)
 
     materia_ids = list(materias_asignadas.values_list("materia_id", flat=True))
 
@@ -196,6 +203,8 @@ def q_horario_semanal(persona, periodo_id=None):
         
     return json.dumps({"horario": final_items}, ensure_ascii=False)
 
+
+
 # -----------------------------------------------------------------------------
 # TOPIC: FINANCIAL (Rubros/Pagos/Deudas/Bloqueos)
 # -----------------------------------------------------------------------------
@@ -251,6 +260,8 @@ def q_pagos_realizados(persona, limit=20):
     return json.dumps({"pagos": out}, ensure_ascii=False)
 
 
+
+
 # -----------------------------------------------------------------------------
 # TOPIC: GRADES (Notas/Promedios/Asistencia/Estado calificación)
 # -----------------------------------------------------------------------------
@@ -258,7 +269,7 @@ def q_notas_periodo(persona, periodo_id:int):
     try:
         periodo_id = int(periodo_id)
     except:
-        return "ID de periodo inválido."
+        return json.dumps({"error": "ID de periodo inválido.", "notas": {}}, ensure_ascii=False)
 
     records = (SgaRecordacademico.objects
                .filter(inscripcion__persona=persona,
@@ -273,7 +284,8 @@ def q_notas_periodo(persona, periodo_id:int):
                           .select_related("materia__asignatura"))
 
     if not records.exists() and not materias_asignadas.exists():
-        return "No se encontraron notas/materias para ese periodo."
+        # CORRECCIÓN: JSON en vez de string plano
+        return json.dumps({"error": "No se encontraron notas/materias para ese periodo.", "notas": {}}, ensure_ascii=False)
 
     notas = {}
 
@@ -330,7 +342,8 @@ def q_estado_calificacion(persona, periodo_id:int):
 def q_practicas(persona):
     practicas = SgaPracticaspreprofesionalesinscripcion.objects.filter(inscripcion__persona=persona, status=True)
     if not practicas.exists():
-        return "No se encontraron prácticas registradas."
+        # CORRECCIÓN: JSON en vez de string plano
+        return json.dumps({"mensaje": "No se encontraron prácticas registradas.", "practicas": []}, ensure_ascii=False)
     out = []
     for p in practicas:
         out.append({

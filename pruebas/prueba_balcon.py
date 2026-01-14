@@ -72,11 +72,36 @@ def ejecutar_pruebas():
     casos_procesados = 0
     output_path = os.path.join(os.path.dirname(__file__), ARCHIVO_SALIDA)
 
+    # 1.1 Cargar casos ya procesados para evitar duplicados
+    procesados = set()
+    if os.path.exists(output_path):
+        print(f"🔎 Analizando historial en {ARCHIVO_SALIDA}...")
+        try:
+            with open(output_path, 'r', encoding='utf-8') as f:
+                for linea in f:
+                    if linea.strip():
+                        try:
+                            obj = json.loads(linea)
+                            # Usamos (cedula, pregunta) como clave única 
+                            clave = (obj.get("cedula"), obj.get("pregunta"))
+                            procesados.add(clave)
+                        except json.JSONDecodeError:
+                            pass
+        except Exception as e:
+            print(f"⚠️ Error leyendo historial: {e}")
+    
+    print(f"ℹ️ {len(procesados)} casos ya registrados anteriormente.")
+
     for i, fila in enumerate(filas_datos):
         cedula = fila.get("cedula", "")
         pregunta = fila.get("pregunta", "")
         resolucion_historica = fila.get("resolucion", "")
         proceso_origen = fila.get("proceso", "General")
+        
+        # Filtro: Verificar si ya existe en resultados
+        if (cedula, pregunta) in procesados:
+             print(f"⏩ [{i+1}/{len(filas_datos)}] Saltando {cedula} (Ya existe en resultados)")
+             continue
         
         # Filtro: Saltar si la resolución está vacía
         if not resolucion_historica or str(resolucion_historica).strip() == "":
@@ -94,19 +119,42 @@ def ejecutar_pruebas():
             persona = SgaPersona.objects.filter(cedula=cedula).first()
             if persona:
                 print(f"   👤 Usuario identificado: {persona}")
-                # Buscamos el primer perfil activo
-                perfil = SgaPerfilusuario.objects.filter(persona=persona, status=True).first()
-                if perfil:
-                    perfil_id = perfil.id
-                    # Buscamos la última matrícula no retirada para obtener el periodo
-                    if perfil.inscripcion:
-                        matricula = SgaMatricula.objects.filter(
-                            inscripcion=perfil.inscripcion, 
+                
+                # Buscamos en TODOS los perfiles activos
+                perfiles_activos = SgaPerfilusuario.objects.filter(persona=persona, status=True)
+                candidate_matriculas = []
+
+                # Guardamos referenica de matricula -> perfil para luego sacar el ID del perfil ganador
+                matricula_perfil_map = {}
+
+                for p in perfiles_activos:
+                    if p.inscripcion:
+                        mats = SgaMatricula.objects.filter(
+                            inscripcion=p.inscripcion, 
                             retiradomatricula=False
-                        ).order_by('-nivel__periodo__inicio').first()
-                        if matricula and matricula.nivel and matricula.nivel.periodo:
-                            periodo_id = matricula.nivel.periodo.id
-                            print(f"   📌 Perfil: {perfil_id}, Periodo: {periodo_id}")
+                        ).select_related('nivel__periodo')
+                        
+                        for m in mats:
+                            candidate_matriculas.append(m)
+                            matricula_perfil_map[m.id] = p.id
+
+                if candidate_matriculas:
+                    # Ordenar: periodo_id DESC, matricula_id DESC
+                    candidate_matriculas.sort(key=lambda x: (getattr(x.nivel.periodo, 'id', 0), x.id), reverse=True)
+                    
+                    best_matricula = candidate_matriculas[0]
+                    
+                    if best_matricula and best_matricula.nivel and best_matricula.nivel.periodo:
+                        periodo_id = best_matricula.nivel.periodo.id
+                        # Actualizamos el perfil_id para que coincida con la matrícula seleccionada
+                        perfil_id = matricula_perfil_map.get(best_matricula.id)
+                        print(f"   📌 Perfil: {perfil_id}, Periodo: {periodo_id} (Origen: Matrícula {best_matricula.id})")
+                
+                # Fallback si no hay matrículas pero hay perfil
+                if not periodo_id and not perfil_id:
+                     perfil_default = perfiles_activos.first()
+                     if perfil_default:
+                         perfil_id = perfil_default.id
             else:
                 print(f"   ⚠️ Usuario no encontrado en BD. Se usará perfil ficticio.")
         except Exception as e:

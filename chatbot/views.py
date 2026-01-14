@@ -551,6 +551,97 @@ def edit_chatbot_role(request, role_id):
     return redirect("chatbot:document_manager")
 
 
+@require_POST
+def update_document_role(request, doc_id):
+    doc = get_object_or_404(RagDocument, id=doc_id)
+    try:
+        new_role_ids = request.POST.getlist("roles")
+        
+        # Vigencia
+        is_infinite = request.POST.get("is_infinite") == "on"
+        valid_from = request.POST.get("valid_from")
+        valid_to = request.POST.get("valid_to")
+
+        doc.is_infinite = is_infinite
+        if not is_infinite and valid_from and valid_to:
+            doc.valid_from = valid_from
+            doc.valid_to = valid_to
+        else:
+            doc.valid_from = None
+            doc.valid_to = None
+
+        doc.save()
+
+        # Actualizar M2M roles
+        if new_role_ids:
+            doc.roles_permitidos.set(new_role_ids)
+        else:
+            doc.roles_permitidos.clear()
+
+        messages.success(request, "Documento actualizado correctamente.")
+    except Exception as e:
+        messages.error(request, f"Error al actualizar: {str(e)}")
+
+    return redirect("chatbot:document_manager")
+
+
+@require_POST
+def bulk_delete_documents(request):
+    try:
+        body = json.loads(request.body)
+        doc_ids = body.get('doc_ids', [])
+        
+        if not doc_ids:
+            return JsonResponse({'success': False, 'error': 'No se seleccionaron documentos.'})
+        
+        # Eliminar documentos
+        qs = RagDocument.objects.filter(id__in=doc_ids)
+        count = qs.count()
+
+        # Eliminar archivos físicos
+        for doc in qs:
+            if doc.archivo:
+                try:
+                    doc.archivo.delete(save=False)
+                except Exception as e:
+                    print(f"Error deleting file for doc {doc.id}: {e}")
+        
+        qs.delete()
+        
+        return JsonResponse({'success': True, 'message': f'Se eliminaron {count} documentos.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@require_POST
+def bulk_update_roles(request):
+    try:
+        body = json.loads(request.body)
+        doc_ids = body.get('doc_ids', [])
+        role_ids = body.get('role_ids', [])
+        mode = body.get('mode', 'replace') # 'replace' or 'add'
+        
+        if not doc_ids:
+            return JsonResponse({'success': False, 'error': 'No se seleccionaron documentos.'})
+            
+        docs = RagDocument.objects.filter(id__in=doc_ids)
+        roles = ChatbotRol.objects.filter(id__in=role_ids)
+        
+        count = 0
+        for doc in docs:
+            if mode == 'replace':
+                doc.roles_permitidos.set(roles)
+            elif mode == 'add':
+                doc.roles_permitidos.add(*roles)
+            elif mode == 'remove':
+                doc.roles_permitidos.remove(*roles)
+            count += 1
+            
+        return JsonResponse({'success': True, 'message': f'Se actualizaron {count} documentos.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
 @require_http_methods(["GET"])
 def get_users_list(request):
     TARGET_CEDULAS = ["0940153000", "0706191558", "2300371198", "0703993329", "0957040132"]
@@ -1364,16 +1455,27 @@ class ChatView(APIView):
                         # EJECUCIÓN DIRECTA (ORM)
                         # =====================================================
 
+                        def _safe_load_service(response_str):
+                            """Intenta cargar JSON, si falla devuelve un dict con el error."""
+                            try:
+                                return json.loads(response_str)
+                            except Exception:
+                                return {"error": response_str, "status": "parse_error"}
+
                         raw_data = ""
                         try:
+                            # Contexto global para todos los temas
+                            d_estado_matricula = _safe_load_service(q_estado_matricula(persona, target_periodo_id))
+
                             if data_topic == "GRADES":
                                 # Agregamos notas + asistencia + promedio + estado calificacion
-                                d_notas = json.loads(q_notas_periodo(persona, target_periodo_id))
-                                d_asist = json.loads(q_asistencia_periodo(persona, target_periodo_id))
-                                d_prom = json.loads(q_promedio_periodo(persona, target_periodo_id))
-                                d_estado = json.loads(q_estado_calificacion(persona, target_periodo_id))
+                                d_notas = _safe_load_service(q_notas_periodo(persona, target_periodo_id))
+                                d_asist = _safe_load_service(q_asistencia_periodo(persona, target_periodo_id))
+                                d_prom = _safe_load_service(q_promedio_periodo(persona, target_periodo_id))
+                                d_estado = _safe_load_service(q_estado_calificacion(persona, target_periodo_id))
                                 
                                 combined = {
+                                    "estado_matricula": d_estado_matricula,
                                     "notas_detalle": d_notas.get("notas"),
                                     "asistencia_promedio": d_asist.get("asistencia_promedio"),
                                     "promedio_general_periodo": d_prom.get("promedio"),
@@ -1383,10 +1485,11 @@ class ChatView(APIView):
 
                             elif data_topic == "FINANCIAL":
                                 # Rubros pendientes + Pagos recientes + Bloqueos
-                                d_rubros = json.loads(q_rubros_pendientes(persona))
-                                d_pagos = json.loads(q_pagos_realizados(persona, limit=10))
+                                d_rubros = _safe_load_service(q_rubros_pendientes(persona))
+                                d_pagos = _safe_load_service(q_pagos_realizados(persona, limit=10))
                                 
                                 combined = {
+                                    "estado_matricula": d_estado_matricula,
                                     "deuda_pendiente": d_rubros,
                                     "ultimos_pagos": d_pagos.get("pagos")
                                 }
@@ -1394,14 +1497,13 @@ class ChatView(APIView):
 
                             elif data_topic == "SCHEDULE":
                                 # Matricula estado + Materias + Horario + Choques + Nivel
-                                d_estado = json.loads(q_estado_matricula(persona, target_periodo_id))
-                                d_materias = json.loads(q_materias_matriculadas(persona, target_periodo_id))
-                                d_horario = json.loads(q_horario_semanal(persona, target_periodo_id))
+                                d_materias = _safe_load_service(q_materias_matriculadas(persona, target_periodo_id))
+                                d_horario = _safe_load_service(q_horario_semanal(persona, target_periodo_id))
                                 
-                                d_nivel = json.loads(q_nivel_semestre_paralelo(persona, target_periodo_id))
+                                d_nivel = _safe_load_service(q_nivel_semestre_paralelo(persona, target_periodo_id))
                                 
                                 combined = {
-                                    "resumen_matricula": d_estado,
+                                    "resumen_matricula": d_estado_matricula,
                                     "detalle_nivel": d_nivel,
                                     "lista_materias": d_materias.get("materias"),
                                     "horario_semanal": d_horario.get("horario")
@@ -1409,36 +1511,44 @@ class ChatView(APIView):
                                 raw_data = json.dumps(combined, ensure_ascii=False)
 
                             elif data_topic == "PRACTICAS":
-                                raw_data = q_practicas(persona)
+                                d_practicas = _safe_load_service(q_practicas(persona))
+                                combined = {
+                                    "estado_matricula": d_estado_matricula,
+                                    "practicas": d_practicas.get("practicas")
+                                }
+                                raw_data = json.dumps(combined, ensure_ascii=False)
 
                             else:
-                                raw_data = "No se identificó qué datos consultar (Topic desconocido)."
+                                raw_data = "No se identificó qué datos consultar, recomendar al usuario que realice la solicitud al balcón de servicios."
 
                             # SÍNTESIS CON LLM - ESTRICTO JSON
+                           # SÍNTESIS CON LLM - ESTRICTO JSON
                             synthesis_messages = [
                                 {
                                     "role": "system", 
                                     "content": (
                                         "ROLE: UNEMI Academic Assistant.\n"
-                                        "TASK: Explain the database results to the student.\n\n"
+                                        "TASK: Answer the student's SPECIFIC QUESTION based STRICTLY on the provided JSON data.\n\n"
                                         
                                         "### OUTPUT FORMAT (STRICT JSON):\n"
-                                        "You must return a SINGLE JSON object. Do not include markdown formatting (like ```json).\n"
-                                        "The JSON must have this exact structure:\n"
+                                        "You must return a SINGLE JSON object. Do not include markdown formatting.\n"
                                         "{\n"
-                                        '    "message": "Tu respuesta amable y explicativa en texto plano aquí.",\n'
+                                        '    "message": "Tu respuesta directa a la pregunta del usuario aquí.",\n'
                                         '    "has_data": true/false\n'
                                         "}\n\n"
 
-                                        "### CONTENT RULES:\n"
-                                        "1. If 'has_data' is false (e.g. 'No records found'): The 'message' must be polite, e.g., 'No encontré registros de notas para el periodo solicitado.'\n"
-                                        "2. If 'has_data' is true: The 'message' must summarize the data using bullet points inside the string.\n"
-                                        "3. LANGUAGE: Spanish."
+                                        "### PRIORITY RULES:\n"
+                                        "1. DATA FIDELITY (CRITICAL): If the user asks for a specific subject (e.g., 'Contabilidad') and it is NOT listed in the JSON keys, YOU MUST SAY: 'No encontré registros de la materia [Nombre] en este periodo'.\n"
+                                        "2. ANTI-HALLUCINATION: DO NOT use the grade of a related subject (e.g., do NOT give the grade of 'Tax Management' if the user asks for 'Accounting'). If the specific name is missing, the answer is 'Not found'.\n"
+                                        "3. IF user asks about 'Matrícula' or 'Enrollment': Look strictly at 'estado_matricula' or 'resumen_matricula'.\n"
+                                        "4. IF user asks about 'Notas' or 'Grades': List the subjects and grades using bullet points. If asking for a specific one, return only that one.\n"
+                                        "5. IF 'has_data' is false in the source: Polite response indicating no records found.\n"
+                                        "6. LANGUAGE: Spanish."
                                     )
                                 },
                                 {
                                     "role": "user", 
-                                    "content": f"Consulta del estudiante: {user_msg}\nDatos recuperados: {raw_data}"
+                                    "content": f"PREGUNTA DEL ESTUDIANTE: {user_msg}\n\nDATOS DEL SISTEMA: {raw_data}"
                                 }
                             ]
 
@@ -1941,7 +2051,7 @@ def upload_document(request):
 
         msg = f"Se subieron {count} archivos."
         if skip > 0:
-            msg += f" (Se omitieron {skip} duplicados o inválidos)."
+            msg += f" (Se omitieron {skip} no válidos)."
         messages.success(request, msg)
 
     except Exception as e:
@@ -2005,11 +2115,16 @@ def update_document_role(request, doc_id):
                 "valid_to": v_to,
                 "access_url": doc.archivo.url if doc.archivo else None,
             }
-            requests.post(
-                f"{settings.PRIVATE_GPT_API_URL}/v1/ingest/{doc.doc_id_pgpt}/metadata",
-                json=payload,
-                timeout=None,
-            )
+            try:
+                requests.post(
+                    f"{settings.PRIVATE_GPT_API_URL}/v1/ingest/{doc.doc_id_pgpt}/metadata",
+                    json=payload,
+                    timeout=None,
+                )
+            except Exception as e:
+                print(f"Error actualizando: {e}")
+                messages.error(request, "Error de servidor en IA")
+                return redirect("chatbot:document_manager")
 
         messages.success(request, "Documento actualizado.")
 

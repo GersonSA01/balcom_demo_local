@@ -16,10 +16,35 @@
         <form id="createProcessForm" action="{% url 'chatbot:create_process' %}" method="POST" class="space-y-4">
             {% csrf_token %}
 
+            {% if not chatbot_roles %}
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                            fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700">
+                            <b>No existen roles registrados.</b><br>
+                            Para crear un proceso, debes asignar permisos de acceso.<br>
+                            <a href="{% url 'chatbot:document_manager' %}"
+                                class="font-bold underline text-yellow-800 hover:text-yellow-900">
+                                Dirijase a la pestaña "Roles" y registre uno primero.
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+
             <div id="cp_step_content_1" class="step-content space-y-4">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-slate-700 mb-1">Tipo de Audiencia</label>
-                    <select name="tipo_audiencia" id="cp_tipo_audiencia_selector" 
+                    <select name="tipo_audiencia" id="cp_tipo_audiencia_selector"
                         class="w-full rounded-lg border-slate-300 focus:border-[#1e3a5f] focus:ring focus:ring-[#1e3a5f]/30">
                         <option value="ambos" selected>Ambos (Interno y Externo)</option>
                         <option value="interno">Interno</option>
@@ -27,7 +52,8 @@
                     </select>
                 </div>
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Vincular con Proceso SGA (Opcional)</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Vincular con Proceso SGA
+                        (Opcional)</label>
                     <select name="proceso_id" id="cp_proceso_selector" disabled
                         class="w-full rounded-lg border-slate-300 focus:border-[#1e3a5f] focus:ring focus:ring-[#1e3a5f]/30">
                         <option value="">-- Seleccione primero el tipo de audiencia --</option>
@@ -145,15 +171,18 @@
                     <div id="cp_preview_container">
                         <label class="block text-sm font-medium text-slate-700 mb-1">
                             Vista Previa Chat
-                            <span id="cp_tipo_proceso_label" class="text-xs font-normal text-slate-500 ml-2 hidden"></span>
+                            <span id="cp_tipo_proceso_label"
+                                class="text-xs font-normal text-slate-500 ml-2 hidden"></span>
                         </label>
                         <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 h-full">
                             <div
                                 class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 text-sm text-slate-800">
-                                <p id="preview_greeting" class="text-slate-500 mb-2 hidden">Hola 👋, para continuar con tu solicitud necesito que me compartas la documentación requerida:</p>
+                                <p id="preview_greeting" class="text-slate-500 mb-2 hidden">Hola 👋, para continuar con
+                                    tu solicitud necesito que me compartas la documentación requerida:</p>
                                 <div id="create_msg_preview"
                                     class="font-medium text-slate-900 whitespace-pre-wrap text-xs">(Mensaje...)</div>
-                                <p id="preview_closing" class="text-slate-500 mt-2 hidden">También necesitaré que me des de nuevo los detalles de tu solicitud.</p>
+                                <p id="preview_closing" class="text-slate-500 mt-2 hidden">También necesitaré que me des
+                                    de nuevo los detalles de tu solicitud.</p>
                             </div>
                         </div>
                     </div>
@@ -173,6 +202,7 @@
                     class="px-4 py-2 text-sm font-medium text-white bg-[#ff6b35] rounded-lg hover:bg-[#ff8c5a] hidden">Guardar
                     Proceso</button>
             </div>
+            {% endif %}
         </form>
     </div>
 </div>
@@ -192,25 +222,26 @@
             <button onclick="closeEditProcessModal()" class="text-slate-400 hover:text-slate-600">&times;</button>
         </div>
 
-        <form id="editProcessForm" method="POST" class="space-y-4"> 
+        <form id="editProcessForm" method="POST" class="space-y-4">
             {% csrf_token %}
 
             <div id="ep_step_content_1" class="step-content space-y-4">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Vincular con Proceso SGA (Opcional)</label>
-                    <select name="proceso_id" id="ep_proceso_selector" 
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Vincular con Proceso SGA
+                        (Opcional)</label>
+                    <select name="proceso_id" id="ep_proceso_selector"
                         class="w-full rounded-lg border-slate-300 focus:border-[#1e3a5f] focus:ring focus:ring-[#1e3a5f]/30">
                         <option value="">-- Ninguno (Creación Manual) --</option>
                         {% for p in procesos_sga %}
-                            <option value="{{ p.id }}" data-desc="{{ p.descripcion|escapejs }}">
-                                {{ p.descripcion }}
-                            </option>
+                        <option value="{{ p.id }}" data-desc="{{ p.descripcion|escapejs }}">
+                            {{ p.descripcion }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-slate-700 mb-1">Tipo de Audiencia</label>
-                    <select name="tipo_audiencia" id="ep_tipo_audiencia_selector" 
+                    <select name="tipo_audiencia" id="ep_tipo_audiencia_selector"
                         class="w-full rounded-lg border-slate-300 focus:border-[#1e3a5f] focus:ring focus:ring-[#1e3a5f]/30">
                         <option value="ambos">Ambos (Interno y Externo)</option>
                         <option value="interno">Interno</option>
@@ -329,15 +360,18 @@
                     <div id="ep_preview_container">
                         <label class="block text-sm font-medium text-slate-700 mb-1">
                             Vista Previa Chat
-                            <span id="ep_tipo_proceso_label" class="text-xs font-normal text-slate-500 ml-2 hidden"></span>
+                            <span id="ep_tipo_proceso_label"
+                                class="text-xs font-normal text-slate-500 ml-2 hidden"></span>
                         </label>
                         <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 h-full">
                             <div
                                 class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 text-sm text-slate-800">
-                                <p id="ep_preview_greeting" class="text-slate-500 mb-2 hidden">Hola 👋, para continuar con tu solicitud necesito que me compartas la documentación requerida:</p>
-                                <div id="ep_msg_preview"
-                                    class="font-medium text-slate-900 whitespace-pre-wrap text-xs">(Mensaje...)</div>
-                                <p id="ep_preview_closing" class="text-slate-500 mt-2 hidden">También necesitaré que me des de nuevo los detalles de tu solicitud.</p>
+                                <p id="ep_preview_greeting" class="text-slate-500 mb-2 hidden">Hola 👋, para continuar
+                                    con tu solicitud necesito que me compartas la documentación requerida:</p>
+                                <div id="ep_msg_preview" class="font-medium text-slate-900 whitespace-pre-wrap text-xs">
+                                    (Mensaje...)</div>
+                                <p id="ep_preview_closing" class="text-slate-500 mt-2 hidden">También necesitaré que me
+                                    des de nuevo los detalles de tu solicitud.</p>
                             </div>
                         </div>
                     </div>
@@ -366,7 +400,7 @@
         // Obtenemos los inputs basados en el prefijo (cp_ o ep_)
         const nameInput = document.getElementById(prefix + '_name');
         const descInput = document.getElementById(prefix + '_context');
-        
+
         const selectedOption = selectElement.options[selectElement.selectedIndex];
         const isServiceSelected = selectElement.value !== "";
 
@@ -382,7 +416,7 @@
             // 3. Bloquear campos (readonly es mejor que disabled para que viajen en el POST)
             nameInput.setAttribute('readonly', true);
             descInput.setAttribute('readonly', true);
-            
+
             // Estilo visual para indicar bloqueo
             nameInput.classList.add('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
             descInput.classList.add('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
@@ -390,10 +424,10 @@
             // Si selecciona "Ninguno", desbloquear y limpiar
             nameInput.removeAttribute('readonly');
             descInput.removeAttribute('readonly');
-            
-            nameInput.value = ""; 
+
+            nameInput.value = "";
             descInput.value = "";
-            
+
             nameInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
             descInput.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
         }

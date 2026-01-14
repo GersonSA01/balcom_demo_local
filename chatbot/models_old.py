@@ -3,8 +3,12 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from datetime import datetime
 
+# Definimos un ID por defecto para evitar errores si no se pasa usuario
 ADMINISTRADOR_ID = 116717 
 
+# ==============================================================================
+# 1. MODELO BASE (Auditoría y Status)
+# ==============================================================================
 
 class ModeloBase(models.Model):
     """ Modelo base para todos los modelos del proyecto """
@@ -52,6 +56,7 @@ class ModeloBase(models.Model):
         abstract = True
 
 
+
 # This is an auto-generated Django model module.
 # You'll have to do the following manually to clean this up:
 #   * Rearrange models' order
@@ -59,23 +64,7 @@ class ModeloBase(models.Model):
 #   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
-
-
-class AcademiaActasolicitud(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    estado = models.IntegerField(blank=True, null=True)
-    tipo = models.IntegerField(blank=True, null=True)
-    solicitud = models.ForeignKey('AcademiaSolicitudrecalificacioncomponente', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiaactasolicitud_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_actasolicitud'
+from django.db import models
 
 
 class AcademiaActivatematter(models.Model):
@@ -98,57 +87,16 @@ class AcademiaActivatematter(models.Model):
         db_table = 'academia_activatematter'
 
 
-class AcademiaAnexodocumentocambiocarrera(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    archivo = models.CharField(max_length=100)
-    nombre = models.CharField(max_length=100)
-    orden = models.IntegerField(blank=True, null=True)
-    fecha_generacion = models.DateTimeField(blank=True, null=True)
-    num_paginas = models.IntegerField(blank=True, null=True)
-    documento = models.ForeignKey('AcademiaDocumentoscambiocarrera', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiaanexodocumentocambiocarrera_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_anexodocumentocambiocarrera'
-
-
 class AcademiaAnexofilasplan(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
     tipo = models.IntegerField()
+    parametros = models.JSONField()
     documento = models.ForeignKey('AcademiaDocplandeaccion', models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiaanexofilasplan_usuario_modificacion_set', blank=True, null=True)
-    analisis = models.TextField(blank=True, null=True)
-    asignatura = models.ForeignKey('SgaMateria', models.DO_NOTHING, blank=True, null=True)
-    componente = models.IntegerField(blank=True, null=True)
-    componente_bajo = models.IntegerField(blank=True, null=True)
-    descripcion = models.TextField(blank=True, null=True)
-    docente = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    especificas = models.TextField(blank=True, null=True)
-    frecuencias = models.IntegerField(blank=True, null=True)
-    generales = models.IntegerField(blank=True, null=True)
-    medio = models.TextField(blank=True, null=True)
-    observaciones = models.TextField(blank=True, null=True)
-    otro_frecuencias = models.CharField(max_length=50000, blank=True, null=True)
-    otro_generales = models.CharField(max_length=50000, blank=True, null=True)
-    otro_recursos = models.CharField(max_length=50000, blank=True, null=True)
-    otro_responsables = models.CharField(max_length=50000, blank=True, null=True)
-    porcentaje = models.FloatField(blank=True, null=True)
-    rango_1 = models.CharField(max_length=100, blank=True, null=True)
-    rango_2 = models.CharField(max_length=100, blank=True, null=True)
-    rango_3 = models.CharField(max_length=100, blank=True, null=True)
-    recursos = models.IntegerField(blank=True, null=True)
-    responsables = models.IntegerField(blank=True, null=True)
-    sugerencia = models.TextField(blank=True, null=True)
-    valoracion = models.FloatField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -221,55 +169,6 @@ class AcademiaCarreranivelacion(models.Model):
         db_table = 'academia_carreranivelacion'
 
 
-class AcademiaCasofortuito(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    verificado = models.BooleanField()
-    observacion = models.TextField()
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    matricula = models.ForeignKey('SgaMatricula', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiacasofortuito_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_casofortuito'
-
-
-class AcademiaComisionsolicitudrecalificacioncomponente(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    firma = models.BooleanField()
-    persona_comision = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    solicitud = models.ForeignKey('AcademiaSolicitudrecalificacioncomponente', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiacomisionsolicitudrecalificacioncomponente_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_comisionsolicitudrecalificacioncomponente'
-
-
-class AcademiaConfiguraciondocumentosexpediente(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    nombre = models.CharField(max_length=500)
-    activo = models.BooleanField()
-    requisito = models.ForeignKey('BdFuncionrequisitoingresounidadintegracioncurricular', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiaconfiguraciondocumentosexpediente_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_configuraciondocumentosexpediente'
-
-
 class AcademiaCronogramaplandeaccion(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
@@ -288,22 +187,6 @@ class AcademiaCronogramaplandeaccion(models.Model):
         db_table = 'academia_cronogramaplandeaccion'
 
 
-class AcademiaCupoies(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    inscripcion = models.ForeignKey('SgaInscripcion', models.DO_NOTHING, blank=True, null=True)
-    periodo = models.ForeignKey('SgaPeriodo', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiacupoies_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_cupoies'
-
-
 class AcademiaDatosadicionalespersona(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
@@ -314,7 +197,6 @@ class AcademiaDatosadicionalespersona(models.Model):
     persona = models.OneToOneField('SgaPersona', models.DO_NOTHING)
     usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiadatosadicionalespersona_usuario_modificacion_set', blank=True, null=True)
-    tiene_un_apellido = models.BooleanField()
 
     class Meta:
         managed = False
@@ -381,47 +263,6 @@ class AcademiaDetallematriculamateriaingles(models.Model):
         db_table = 'academia_detallematriculamateriaingles'
 
 
-class AcademiaDetallerecordacademico(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    historicorecord = models.ForeignKey('SgaHistoricorecordacademico', models.DO_NOTHING, blank=True, null=True)
-    inscripcion = models.ForeignKey('SgaInscripcion', models.DO_NOTHING, blank=True, null=True)
-    recordacademico = models.ForeignKey('SgaRecordacademico', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiadetallerecordacademico_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_detallerecordacademico'
-
-
-class AcademiaDetallerevisionexpediente(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    estado_asistente = models.IntegerField()
-    obs_asistente = models.TextField()
-    estado_secretaria = models.IntegerField()
-    obs_secretaria = models.TextField()
-    estado_decano = models.IntegerField()
-    obs_decano = models.TextField()
-    estado_rector = models.IntegerField()
-    obs_rector = models.TextField()
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    requisito = models.ForeignKey(AcademiaConfiguraciondocumentosexpediente, models.DO_NOTHING)
-    revision = models.ForeignKey('AcademiaRevisionexpediente', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiadetallerevisionexpediente_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_detallerevisionexpediente'
-
-
 class AcademiaDocplandeaccion(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
@@ -472,32 +313,6 @@ class AcademiaDocumentogp(models.Model):
         db_table = 'academia_documentogp'
 
 
-class AcademiaDocumentoscambiocarrera(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    archivo = models.CharField(max_length=100)
-    firmado = models.BooleanField()
-    secuencia = models.IntegerField(blank=True, null=True)
-    tipo = models.IntegerField(blank=True, null=True)
-    codigo = models.CharField(max_length=50, blank=True, null=True)
-    objeto = models.TextField()
-    antecedentes = models.TextField()
-    motivacion = models.TextField()
-    motivacionjuridica = models.TextField()
-    conclusion = models.TextField()
-    recomendacion = models.TextField()
-    personaelabora = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    solicitud = models.ForeignKey('SgaSolicitudcambiocarrera', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiadocumentoscambiocarrera_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_documentoscambiocarrera'
-
-
 class AcademiaDocumentoscambiocarrerainscripcion(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
@@ -518,29 +333,6 @@ class AcademiaDocumentoscambiocarrerainscripcion(models.Model):
         db_table = 'academia_documentoscambiocarrerainscripcion'
 
 
-class AcademiaDocumentosquipux(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    rol = models.IntegerField(blank=True, null=True)
-    archivo = models.CharField(max_length=100)
-    firmado = models.BooleanField()
-    secuencia = models.IntegerField(blank=True, null=True)
-    tipo = models.IntegerField(blank=True, null=True)
-    codigo = models.CharField(max_length=50, blank=True, null=True)
-    antecedentes = models.TextField()
-    personaelabora = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    quipux = models.ForeignKey('AcademiaExpedientequipux', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiadocumentosquipux_usuario_modificacion_set', blank=True, null=True)
-    graduado = models.ForeignKey('SgaGraduado', models.DO_NOTHING, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_documentosquipux'
-
-
 class AcademiaEstadosinscripcion(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
@@ -553,34 +345,6 @@ class AcademiaEstadosinscripcion(models.Model):
     class Meta:
         managed = False
         db_table = 'academia_estadosinscripcion'
-
-
-class AcademiaEvaluacionanualdocente(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    horas_docencia = models.FloatField()
-    horas_investigacion = models.FloatField()
-    horas_gestion = models.FloatField()
-    horas_vinculacion = models.FloatField()
-    promedio_docencia = models.FloatField()
-    promedio_investigacion = models.FloatField()
-    promedio_gestion = models.FloatField()
-    promedio_vinculacion = models.FloatField()
-    puntaje_final = models.FloatField()
-    resultado_total = models.FloatField()
-    carrera = models.ForeignKey('SgaCarrera', models.DO_NOTHING, blank=True, null=True)
-    coordinacion = models.ForeignKey('SgaCoordinacion', models.DO_NOTHING, blank=True, null=True)
-    proceso = models.ForeignKey('InvestigacionProcesoevaluativoinvestigacion', models.DO_NOTHING)
-    profesor = models.ForeignKey('SgaProfesor', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiaevaluacionanualdocente_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_evaluacionanualdocente'
-        unique_together = (('proceso', 'profesor'),)
 
 
 class AcademiaEvento(models.Model):
@@ -603,26 +367,6 @@ class AcademiaEvento(models.Model):
         db_table = 'academia_evento'
 
 
-class AcademiaExpedientequipux(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    nombre = models.CharField(max_length=500)
-    fecha_inicio = models.DateField(blank=True, null=True)
-    fecha_fin = models.DateField(blank=True, null=True)
-    estado = models.IntegerField()
-    observacion = models.TextField()
-    carrera = models.ForeignKey('SgaCarrera', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiaexpedientequipux_usuario_modificacion_set', blank=True, null=True)
-    historico = models.ForeignKey('InnoHistoricomatrizsenescyt', models.DO_NOTHING, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_expedientequipux'
-
-
 class AcademiaFilaarchivo(models.Model):
     id = models.BigAutoField(primary_key=True)
     archivo = models.CharField(max_length=100)
@@ -631,25 +375,6 @@ class AcademiaFilaarchivo(models.Model):
     class Meta:
         managed = False
         db_table = 'academia_filaarchivo'
-
-
-class AcademiaHistorialactafirma(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    archivo_original = models.CharField(max_length=100, blank=True, null=True)
-    archivo_firmado = models.CharField(max_length=100, blank=True, null=True)
-    cantidadfirmas = models.IntegerField()
-    estado = models.IntegerField(blank=True, null=True)
-    acta = models.ForeignKey(AcademiaActasolicitud, models.DO_NOTHING, blank=True, null=True)
-    personacomision = models.ForeignKey(AcademiaComisionsolicitudrecalificacioncomponente, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiahistorialactafirma_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_historialactafirma'
 
 
 class AcademiaHistorialfirmagp(models.Model):
@@ -670,26 +395,6 @@ class AcademiaHistorialfirmagp(models.Model):
         db_table = 'academia_historialfirmagp'
 
 
-class AcademiaHistorialrevisionexpediente(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    fecha = models.DateTimeField()
-    estado = models.IntegerField()
-    accion = models.CharField(max_length=2000)
-    observacion = models.TextField()
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    responsableanterior = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='academiahistorialrevisionexpediente_responsableanterior_set', blank=True, null=True)
-    revision = models.ForeignKey('AcademiaRevisionexpediente', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiahistorialrevisionexpediente_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_historialrevisionexpediente'
-
-
 class AcademiaHistorialrevisiongp(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
@@ -705,25 +410,6 @@ class AcademiaHistorialrevisiongp(models.Model):
     class Meta:
         managed = False
         db_table = 'academia_historialrevisiongp'
-
-
-class AcademiaHistorialsolicitudrecalificacioncomponente(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    observacion = models.TextField(blank=True, null=True)
-    estado = models.IntegerField()
-    persona_revisa = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    solicitud = models.ForeignKey('AcademiaSolicitudrecalificacioncomponente', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiahistorialsolicitudrecalificacioncomponente_usuario_modificacion_set', blank=True, null=True)
-    accionrealizada = models.TextField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_historialsolicitudrecalificacioncomponente'
 
 
 class AcademiaHistoricalactivatematter(models.Model):
@@ -800,26 +486,6 @@ class AcademiaInscripcionadmision(models.Model):
         db_table = 'academia_inscripcionadmision'
 
 
-class AcademiaIntegranterevisorexpediente(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    rol = models.IntegerField()
-    activo = models.BooleanField()
-    fecha_asignacion = models.DateTimeField()
-    validacion = models.BooleanField()
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    revision = models.ForeignKey('AcademiaRevisionexpediente', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiaintegranterevisorexpediente_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_integranterevisorexpediente'
-        unique_together = (('revision', 'persona'),)
-
-
 class AcademiaInvitacionesanfitrion(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
@@ -891,40 +557,6 @@ class AcademiaPersonafirma(models.Model):
     class Meta:
         managed = False
         db_table = 'academia_personafirma'
-
-
-class AcademiaPersonafirmadocumentocambiocarrera(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    firmado = models.BooleanField()
-    orden = models.IntegerField()
-    documento = models.ForeignKey(AcademiaDocumentoscambiocarrera, models.DO_NOTHING)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiapersonafirmadocumentocambiocarrera_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_personafirmadocumentocambiocarrera'
-
-
-class AcademiaPersonafirmadocumentoquipux(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    firmado = models.BooleanField()
-    orden = models.IntegerField()
-    documento = models.ForeignKey(AcademiaDocumentosquipux, models.DO_NOTHING)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiapersonafirmadocumentoquipux_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_personafirmadocumentoquipux'
 
 
 class AcademiaPersontesttime(models.Model):
@@ -1110,43 +742,6 @@ class AcademiaResumenevaluacionsegundocomponente(models.Model):
         db_table = 'academia_resumenevaluacionsegundocomponente'
 
 
-class AcademiaRevisionexpediente(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    nivel_actual = models.IntegerField()
-    estado = models.IntegerField()
-    observacion_general = models.TextField()
-    es_excluido = models.BooleanField()
-    graduadomatriz = models.OneToOneField('InnoGraduadosmatrizsenescyt', models.DO_NOTHING)
-    proceso = models.ForeignKey(AcademiaExpedientequipux, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiarevisionexpediente_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_revisionexpediente'
-
-
-class AcademiaRevisorquipux(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    rol = models.IntegerField()
-    activo = models.BooleanField()
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    proceso = models.ForeignKey(AcademiaExpedientequipux, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiarevisorquipux_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_revisorquipux'
-        unique_together = (('proceso', 'persona', 'rol'),)
-
-
 class AcademiaSagencuestafiles(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
@@ -1188,55 +783,6 @@ class AcademiaSolicituddocumento(models.Model):
     class Meta:
         managed = False
         db_table = 'academia_solicituddocumento'
-
-
-class AcademiaSolicitudrecalificacioncomponente(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    tiposolicitud = models.IntegerField()
-    tipoexamen = models.IntegerField()
-    tipocomponente = models.IntegerField()
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    observacion_estudiante = models.TextField(blank=True, null=True)
-    observacion = models.TextField(blank=True, null=True)
-    estado = models.IntegerField()
-    estado_director = models.IntegerField()
-    observacion_director = models.TextField()
-    estado_comision = models.IntegerField()
-    observacion_comision = models.TextField()
-    aceptaterminos = models.BooleanField()
-    archivoterminos = models.CharField(max_length=100, blank=True, null=True)
-    materiaasignada = models.ForeignKey('SgaMateriaasignada', models.DO_NOTHING, blank=True, null=True)
-    persona_revisa_director = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiasolicitudrecalificacioncomponente_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_solicitudrecalificacioncomponente'
-
-
-class AcademiaSolicitudrevisionevidencia(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    estado = models.IntegerField()
-    observacion_estudiante = models.TextField(blank=True, null=True)
-    observacion_aprobador = models.TextField(blank=True, null=True)
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    aprobador = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    evidencia_ae = models.ForeignKey('SgaInscripcionrequisitosactividadconvalidacionppv', models.DO_NOTHING, blank=True, null=True)
-    evidencia_pp = models.ForeignKey('SgaDetalleevidenciaspracticaspro', models.DO_NOTHING, blank=True, null=True)
-    evidencia_pv = models.ForeignKey('SgaInformesproyectovinculacionestudiante', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='academiasolicitudrevisionevidencia_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'academia_solicitudrevisionevidencia'
 
 
 class AcademiaTablaponderacion(models.Model):
@@ -1652,26 +1198,6 @@ class AdmisionVeracitysecuritycode(models.Model):
         db_table = 'admision_veracitysecuritycode'
 
 
-class AgenteAgent(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    name = models.CharField(max_length=100)
-    description = models.TextField()
-    active = models.BooleanField()
-    slug = models.CharField(unique=True, max_length=100)
-    url_webhook = models.CharField(max_length=200)
-    token_access = models.CharField(max_length=255)
-    usuario_creacion = models.ForeignKey('AuthUser', models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey('AuthUser', models.DO_NOTHING, related_name='agenteagent_usuario_modificacion_set', blank=True, null=True)
-    bot_name = models.CharField(max_length=100)
-
-    class Meta:
-        managed = False
-        db_table = 'agente_agent'
-
-
 class AuthGroup(models.Model):
     name = models.CharField(unique=True, max_length=150)
 
@@ -2063,34 +1589,6 @@ class BalconEncuestaproceso(models.Model):
         db_table = 'balcon_encuestaproceso'
 
 
-class BalconGestion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    nombre = models.TextField()
-    descripcion = models.CharField(max_length=1000)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='balcongestion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'balcon_gestion'
-
-
-class BalconGestiondepartamento(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    departamento = models.ForeignKey('SagestCarreradepartamento', models.DO_NOTHING, blank=True, null=True)
-    gestion = models.ForeignKey(BalconGestion, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='balcongestiondepartamento_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'balcon_gestiondepartamento'
-
-
 class BalconHistorialsolicitud(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -2293,21 +1791,6 @@ class BalconResponsabledepartamento(models.Model):
     class Meta:
         managed = False
         db_table = 'balcon_responsabledepartamento'
-
-
-class BalconResponsablegestiondepartamento(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    principal = models.BooleanField()
-    gestion_departamento = models.ForeignKey(BalconGestiondepartamento, models.DO_NOTHING, blank=True, null=True)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='balconresponsablegestiondepartamento_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'balcon_responsablegestiondepartamento'
 
 
 class BalconRespuestaencuestasatisfaccion(models.Model):
@@ -3179,7 +2662,7 @@ class BdIpwhitelist(models.Model):
 
 
 class BdLogentrylogin(models.Model):
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True)
     action_time = models.DateTimeField()
     action_app = models.SmallIntegerField()
     action_flag = models.SmallIntegerField()
@@ -3774,7 +3257,7 @@ class BdUserquery(models.Model):
 
 
 class BdUsertoken(models.Model):
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True)
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
@@ -4617,193 +4100,6 @@ class BibTipoingreso(models.Model):
         db_table = 'bib_tipoingreso'
 
 
-class CalidadComponentprogress(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    total_points = models.IntegerField()
-    correct_count = models.IntegerField()
-    incorrect_count = models.IntegerField()
-    is_unlocked = models.BooleanField()
-    completed_at = models.DateTimeField(blank=True, null=True)
-    is_opened = models.BooleanField()
-    is_completed = models.BooleanField()
-    component = models.ForeignKey('CalidadComponents', models.DO_NOTHING)
-    course_detail = models.ForeignKey('CalidadCoursedetails', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadcomponentprogress_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_componentprogress'
-        unique_together = (('course_detail', 'component'),)
-
-
-class CalidadComponents(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    name = models.CharField(max_length=150)
-    code = models.CharField(max_length=50, blank=True, null=True)
-    description = models.TextField(blank=True, null=True)
-    completed = models.BooleanField()
-    min_score = models.IntegerField()
-    num_questions_normal = models.IntegerField()
-    num_questions_dynamic = models.IntegerField()
-    course_id = models.ForeignKey('CalidadCourse', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadcomponents_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_components'
-
-
-class CalidadCourse(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    objective = models.TextField()
-    start_date = models.DateField()
-    end_date = models.DateField()
-    min_part = models.IntegerField()
-    cant_comp = models.IntegerField()
-    is_completed = models.BooleanField()
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadcourse_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_course'
-
-
-class CalidadCoursedetails(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    state = models.IntegerField()
-    score = models.FloatField(blank=True, null=True)
-    access = models.BooleanField()
-    first_time = models.BooleanField()
-    course_id = models.ForeignKey(CalidadCourse, models.DO_NOTHING)
-    persona_id = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadcoursedetails_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_coursedetails'
-
-
-class CalidadCriterion(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    name = models.CharField(max_length=200, blank=True, null=True)
-    evaluationmodel = models.ForeignKey('CalidadEvaluationmodel', models.DO_NOTHING, blank=True, null=True)
-    parent_criterion = models.ForeignKey('self', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadcriterion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_criterion'
-
-
-class CalidadDocument(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    name = models.CharField(max_length=255, blank=True, null=True)
-    file = models.CharField(max_length=100, blank=True, null=True)
-    observation = models.TextField(blank=True, null=True)
-    status_doc = models.CharField(max_length=20)
-    update_reason = models.TextField(blank=True, null=True)
-    informationsourcedocument = models.ForeignKey('CalidadInformationsourcedocument', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidaddocument_usuario_modificacion_set', blank=True, null=True)
-    validated_by = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_document'
-
-
-class CalidadEvaluationmodel(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    name = models.CharField(max_length=200, blank=True, null=True)
-    description = models.TextField(blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadevaluationmodel_usuario_modificacion_set', blank=True, null=True)
-    model_document = models.CharField(max_length=100, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_evaluationmodel'
-
-
-class CalidadEvaluationmodelmanager(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    start_date = models.DateField(blank=True, null=True)
-    end_date = models.DateField(blank=True, null=True)
-    evaluationmodel = models.ForeignKey(CalidadEvaluationmodel, models.DO_NOTHING, blank=True, null=True)
-    person = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadevaluationmodelmanager_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_evaluationmodelmanager'
-
-
-class CalidadFundamentalelement(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    name = models.TextField(blank=True, null=True)
-    indicator = models.ForeignKey('CalidadIndicator', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadfundamentalelement_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_fundamentalelement'
-
-
-class CalidadIndicator(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    name = models.CharField(max_length=200, blank=True, null=True)
-    type = models.IntegerField()
-    formula = models.TextField(blank=True, null=True)
-    standard = models.TextField(blank=True, null=True)
-    evaluation_period = models.TextField(blank=True, null=True)
-    criterion = models.ForeignKey(CalidadCriterion, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadindicator_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_indicator'
-
-
 class CalidadInform(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
@@ -4816,8 +4112,6 @@ class CalidadInform(models.Model):
     archive = models.CharField(max_length=100, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadinform_usuario_modificacion_set', blank=True, null=True)
-    typeproduct = models.IntegerField()
-    informtype = models.ForeignKey('CalidadInformtype', models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -4829,7 +4123,7 @@ class CalidadInformannex(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    documentname = models.CharField(db_column='documentName', max_length=300)  # Field name made lowercase.
+    documentname = models.CharField(db_column='documentName', max_length=100)  # Field name made lowercase.
     numberpage = models.IntegerField(db_column='numberPage')  # Field name made lowercase.
     documentdate = models.DateField(db_column='documentDate', blank=True, null=True)  # Field name made lowercase.
     inform = models.ForeignKey(CalidadInform, models.DO_NOTHING, blank=True, null=True)
@@ -4854,92 +4148,6 @@ class CalidadInformannexfile(models.Model):
     class Meta:
         managed = False
         db_table = 'calidad_informannexfile'
-
-
-class CalidadInformationsource(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    source = models.TextField(blank=True, null=True)
-    periodicity = models.IntegerField(blank=True, null=True)
-    repetitions = models.IntegerField(blank=True, null=True)
-    status_model = models.CharField(max_length=20)
-    period_year = models.ForeignKey('CalidadPeriodyear', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadinformationsource_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_informationsource'
-
-
-class CalidadInformationsourceassignment(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    role = models.IntegerField()
-    start_date = models.DateField(blank=True, null=True)
-    end_date = models.DateField(blank=True, null=True)
-    assigned_person = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    informationsource = models.ForeignKey(CalidadInformationsource, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadinformationsourceassignment_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_informationsourceassignment'
-
-
-class CalidadInformationsourcedetail(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    fundamentalelement = models.ForeignKey(CalidadFundamentalelement, models.DO_NOTHING, blank=True, null=True)
-    indicator = models.ForeignKey(CalidadIndicator, models.DO_NOTHING, blank=True, null=True)
-    informationsource = models.ForeignKey(CalidadInformationsource, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadinformationsourcedetail_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_informationsourcedetail'
-
-
-class CalidadInformationsourcedocument(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    start_date = models.DateField(blank=True, null=True)
-    end_date = models.DateField(blank=True, null=True)
-    informationsource = models.ForeignKey(CalidadInformationsource, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadinformationsourcedocument_usuario_modificacion_set', blank=True, null=True)
-    is_applicated = models.BooleanField()
-    habilitation_reason = models.TextField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_informationsourcedocument'
-
-
-class CalidadInformationsourceperiod(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    repetition_number = models.IntegerField()
-    informationsource = models.ForeignKey(CalidadInformationsource, models.DO_NOTHING)
-    period_year = models.ForeignKey('CalidadPeriodyear', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadinformationsourceperiod_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_informationsourceperiod'
 
 
 class CalidadInformdirection(models.Model):
@@ -4973,7 +4181,6 @@ class CalidadInformmanager(models.Model):
     rol = models.ForeignKey('CalidadInformrole', models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadinformmanager_usuario_modificacion_set', blank=True, null=True)
-    competency_certificate_code = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -5090,201 +4297,6 @@ class CalidadInformsender(models.Model):
         db_table = 'calidad_informsender'
 
 
-class CalidadInformtype(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    name = models.CharField(max_length=300, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadinformtype_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_informtype'
-
-
-class CalidadNormativareplace(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    current_regulations = models.ForeignKey('CalidadNormativaversion', models.DO_NOTHING, blank=True, null=True)
-    repealed_regulation = models.ForeignKey('CalidadNormativaversion', models.DO_NOTHING, related_name='calidadnormativareplace_repealed_regulation_set', blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadnormativareplace_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_normativareplace'
-
-
-class CalidadNormativaunit(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    normativa = models.ForeignKey('SagestNormativacalidad', models.DO_NOTHING)
-    unit = models.ForeignKey('SagestDepartamento', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadnormativaunit_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_normativaunit'
-
-
-class CalidadNormativaversion(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    number = models.CharField(max_length=6)
-    effective_date = models.DateField(blank=True, null=True)
-    repeal_date = models.DateField(blank=True, null=True)
-    resolution = models.TextField(blank=True, null=True)
-    comment = models.TextField(blank=True, null=True)
-    state = models.IntegerField()
-    document = models.CharField(max_length=100, blank=True, null=True)
-    resolution_document = models.CharField(max_length=100, blank=True, null=True)
-    content = models.TextField(blank=True, null=True)
-    normativa = models.ForeignKey('SagestNormativacalidad', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadnormativaversion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_normativaversion'
-
-
-class CalidadOptionanswer(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    option = models.TextField()
-    is_correct = models.BooleanField()
-    position = models.IntegerField(blank=True, null=True)
-    question_id = models.ForeignKey('CalidadQuestion', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadoptionanswer_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_optionanswer'
-
-
-class CalidadPeriodyear(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    description = models.CharField(max_length=550, blank=True, null=True)
-    year = models.IntegerField()
-    active = models.BooleanField()
-    evaluationmodel = models.ForeignKey(CalidadEvaluationmodel, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadperiodyear_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_periodyear'
-
-
-class CalidadPerms(models.Model):
-    id = models.BigAutoField(primary_key=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_perms'
-
-
-class CalidadProgressdocumentstatus(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    status_doc = models.CharField(max_length=20)
-    observation = models.TextField(blank=True, null=True)
-    comment = models.TextField(blank=True, null=True)
-    update_reason = models.TextField(blank=True, null=True)
-    percentage = models.IntegerField(blank=True, null=True)
-    document = models.ForeignKey(CalidadDocument, models.DO_NOTHING, blank=True, null=True)
-    informationsourcedocument = models.ForeignKey(CalidadInformationsourcedocument, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadprogressdocumentstatus_usuario_modificacion_set', blank=True, null=True)
-    validated_by = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_progressdocumentstatus'
-
-
-class CalidadQuestion(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    name = models.CharField(max_length=200, blank=True, null=True)
-    question_type = models.IntegerField()
-    statement = models.TextField()
-    difficulty = models.IntegerField()
-    image = models.CharField(max_length=100, blank=True, null=True)
-    explanation = models.TextField(blank=True, null=True)
-    references = models.TextField(blank=True, null=True)
-    times_answered = models.IntegerField()
-    success_percentage = models.FloatField()
-    active = models.BooleanField()
-    score = models.FloatField()
-    metadata = models.TextField(blank=True, null=True)
-    components_id = models.ForeignKey(CalidadComponents, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadquestion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_question'
-
-
-class CalidadResponseperson(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    h5p_response = models.JSONField(blank=True, null=True)
-    achieved_score = models.FloatField()
-    answered_at = models.DateTimeField(blank=True, null=True)
-    person_id = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    selected_option_id = models.ForeignKey(CalidadOptionanswer, models.DO_NOTHING, blank=True, null=True)
-    test_attempt = models.ForeignKey('CalidadTestattempt', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadresponseperson_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_responseperson'
-
-
-class CalidadSectiondocument(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    number = models.IntegerField()
-    title = models.TextField()
-    description = models.TextField(blank=True, null=True)
-    comment = models.TextField(blank=True, null=True)
-    normativa_version = models.ForeignKey(CalidadNormativaversion, models.DO_NOTHING, blank=True, null=True)
-    parent_section = models.ForeignKey('self', models.DO_NOTHING, blank=True, null=True)
-    type = models.ForeignKey('CalidadTypesection', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadsectiondocument_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_sectiondocument'
-
-
 class CalidadSections(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
@@ -5301,44 +4313,6 @@ class CalidadSections(models.Model):
     class Meta:
         managed = False
         db_table = 'calidad_sections'
-
-
-class CalidadTestattempt(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField(blank=True, null=True)
-    total_score = models.IntegerField()
-    questions_answered = models.IntegerField()
-    correct_answers = models.IntegerField()
-    is_completed = models.BooleanField()
-    is_active = models.BooleanField()
-    current_question_index = models.IntegerField()
-    questions_order = models.JSONField(blank=True, null=True)
-    component = models.ForeignKey(CalidadComponents, models.DO_NOTHING)
-    course_detail = models.ForeignKey(CalidadCoursedetails, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadtestattempt_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_testattempt'
-
-
-class CalidadTypesection(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    description = models.TextField()
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='calidadtypesection_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'calidad_typesection'
 
 
 class CeleryTaskmeta(models.Model):
@@ -5619,7 +4593,7 @@ class CertiSolicitudcertificado(models.Model):
         db_table = 'certi_solicitudcertificado'
 
 
-class CitaAdministracionurl(models.Model):
+class CitaAdministracionembed(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -5628,13 +4602,11 @@ class CitaAdministracionurl(models.Model):
     codigo_embed = models.TextField(blank=True, null=True)
     departamentoservicio = models.ForeignKey('CitaDepartamentoservicio', models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='citaadministracionurl_usuario_modificacion_set', blank=True, null=True)
-    mostrar = models.BooleanField()
-    titulo = models.CharField(max_length=350)
+    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='citaadministracionembed_usuario_modificacion_set', blank=True, null=True)
 
     class Meta:
         managed = False
-        db_table = 'cita_administracionurl'
+        db_table = 'cita_administracionembed'
 
 
 class CitaBitacoracabecerasede(models.Model):
@@ -5730,22 +4702,6 @@ class CitaCargaimgvin(models.Model):
     class Meta:
         managed = False
         db_table = 'cita_cargaimgvin'
-
-
-class CitaCategorianoticias(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    nombre_categoria = models.CharField(max_length=350)
-    ordencate = models.IntegerField()
-    departamentoservicio = models.ForeignKey('CitaDepartamentoservicio', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='citacategorianoticias_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'cita_categorianoticias'
 
 
 class CitaContadorvinculacion(models.Model):
@@ -6127,10 +5083,6 @@ class CitaNoticiasvinculacion(models.Model):
     estadowebinar = models.IntegerField(blank=True, null=True)
     content_type = models.ForeignKey('DjangoContentType', models.DO_NOTHING, blank=True, null=True)
     object_id = models.IntegerField(blank=True, null=True)
-    anio = models.IntegerField(blank=True, null=True)
-    fecha_publicacion = models.DateTimeField(blank=True, null=True)
-    mes = models.IntegerField(blank=True, null=True)
-    categoria = models.ForeignKey(CitaCategorianoticias, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -6202,23 +5154,6 @@ class CitaPersonainteresadamaestriaposgrado(models.Model):
     class Meta:
         managed = False
         db_table = 'cita_personainteresadamaestriaposgrado'
-
-
-class CitaPreguntascentroapoyo(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    pregunta = models.CharField(max_length=500)
-    respuesta = models.TextField(blank=True, null=True)
-    url_relacionada = models.CharField(max_length=500, blank=True, null=True)
-    centro_apoyo = models.ForeignKey(CitaDepartamentoservicio, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='citapreguntascentroapoyo_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'cita_preguntascentroapoyo'
 
 
 class CitaPreguntasfrecuentes(models.Model):
@@ -6439,7 +5374,6 @@ class CitaSubcitaagendada(models.Model):
     es_derivacion = models.BooleanField()
     persona_responsable = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
     servicio = models.ForeignKey(CitaServicioconfigurado, models.DO_NOTHING, blank=True, null=True)
-    ubicacion = models.ForeignKey('CitaUbicacionesserviciocita', models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -7233,86 +6167,6 @@ class DjceleryWorkerstate(models.Model):
     class Meta:
         managed = False
         db_table = 'djcelery_workerstate'
-
-
-class DrawsGanador(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    fecha_sorteo = models.DateTimeField()
-    entregado = models.BooleanField()
-    fecha_entrega = models.DateTimeField(blank=True, null=True)
-    observaciones = models.TextField(blank=True, null=True)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    premio = models.ForeignKey('DrawsPremio', models.DO_NOTHING)
-    sorteo = models.ForeignKey('DrawsSorteo', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='drawsganador_usuario_modificacion_set', blank=True, null=True)
-    nombre_persona_ganador = models.CharField(max_length=200, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'draws_ganador'
-        unique_together = (('sorteo', 'persona'),)
-
-
-class DrawsParticipante(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    fecha_inscripcion = models.DateTimeField()
-    activo = models.BooleanField()
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    sorteo = models.ForeignKey('DrawsSorteo', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='drawsparticipante_usuario_modificacion_set', blank=True, null=True)
-    nombre_persona = models.CharField(max_length=200, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'draws_participante'
-        unique_together = (('sorteo', 'persona'),)
-
-
-class DrawsPremio(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    nombre = models.CharField(max_length=200)
-    descripcion = models.TextField(blank=True, null=True)
-    imagen = models.CharField(max_length=100, blank=True, null=True)
-    cantidad_total = models.IntegerField()
-    cantidad_disponible = models.IntegerField()
-    orden = models.IntegerField()
-    activo = models.BooleanField()
-    sorteo = models.ForeignKey('DrawsSorteo', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='drawspremio_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'draws_premio'
-
-
-class DrawsSorteo(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    nombre = models.CharField(max_length=200)
-    descripcion = models.TextField(blank=True, null=True)
-    fecha = models.DateTimeField()
-    activo = models.BooleanField()
-    finalizado = models.BooleanField()
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='drawssorteo_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'draws_sorteo'
 
 
 class EdataResumencalificacion(models.Model):
@@ -8433,21 +7287,6 @@ class EmpleoOfertalaboralempresaCarrerarelacionada(models.Model):
         managed = False
         db_table = 'empleo_ofertalaboralempresa_carrerarelacionada'
         unique_together = (('ofertalaboralempresa', 'carrera'),)
-
-
-class EmpleoOfertamaestria(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    maestria_id = models.IntegerField()
-    oferta = models.ForeignKey(EmpleoOfertalaboralempresa, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='empleoofertamaestria_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'empleo_ofertamaestria'
 
 
 class EmpleoOfertatermino(models.Model):
@@ -10548,53 +9387,6 @@ class HelpdeskSolicitudcopia(models.Model):
         db_table = 'helpdesk_solicitudcopia'
 
 
-class HomologaAnexodocumentohomologacion(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    archivo = models.CharField(max_length=100)
-    nombre = models.CharField(max_length=100)
-    orden = models.IntegerField(blank=True, null=True)
-    fecha_generacion = models.DateTimeField(blank=True, null=True)
-    num_paginas = models.IntegerField(blank=True, null=True)
-    documento = models.ForeignKey('HomologaDocumentoshomologacion', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='homologaanexodocumentohomologacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'homologa_anexodocumentohomologacion'
-
-
-class HomologaDocumentoshomologacion(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    archivo = models.CharField(max_length=100)
-    firmado = models.BooleanField()
-    secuencia = models.IntegerField(blank=True, null=True)
-    tipo = models.IntegerField(blank=True, null=True)
-    codigo = models.CharField(max_length=50, blank=True, null=True)
-    procedencia = models.TextField(blank=True, null=True)
-    objeto = models.TextField()
-    antecedentes = models.TextField()
-    motivacion = models.TextField()
-    motivacionjuridica = models.TextField()
-    conclusion = models.TextField()
-    recomendacion = models.TextField()
-    personaelabora = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    solicitud = models.ForeignKey('HomologaSolicitudestudiantehomologacion', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='homologadocumentoshomologacion_usuario_modificacion_set', blank=True, null=True)
-    universidad = models.TextField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'homologa_documentoshomologacion'
-
-
 class HomologaDocumentossolicitudhomologacion(models.Model):
     id = models.BigAutoField(primary_key=True)
     status = models.BooleanField()
@@ -10613,39 +9405,10 @@ class HomologaDocumentossolicitudhomologacion(models.Model):
     descripcion = models.TextField(blank=True, null=True)
     nivel = models.ForeignKey('SgaNivelmalla', models.DO_NOTHING, blank=True, null=True)
     materia = models.ForeignKey('SgaMateria', models.DO_NOTHING, blank=True, null=True)
-    homologada = models.BooleanField()
 
     class Meta:
         managed = False
         db_table = 'homologa_documentossolicitudhomologacion'
-
-
-class HomologaHomologaciondetallearchivo(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    asignaturacursada = models.CharField(max_length=200, blank=True, null=True)
-    nota_cursada = models.FloatField()
-    horas_cursada = models.FloatField()
-    creditos_cursada = models.FloatField()
-    nota_hom = models.FloatField()
-    horas_hom = models.FloatField()
-    creditos_hom = models.FloatField()
-    similitud = models.FloatField()
-    aceptada = models.BooleanField()
-    abreviatura = models.CharField(max_length=20, blank=True, null=True)
-    asig_cursada = models.ForeignKey('SgaAsignaturamalla', models.DO_NOTHING, blank=True, null=True)
-    asig_hom = models.ForeignKey('SgaAsignaturamalla', models.DO_NOTHING, related_name='homologahomologaciondetallearchivo_asig_hom_set', blank=True, null=True)
-    documento = models.ForeignKey(HomologaDocumentossolicitudhomologacion, models.DO_NOTHING, blank=True, null=True)
-    semestre_cursado = models.ForeignKey('SgaNivelmalla', models.DO_NOTHING, blank=True, null=True)
-    solicitud = models.ForeignKey('HomologaSolicitudestudiantehomologacion', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='homologahomologaciondetallearchivo_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'homologa_homologaciondetallearchivo'
 
 
 class HomologaPeriodohomologacion(models.Model):
@@ -10673,23 +9436,6 @@ class HomologaPeriodohomologacion(models.Model):
     class Meta:
         managed = False
         db_table = 'homologa_periodohomologacion'
-
-
-class HomologaPersonafirmadocumentohomologacion(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    firmado = models.BooleanField()
-    orden = models.IntegerField()
-    documento = models.ForeignKey(HomologaDocumentoshomologacion, models.DO_NOTHING)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='homologapersonafirmadocumentohomologacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'homologa_personafirmadocumentohomologacion'
 
 
 class HomologaRequisitoperiodohomologacion(models.Model):
@@ -10812,7 +9558,6 @@ class HomologaSolicitudestudiantehomologacion(models.Model):
     carrera_anterior = models.TextField(blank=True, null=True)
     imgevidencia = models.CharField(max_length=100, blank=True, null=True)
     persona_externo = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='homologasolicitudestudiantehomologacion_persona_externo_set', blank=True, null=True)
-    cambiocarrera = models.ForeignKey('SgaSolicitudcambiocarrera', models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -10978,7 +9723,6 @@ class InnoActividadesdiariaspractica(models.Model):
     planificacionmensual = models.ForeignKey('InnoPlanificacionmensualpractica', models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innoactividadesdiariaspractica_usuario_modificacion_set', blank=True, null=True)
-    aplica = models.BooleanField()
 
     class Meta:
         managed = False
@@ -11333,7 +10077,6 @@ class InnoCabeceraevidenciaproyectovinculacion(models.Model):
     periodo = models.ForeignKey('SgaPeriodo', models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innocabeceraevidenciaproyectovinculacion_usuario_modificacion_set', blank=True, null=True)
-    tipo = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -11587,7 +10330,6 @@ class InnoCasocliniconutricion(models.Model):
     medicamentousoaccion = models.TextField(blank=True, null=True)
     otros = models.TextField(blank=True, null=True)
     tabaco = models.IntegerField()
-    grupo = models.ForeignKey('InnoGrupocasoclinicopractica', models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -11622,7 +10364,6 @@ class InnoCasoclinicopractica(models.Model):
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innocasoclinicopractica_usuario_modificacion_set', blank=True, null=True)
     tema = models.TextField(blank=True, null=True)
-    grupo = models.ForeignKey('InnoGrupocasoclinicopractica', models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -12001,7 +10742,6 @@ class InnoContenidogenericocasocliniconutricion(models.Model):
     subcontenido = models.ForeignKey('InnoSubcontenidoestructuraevidenciasalud', models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innocontenidogenericocasocliniconutricion_usuario_modificacion_set', blank=True, null=True)
-    grupo = models.ForeignKey('InnoGrupocasoclinicopractica', models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -12412,10 +11152,6 @@ class InnoDetalleevidenciaproyectovinculacion(models.Model):
     cabecera = models.ForeignKey(InnoCabeceraevidenciaproyectovinculacion, models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innodetalleevidenciaproyectovinculacion_usuario_modificacion_set', blank=True, null=True)
-    dias_correccion = models.IntegerField()
-    horas_requisito = models.IntegerField(blank=True, null=True)
-    fecha_fin_justificacion = models.DateField(blank=True, null=True)
-    fecha_inicio_justificacion = models.DateField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -12499,7 +11235,6 @@ class InnoDetalleinsumosilaboperiodo(models.Model):
     seccion = models.ForeignKey('InnoSeccioninsumosilaboperiodo', models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innodetalleinsumosilaboperiodo_usuario_modificacion_set', blank=True, null=True)
-    orden = models.IntegerField()
 
     class Meta:
         managed = False
@@ -13933,47 +12668,6 @@ class InnoGprequerimientopractica(models.Model):
         db_table = 'inno_gprequerimientopractica'
 
 
-class InnoGraduadosmatrizsenescyt(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    observacion = models.CharField(max_length=1000)
-    valido = models.BooleanField()
-    graduado = models.ForeignKey('SgaGraduado', models.DO_NOTHING, blank=True, null=True)
-    historico = models.ForeignKey('InnoHistoricomatrizsenescyt', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innograduadosmatrizsenescyt_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'inno_graduadosmatrizsenescyt'
-
-
-class InnoGrupocasoclinicopractica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    tema = models.TextField(blank=True, null=True)
-    lidercaso = models.ForeignKey('SgaPracticaspreprofesionalesinscripcion', models.DO_NOTHING, blank=True, null=True)
-    lugardiagnostico = models.ForeignKey('SgaAsignacionempresapractica', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innogrupocasoclinicopractica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'inno_grupocasoclinicopractica'
-
-
-class InnoGrupocasoclinicopracticaInscripcionespractica(models.Model):
-    grupocasoclinicopractica = models.ForeignKey(InnoGrupocasoclinicopractica, models.DO_NOTHING)
-    practicaspreprofesionalesinscripcion = models.ForeignKey('SgaPracticaspreprofesionalesinscripcion', models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'inno_grupocasoclinicopractica_inscripcionespractica'
-        unique_together = (('grupocasoclinicopractica', 'practicaspreprofesionalesinscripcion'),)
-
-
 class InnoGrupodetallemodelo(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -14271,54 +12965,6 @@ class InnoHistorialdocumentospppsalud(models.Model):
         db_table = 'inno_historialdocumentospppsalud'
 
 
-class InnoHistorialevidenciaae(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    estado = models.IntegerField()
-    observacion = models.TextField(blank=True, null=True)
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    evidencia = models.ForeignKey('SgaInscripcionrequisitosactividadconvalidacionppv', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innohistorialevidenciaae_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'inno_historialevidenciaae'
-
-
-class InnoHistorialevidenciapp(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    estado = models.IntegerField()
-    observacion = models.TextField(blank=True, null=True)
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    evidencia = models.ForeignKey('SgaDetalleevidenciaspracticaspro', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innohistorialevidenciapp_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'inno_historialevidenciapp'
-
-
-class InnoHistorialevidenciapv(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    estado = models.IntegerField()
-    observacion = models.TextField(blank=True, null=True)
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    evidencia = models.ForeignKey('SgaInformesproyectovinculacionestudiante', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innohistorialevidenciapv_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'inno_historialevidenciapv'
-
-
 class InnoHistorialinforme(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -14467,12 +13113,6 @@ class InnoHistoricomatrizsenescyt(models.Model):
     archivocsv = models.CharField(max_length=100, blank=True, null=True)
     parametros = models.JSONField(blank=True, null=True)
     codigo = models.CharField(max_length=1000, blank=True, null=True)
-    fechacarga = models.DateTimeField(blank=True, null=True)
-    numeronomina = models.CharField(max_length=1000, blank=True, null=True)
-    observaciondelegado = models.TextField()
-    archivoconvocatoria = models.CharField(max_length=100, blank=True, null=True)
-    fecha_fin_proceso = models.DateTimeField(blank=True, null=True)
-    tipo = models.IntegerField()
 
     class Meta:
         managed = False
@@ -15557,7 +14197,6 @@ class InnoPlannutricionpractica(models.Model):
     inscripcionpractica = models.ForeignKey('SgaPracticaspreprofesionalesinscripcion', models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innoplannutricionpractica_usuario_modificacion_set', blank=True, null=True)
-    aplicacasoclinico = models.BooleanField()
 
     class Meta:
         managed = False
@@ -15782,24 +14421,6 @@ class InnoRegistroclasetutoriadocente(models.Model):
     class Meta:
         managed = False
         db_table = 'inno_registroclasetutoriadocente'
-
-
-class InnoRegistromigracionevidencia(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    estado_migracion = models.IntegerField()
-    evaluacion_generica_id = models.IntegerField(blank=True, null=True)
-    evidencia_ae = models.ForeignKey('SgaInscripcionrequisitosactividadconvalidacionppv', models.DO_NOTHING, blank=True, null=True)
-    evidencia_pp = models.ForeignKey('SgaDetalleevidenciaspracticaspro', models.DO_NOTHING, blank=True, null=True)
-    evidencia_pv = models.ForeignKey('SgaInformesproyectovinculacionestudiante', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innoregistromigracionevidencia_usuario_modificacion_set', blank=True, null=True)
-    motivo_rechazo = models.IntegerField()
-
-    class Meta:
-        managed = False
-        db_table = 'inno_registromigracionevidencia'
 
 
 class InnoReporteseguimientoacademico(models.Model):
@@ -16170,7 +14791,6 @@ class InnoRubricaevaluacionpractica(models.Model):
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='innorubricaevaluacionpractica_usuario_modificacion_set', blank=True, null=True)
     notamateria = models.FloatField(blank=True, null=True)
-    tipo = models.IntegerField()
 
     class Meta:
         managed = False
@@ -17035,7 +15655,6 @@ class InvestigacionActividadcriteriodocentehonorario(models.Model):
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionactividadcriteriodocentehonorario_usuario_modificacion_set', blank=True, null=True)
     planificacionmensual = models.BooleanField()
-    articuloinformefinal = models.BooleanField()
 
     class Meta:
         managed = False
@@ -17058,7 +15677,6 @@ class InvestigacionActividadcriteriodocenteinvitado(models.Model):
     avancesatisf = models.IntegerField(blank=True, null=True)
     vigente = models.BooleanField()
     planificacionmensual = models.BooleanField()
-    articuloinformefinal = models.BooleanField()
 
     class Meta:
         managed = False
@@ -17257,21 +15875,6 @@ class InvestigacionArchivorepositorio(models.Model):
         db_table = 'investigacion_archivorepositorio'
 
 
-class InvestigacionArchivosolicitudayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    archivo = models.CharField(max_length=100)
-    solicitud = models.ForeignKey('InvestigacionSolicitudayudaeconomica', models.DO_NOTHING)
-    tipoarchivo = models.ForeignKey('InvestigacionTipoarchivoayudaeconomica', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionarchivosolicitudayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_archivosolicitudayudaeconomica'
-
-
 class InvestigacionArchivosolicitudayudaeconomicaarticulo(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -17298,34 +15901,6 @@ class InvestigacionAreaunesco(models.Model):
     class Meta:
         managed = False
         db_table = 'investigacion_areaunesco'
-
-
-class InvestigacionArticuloinformedocentehonorario(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    articulo = models.ForeignKey('SgaArticuloinvestigacion', models.DO_NOTHING)
-    informe = models.ForeignKey('InvestigacionInformedocentehonorario', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionarticuloinformedocentehonorario_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_articuloinformedocentehonorario'
-
-
-class InvestigacionArticuloinformedocenteinvitado(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    articulo = models.ForeignKey('SgaArticuloinvestigacion', models.DO_NOTHING)
-    informe = models.ForeignKey('InvestigacionInformedocenteinvitado', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionarticuloinformedocenteinvitado_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_articuloinformedocenteinvitado'
 
 
 class InvestigacionAsesoria(models.Model):
@@ -17429,6 +16004,7 @@ class InvestigacionAutorsolicitudayudaeconomicaarticulo(models.Model):
     inscripcion = models.ForeignKey('SgaInscripcion', models.DO_NOTHING, blank=True, null=True)
     persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
     profesor = models.ForeignKey('SgaProfesor', models.DO_NOTHING, blank=True, null=True)
+    solicitud = models.ForeignKey('InvestigacionSolicitudayudaeconomicaarticulo', models.DO_NOTHING)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionautorsolicitudayudaeconomicaarticulo_usuario_modificacion_set', blank=True, null=True)
     existeinstitucion = models.BooleanField()
@@ -17440,7 +16016,6 @@ class InvestigacionAutorsolicitudayudaeconomicaarticulo(models.Model):
     existepersona = models.BooleanField()
     externo = models.ForeignKey('SgaExterno', models.DO_NOTHING, blank=True, null=True)
     nombrepersona = models.CharField(max_length=100, blank=True, null=True)
-    solicitudarticulo = models.ForeignKey('InvestigacionSolicitudayudaeconomicaarticulo', models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -17563,58 +16138,6 @@ class InvestigacionCertificadogrupoinvestigacion(models.Model):
     class Meta:
         managed = False
         db_table = 'investigacion_certificadogrupoinvestigacion'
-
-
-class InvestigacionCertificadoinvestigacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    secuencia = models.IntegerField()
-    fecha = models.DateTimeField()
-    numero = models.CharField(max_length=150)
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    archivofirmado = models.CharField(max_length=100, blank=True, null=True)
-    fecharevision = models.DateTimeField(blank=True, null=True)
-    fechaaprobacion = models.DateTimeField(blank=True, null=True)
-    firmaelabora = models.BooleanField()
-    firmarevisa = models.BooleanField()
-    firmaaprueba = models.BooleanField()
-    enviado = models.BooleanField()
-    aprueba = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    cargoaprueba = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING)
-    cargoelabora = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, related_name='investigacioncertificadoinvestigacion_cargoelabora_set')
-    cargorevisa = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, related_name='investigacioncertificadoinvestigacion_cargorevisa_set')
-    elabora = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigacioncertificadoinvestigacion_elabora_set')
-    revisa = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigacioncertificadoinvestigacion_revisa_set')
-    solicitante = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigacioncertificadoinvestigacion_solicitante_set')
-    tipo = models.ForeignKey('InvestigacionTipocertificadoinvestigacion', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacioncertificadoinvestigacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_certificadoinvestigacion'
-
-
-class InvestigacionCertipresupuestariasolicitudayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    fuente = models.CharField(max_length=150)
-    codificado = models.DecimalField(max_digits=30, decimal_places=2)
-    devengado = models.DecimalField(max_digits=30, decimal_places=2)
-    saldoxdevengar = models.DecimalField(max_digits=30, decimal_places=2)
-    valorcertificar = models.DecimalField(max_digits=30, decimal_places=2)
-    saldodisponible = models.DecimalField(max_digits=30, decimal_places=2)
-    montocertificado = models.DecimalField(max_digits=30, decimal_places=2)
-    detallepresupuesto = models.ForeignKey('InvestigacionDetallepresupuestoayudaeconomica', models.DO_NOTHING)
-    solicitud = models.ForeignKey('InvestigacionSolicitudayudaeconomica', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacioncertipresupuestariasolicitudayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_certipresupuestariasolicitudayudaeconomica'
 
 
 class InvestigacionCitaasesoria(models.Model):
@@ -17794,12 +16317,6 @@ class InvestigacionConvocatoriaproyecto(models.Model):
     abreviatura = models.CharField(max_length=20)
     postulacionexterna = models.BooleanField()
     archivoinstructivo = models.CharField(max_length=100, blank=True, null=True)
-    maxintegranteai = models.IntegerField()
-    minintegranteai = models.IntegerField()
-    registropropuesta = models.BooleanField()
-    archivorefasociado = models.CharField(max_length=100, blank=True, null=True)
-    archivorefcodirector = models.CharField(max_length=100, blank=True, null=True)
-    archivorefcolaborador = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -17865,7 +16382,6 @@ class InvestigacionCriteriodocentehonorario(models.Model):
     vigente = models.BooleanField()
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacioncriteriodocentehonorario_usuario_modificacion_set', blank=True, null=True)
-    abreviatura = models.CharField(max_length=30)
 
     class Meta:
         managed = False
@@ -17880,7 +16396,6 @@ class InvestigacionCriteriodocenteinvitado(models.Model):
     vigente = models.BooleanField()
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacioncriteriodocenteinvitado_usuario_modificacion_set', blank=True, null=True)
-    abreviatura = models.CharField(max_length=30)
 
     class Meta:
         managed = False
@@ -18036,20 +16551,6 @@ class InvestigacionDetallebitacoradocente(models.Model):
         db_table = 'investigacion_detallebitacoradocente'
 
 
-class InvestigacionDetallecriteriorubricainvestigacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    criterio = models.ForeignKey('SgaCriterioinvestigacionperiodo', models.DO_NOTHING)
-    rubrica = models.ForeignKey('InvestigacionRubricainvestigacion', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciondetallecriteriorubricainvestigacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_detallecriteriorubricainvestigacion'
-
-
 class InvestigacionDetalleevaluacioninvestigacion(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -18114,57 +16615,6 @@ class InvestigacionDetalleinstrumentoevaluacioninvestigacion(models.Model):
     class Meta:
         managed = False
         db_table = 'investigacion_detalleinstrumentoevaluacioninvestigacion'
-
-
-class InvestigacionDetalleplanificacionrecursoayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    ambito = models.IntegerField()
-    total = models.DecimalField(max_digits=30, decimal_places=2)
-    ejecutado = models.DecimalField(max_digits=30, decimal_places=2)
-    saldo = models.DecimalField(max_digits=30, decimal_places=2)
-    porcejectotal = models.DecimalField(max_digits=6, decimal_places=2)
-    totalunemi = models.DecimalField(max_digits=30, decimal_places=2)
-    ejecutadounemi = models.DecimalField(max_digits=30, decimal_places=2)
-    saldounemi = models.DecimalField(max_digits=30, decimal_places=2)
-    porcejecunemi = models.DecimalField(max_digits=6, decimal_places=2)
-    totalepunemi = models.DecimalField(max_digits=30, decimal_places=2)
-    ejecutadoepunemi = models.DecimalField(max_digits=30, decimal_places=2)
-    saldoepunemi = models.DecimalField(max_digits=30, decimal_places=2)
-    porcejecepunemi = models.DecimalField(max_digits=6, decimal_places=2)
-    habilitado = models.BooleanField()
-    planificacion = models.ForeignKey('InvestigacionPlanificacionrecursoayudaeconomica', models.DO_NOTHING)
-    programa = models.ForeignKey('InvestigacionProgramaayudaeconomica', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciondetalleplanificacionrecursoayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_detalleplanificacionrecursoayudaeconomica'
-
-
-class InvestigacionDetallepresupuestoayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    programa = models.CharField(max_length=150)
-    renglon = models.CharField(max_length=150)
-    descripcionministerio = models.CharField(max_length=250)
-    referenciaunemi = models.CharField(max_length=250)
-    codificado = models.DecimalField(max_digits=30, decimal_places=2)
-    precompromiso = models.DecimalField(max_digits=30, decimal_places=2)
-    compromiso = models.DecimalField(max_digits=30, decimal_places=2)
-    devengado = models.DecimalField(max_digits=30, decimal_places=2)
-    pagado = models.DecimalField(max_digits=30, decimal_places=2)
-    saldo = models.DecimalField(max_digits=30, decimal_places=2)
-    presupuesto = models.ForeignKey('InvestigacionPresupuestoayudaeconomica', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciondetallepresupuestoayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_detallepresupuestoayudaeconomica'
 
 
 class InvestigacionDetalleprocesoevaluacioninvestigacion(models.Model):
@@ -18448,7 +16898,6 @@ class InvestigacionEvaluacioninvestigacion(models.Model):
     solicitudusoarticulo = models.ForeignKey('InvestigacionSolicitudarticuloevaluacioninvestigacion', models.DO_NOTHING, blank=True, null=True)
     fechaactualiza = models.DateTimeField(blank=True, null=True)
     fecharatifica = models.DateTimeField(blank=True, null=True)
-    notificada = models.BooleanField()
 
     class Meta:
         managed = False
@@ -18672,10 +17121,6 @@ class InvestigacionGrupoinvestigacion(models.Model):
     fechadisolucion = models.DateField(blank=True, null=True)
     fechainicio = models.DateField(blank=True, null=True)
     numerodisolucionocs = models.CharField(max_length=150)
-    marcojuridicoinforme = models.TextField()
-    apruebainforme = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    revisainforme = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigaciongrupoinvestigacion_revisainforme_set', blank=True, null=True)
-    verificainforme = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigaciongrupoinvestigacion_verificainforme_set', blank=True, null=True)
 
     class Meta:
         managed = False
@@ -18690,82 +17135,6 @@ class InvestigacionGrupoinvestigacionLineainvestigacion(models.Model):
         managed = False
         db_table = 'investigacion_grupoinvestigacion_lineainvestigacion'
         unique_together = (('grupoinvestigacion', 'lineainvestigacion'),)
-
-
-class InvestigacionGrupoinvestigacionSublineainvestigacion(models.Model):
-    grupoinvestigacion = models.ForeignKey(InvestigacionGrupoinvestigacion, models.DO_NOTHING)
-    sublineainvestigacion = models.ForeignKey('SgaSublineainvestigacion', models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_grupoinvestigacion_sublineainvestigacion'
-        unique_together = (('grupoinvestigacion', 'sublineainvestigacion'),)
-
-
-class InvestigacionGrupoinvestigacionactividadadicionalplanificacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    detalle = models.TextField()
-    planificacion = models.ForeignKey('InvestigacionGrupoinvestigacionplanificacion', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciongrupoinvestigacionactividadadicionalplanificacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_grupoinvestigacionactividadadicionalplanificacion'
-
-
-class InvestigacionGrupoinvestigacionactividadplanificacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    detalle = models.TextField()
-    ponderacion = models.DecimalField(max_digits=6, decimal_places=2)
-    entregable = models.TextField()
-    registraavance = models.IntegerField()
-    porcentajeejecucion = models.DecimalField(max_digits=6, decimal_places=2)
-    observacion = models.TextField()
-    estado = models.IntegerField()
-    objetivo = models.ForeignKey('InvestigacionGrupoinvestigacionobjetivo', models.DO_NOTHING)
-    planificacion = models.ForeignKey('InvestigacionGrupoinvestigacionplanificacion', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciongrupoinvestigacionactividadplanificacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_grupoinvestigacionactividadplanificacion'
-
-
-class InvestigacionGrupoinvestigacioncapacitacionplanificacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    tema = models.TextField()
-    descripcion = models.TextField()
-    planificacion = models.ForeignKey('InvestigacionGrupoinvestigacionplanificacion', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciongrupoinvestigacioncapacitacionplanificacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_grupoinvestigacioncapacitacionplanificacion'
-
-
-class InvestigacionGrupoinvestigacionhistorialrevisionplanificacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    observacion = models.TextField()
-    estado = models.IntegerField()
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    planificacion = models.ForeignKey('InvestigacionGrupoinvestigacionplanificacion', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciongrupoinvestigacionhistorialrevisionplanificacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_grupoinvestigacionhistorialrevisionplanificacion'
 
 
 class InvestigacionGrupoinvestigacioninforme(models.Model):
@@ -18802,11 +17171,6 @@ class InvestigacionGrupoinvestigacioninforme(models.Model):
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciongrupoinvestigacioninforme_usuario_modificacion_set', blank=True, null=True)
     verifica = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigaciongrupoinvestigacioninforme_verifica_set', blank=True, null=True)
     remitidocga = models.BooleanField()
-    fechaenvio = models.DateTimeField(blank=True, null=True)
-    fechafin = models.DateField(blank=True, null=True)
-    fechainicio = models.DateField(blank=True, null=True)
-    periodo = models.ForeignKey('SgaPeriodo', models.DO_NOTHING, blank=True, null=True)
-    tipo = models.IntegerField()
 
     class Meta:
         managed = False
@@ -18877,21 +17241,6 @@ class InvestigacionGrupoinvestigacionintegranterequisito(models.Model):
         db_table = 'investigacion_grupoinvestigacionintegranterequisito'
 
 
-class InvestigacionGrupoinvestigacionmesactividadplanificacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    mes = models.IntegerField()
-    planificado = models.BooleanField()
-    actividad = models.ForeignKey(InvestigacionGrupoinvestigacionactividadplanificacion, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciongrupoinvestigacionmesactividadplanificacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_grupoinvestigacionmesactividadplanificacion'
-
-
 class InvestigacionGrupoinvestigacionobjetivo(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -18900,55 +17249,10 @@ class InvestigacionGrupoinvestigacionobjetivo(models.Model):
     grupo = models.ForeignKey(InvestigacionGrupoinvestigacion, models.DO_NOTHING)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciongrupoinvestigacionobjetivo_usuario_modificacion_set', blank=True, null=True)
-    detalle = models.TextField()
 
     class Meta:
         managed = False
         db_table = 'investigacion_grupoinvestigacionobjetivo'
-
-
-class InvestigacionGrupoinvestigacionplanificacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    secuencia = models.IntegerField()
-    fecha = models.DateTimeField()
-    fechaenvio = models.DateTimeField(blank=True, null=True)
-    fechavalida = models.DateTimeField(blank=True, null=True)
-    fechaaprueba = models.DateTimeField(blank=True, null=True)
-    numero = models.CharField(max_length=150)
-    objeto = models.TextField()
-    impreso = models.BooleanField()
-    archivosubido = models.BooleanField()
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    archivofirmado = models.CharField(max_length=100, blank=True, null=True)
-    observacion = models.TextField()
-    firmaelabora = models.BooleanField()
-    firmarevisa = models.BooleanField()
-    firmaverifica = models.BooleanField()
-    firmaaprueba = models.BooleanField()
-    estado = models.IntegerField()
-    aprueba = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    cargoaprueba = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, blank=True, null=True)
-    cargodestinatario = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, related_name='investigaciongrupoinvestigacionplanificacion_cargodestinatario_set')
-    cargoelabora = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, related_name='investigaciongrupoinvestigacionplanificacion_cargoelabora_set', blank=True, null=True)
-    cargoremitente = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, related_name='investigaciongrupoinvestigacionplanificacion_cargoremitente_set', blank=True, null=True)
-    cargorevisa = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, related_name='investigaciongrupoinvestigacionplanificacion_cargorevisa_set', blank=True, null=True)
-    cargoverifica = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, related_name='investigaciongrupoinvestigacionplanificacion_cargoverifica_set', blank=True, null=True)
-    destinatario = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigaciongrupoinvestigacionplanificacion_destinatario_set')
-    elabora = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigaciongrupoinvestigacionplanificacion_elabora_set', blank=True, null=True)
-    grupo = models.ForeignKey(InvestigacionGrupoinvestigacion, models.DO_NOTHING)
-    remitente = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigaciongrupoinvestigacionplanificacion_remitente_set')
-    revisa = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigaciongrupoinvestigacionplanificacion_revisa_set', blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciongrupoinvestigacionplanificacion_usuario_modificacion_set', blank=True, null=True)
-    verifica = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigaciongrupoinvestigacionplanificacion_verifica_set', blank=True, null=True)
-    ponderacion = models.DecimalField(max_digits=6, decimal_places=2)
-    porcentajeejecucion = models.DecimalField(max_digits=6, decimal_places=2)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_grupoinvestigacionplanificacion'
 
 
 class InvestigacionGrupoinvestigacionrecorrido(models.Model):
@@ -19003,21 +17307,6 @@ class InvestigacionGrupoinvestigacionresolucion(models.Model):
         db_table = 'investigacion_grupoinvestigacionresolucion'
 
 
-class InvestigacionGrupoinvestigacionresponsableactividadplanifiaf9F(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    actividad = models.ForeignKey(InvestigacionGrupoinvestigacionactividadplanificacion, models.DO_NOTHING)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciongrupoinvestigacionresponsableactividadplanifiaf9f_usuario_modificacion_set', blank=True, null=True)
-    tipo = models.IntegerField()
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_grupoinvestigacionresponsableactividadplanifiaf9f'
-
-
 class InvestigacionGrupoinvestigaciontecnologia(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -19067,79 +17356,6 @@ class InvestigacionHistorialcitaasesoria(models.Model):
     class Meta:
         managed = False
         db_table = 'investigacion_historialcitaasesoria'
-
-
-class InvestigacionHistorialdetalleevaluacioninvestigacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    calificacion = models.DecimalField(max_digits=6, decimal_places=2)
-    estado = models.IntegerField()
-    criterio = models.ForeignKey(InvestigacionCriterioevaluacioninvestigacion, models.DO_NOTHING)
-    historialevaluacion = models.ForeignKey('InvestigacionHistorialevaluacioninvestigacion', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionhistorialdetalleevaluacioninvestigacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_historialdetalleevaluacioninvestigacion'
-
-
-class InvestigacionHistorialevaluacioninvestigacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    total = models.DecimalField(max_digits=6, decimal_places=2)
-    evaluacion = models.ForeignKey(InvestigacionEvaluacioninvestigacion, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionhistorialevaluacioninvestigacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_historialevaluacioninvestigacion'
-
-
-class InvestigacionHistorialevidenciadetalleevaluacioninvestigacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    registroid = models.IntegerField()
-    tipo = models.IntegerField(blank=True, null=True)
-    estadoarticulo = models.IntegerField(blank=True, null=True)
-    nivelindexacion = models.IntegerField(blank=True, null=True)
-    fechaarticulo = models.DateField(blank=True, null=True)
-    estadoproyecto = models.IntegerField(blank=True, null=True)
-    iniciopartproyecto = models.DateField(blank=True, null=True)
-    finpartproyecto = models.DateField(blank=True, null=True)
-    rolproyecto = models.IntegerField(blank=True, null=True)
-    estadogrupo = models.IntegerField(blank=True, null=True)
-    iniciopartgrupo = models.DateField(blank=True, null=True)
-    finpartgrupo = models.DateField(blank=True, null=True)
-    rolgrupo = models.IntegerField(blank=True, null=True)
-    historialdetalleevaluacion = models.ForeignKey(InvestigacionHistorialdetalleevaluacioninvestigacion, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionhistorialevidenciadetalleevaluacioninvestigacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_historialevidenciadetalleevaluacioninvestigacion'
-
-
-class InvestigacionHistorialrespuestaevaluacioninvestigacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    fecha = models.DateTimeField()
-    accion = models.CharField(max_length=100)
-    observacion = models.TextField()
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    respuesta = models.ForeignKey('InvestigacionRespuestaevaluacioninvestigacion', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionhistorialrespuestaevaluacioninvestigacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_historialrespuestaevaluacioninvestigacion'
 
 
 class InvestigacionHistorialrevisioninformeproyectoinvestigacion(models.Model):
@@ -19326,7 +17542,6 @@ class InvestigacionInformedocentehonorario(models.Model):
     valida = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigacioninformedocentehonorario_valida_set', blank=True, null=True)
     subroganteaprueba = models.BooleanField()
     tipogestion = models.IntegerField()
-    final = models.BooleanField()
 
     class Meta:
         managed = False
@@ -19376,7 +17591,6 @@ class InvestigacionInformedocenteinvitado(models.Model):
     fueradeplazo = models.BooleanField()
     tipogestion = models.IntegerField()
     subroganteaprueba = models.BooleanField()
-    final = models.BooleanField()
 
     class Meta:
         managed = False
@@ -19635,26 +17849,6 @@ class InvestigacionMigracionevidenciainformeproyectoinvestigacion(models.Model):
         db_table = 'investigacion_migracionevidenciainformeproyectoinvestigacion'
 
 
-class InvestigacionMovimientodetallepresupuestoayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    tipo = models.IntegerField()
-    fecha = models.DateTimeField()
-    saldoant = models.DecimalField(max_digits=30, decimal_places=2)
-    ingreso = models.DecimalField(max_digits=30, decimal_places=2)
-    salida = models.DecimalField(max_digits=30, decimal_places=2)
-    saldo = models.DecimalField(max_digits=30, decimal_places=2)
-    observacion = models.TextField()
-    detallepresupuesto = models.ForeignKey(InvestigacionDetallepresupuestoayudaeconomica, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionmovimientodetallepresupuestoayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_movimientodetallepresupuestoayudaeconomica'
-
-
 class InvestigacionNombrefirmadocumento(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -19750,19 +17944,6 @@ class InvestigacionObrarelevanciarecorrido(models.Model):
     class Meta:
         managed = False
         db_table = 'investigacion_obrarelevanciarecorrido'
-
-
-class InvestigacionPeriodoacademicoayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    periodo = models.ForeignKey('SgaPeriodo', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionperiodoacademicoayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_periodoacademicoayudaeconomica'
 
 
 class InvestigacionPeriodoacademicoayudaeconomicaarticulo(models.Model):
@@ -19929,38 +18110,6 @@ class InvestigacionPlanificacionactividaddocenteinvitado(models.Model):
         db_table = 'investigacion_planificacionactividaddocenteinvitado'
 
 
-class InvestigacionPlanificacionrecursoayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    descripcion = models.CharField(max_length=250)
-    anio = models.IntegerField()
-    total = models.DecimalField(max_digits=30, decimal_places=2)
-    ejecutado = models.DecimalField(max_digits=30, decimal_places=2)
-    saldo = models.DecimalField(max_digits=30, decimal_places=2)
-    porcejectotal = models.DecimalField(max_digits=6, decimal_places=2)
-    totalunemi = models.DecimalField(max_digits=30, decimal_places=2)
-    ejecutadounemi = models.DecimalField(max_digits=30, decimal_places=2)
-    saldounemi = models.DecimalField(max_digits=30, decimal_places=2)
-    porcejecunemi = models.DecimalField(max_digits=6, decimal_places=2)
-    totalepunemi = models.DecimalField(max_digits=30, decimal_places=2)
-    ejecutadoepunemi = models.DecimalField(max_digits=30, decimal_places=2)
-    saldoepunemi = models.DecimalField(max_digits=30, decimal_places=2)
-    porcejecepunemi = models.DecimalField(max_digits=6, decimal_places=2)
-    archivocertificacionunemi = models.CharField(max_length=100, blank=True, null=True)
-    archivocertificacionepunemi = models.CharField(max_length=100, blank=True, null=True)
-    habilitado = models.BooleanField()
-    estado = models.ForeignKey('SagestEstadosolicitud', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionplanificacionrecursoayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-    finregsol = models.DateField(blank=True, null=True)
-    inicioregsol = models.DateField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_planificacionrecursoayudaeconomica'
-
-
 class InvestigacionPostulanteexternoproyectoinvestigacion(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -19997,24 +18146,6 @@ class InvestigacionPreguntacaracteristicaevaluacioninvestigacion(models.Model):
         unique_together = (('caracteristica', 'pregunta'),)
 
 
-class InvestigacionPresupuestoayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    descripcion = models.CharField(max_length=250)
-    anio = models.IntegerField()
-    codificado = models.DecimalField(max_digits=30, decimal_places=2)
-    devengado = models.DecimalField(max_digits=30, decimal_places=2)
-    saldo = models.DecimalField(max_digits=30, decimal_places=2)
-    planificacion = models.ForeignKey(InvestigacionPlanificacionrecursoayudaeconomica, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionpresupuestoayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_presupuestoayudaeconomica'
-
-
 class InvestigacionProcesoevaluativoinvestigacion(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -20047,24 +18178,6 @@ class InvestigacionProcesoevaluativoinvestigacionPeriodos(models.Model):
         managed = False
         db_table = 'investigacion_procesoevaluativoinvestigacion_periodos'
         unique_together = (('procesoevaluativoinvestigacion', 'periodo'),)
-
-
-class InvestigacionProgramaayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    descripcion = models.CharField(max_length=250)
-    abreviatura = models.CharField(max_length=30)
-    vigente = models.BooleanField()
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionprogramaayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-    orden = models.IntegerField()
-    visibledocente = models.BooleanField()
-    abrevinforme = models.CharField(max_length=5)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_programaayudaeconomica'
 
 
 class InvestigacionProyectoinvestigacion(models.Model):
@@ -20232,12 +18345,6 @@ class InvestigacionProyectoinvestigacion(models.Model):
     resolucioninsubsis = models.CharField(max_length=100, blank=True, null=True)
     postulacionexterna = models.BooleanField()
     numeroresolucionprorroga = models.CharField(max_length=250)
-    numeroresolucionprorrogacdfi = models.CharField(max_length=250)
-    numeroresolucionprorrogacga = models.CharField(max_length=250)
-    resolucionprorrogacdfi = models.CharField(max_length=100, blank=True, null=True)
-    resolucionprorrogacga = models.CharField(max_length=100, blank=True, null=True)
-    archivoequipomaterial = models.CharField(max_length=100, blank=True, null=True)
-    tiporegistro = models.IntegerField()
 
     class Meta:
         managed = False
@@ -21032,10 +19139,6 @@ class InvestigacionProyectoinvestigacionintegrante(models.Model):
     certificado = models.CharField(max_length=100, blank=True, null=True)
     rolvigente = models.BooleanField()
     registrainforme = models.BooleanField()
-    carrera = models.ForeignKey('SgaCarrera', models.DO_NOTHING, blank=True, null=True)
-    titulo = models.ForeignKey('SgaTitulo', models.DO_NOTHING, blank=True, null=True)
-    campoamplio = models.TextField()
-    campoespecifico = models.TextField()
 
     class Meta:
         managed = False
@@ -21543,23 +19646,6 @@ class InvestigacionRecorridoinformedocenteinvitado(models.Model):
         db_table = 'investigacion_recorridoinformedocenteinvitado'
 
 
-class InvestigacionRecorridosolicitudayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    fecha = models.DateTimeField()
-    observacion = models.TextField()
-    estado = models.ForeignKey('SagestEstadosolicitud', models.DO_NOTHING)
-    solicitud = models.ForeignKey('InvestigacionSolicitudayudaeconomica', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionrecorridosolicitudayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-    descripcion = models.CharField(max_length=250)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_recorridosolicitudayudaeconomica'
-
-
 class InvestigacionRecorridosolicitudayudaeconomicaarticulo(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -21705,7 +19791,7 @@ class InvestigacionRespuestaevaluacioninvestigacion(models.Model):
     class Meta:
         managed = False
         db_table = 'investigacion_respuestaevaluacioninvestigacion'
-        unique_together = (('profesor', 'evaluador', 'proceso'),)
+        unique_together = (('profesor', 'evaluador'),)
 
 
 class InvestigacionRespuestarubricainvestigacion(models.Model):
@@ -21855,53 +19941,6 @@ class InvestigacionRubricapreguntasinvestigacion(models.Model):
         unique_together = (('rubrica', 'orden'),)
 
 
-class InvestigacionRubroayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    descripcion = models.CharField(max_length=250)
-    abreviatura = models.CharField(max_length=30)
-    vigente = models.BooleanField()
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionrubroayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_rubroayudaeconomica'
-
-
-class InvestigacionRubroprogramaayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    ambito = models.IntegerField()
-    orden = models.IntegerField()
-    modalidad = models.ForeignKey('SgaModalidad', models.DO_NOTHING, blank=True, null=True)
-    programa = models.ForeignKey(InvestigacionProgramaayudaeconomica, models.DO_NOTHING)
-    rubro = models.ForeignKey(InvestigacionRubroayudaeconomica, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionrubroprogramaayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_rubroprogramaayudaeconomica'
-
-
-class InvestigacionRubrosolicitudayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    valor = models.DecimalField(max_digits=30, decimal_places=2)
-    rubro = models.ForeignKey(InvestigacionRubroayudaeconomica, models.DO_NOTHING)
-    solicitud = models.ForeignKey('InvestigacionSolicitudayudaeconomica', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionrubrosolicitudayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_rubrosolicitudayudaeconomica'
-
-
 class InvestigacionServiciogestion(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -21956,65 +19995,6 @@ class InvestigacionSolicitudarticuloevaluacioninvestigacion(models.Model):
         db_table = 'investigacion_solicitudarticuloevaluacioninvestigacion'
 
 
-class InvestigacionSolicitudayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    secuencia = models.IntegerField()
-    numero = models.CharField(max_length=150)
-    fecha = models.DateTimeField()
-    tema = models.CharField(max_length=250)
-    costo = models.DecimalField(max_digits=30, decimal_places=2)
-    observacion = models.TextField()
-    cargo = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, blank=True, null=True)
-    carrera = models.ForeignKey('SgaCarrera', models.DO_NOTHING)
-    categoria = models.ForeignKey('SgaCategorizaciondocente', models.DO_NOTHING, blank=True, null=True)
-    coordinacion = models.ForeignKey('SgaCoordinacion', models.DO_NOTHING)
-    dedicacion = models.ForeignKey('SgaTiempodedicaciondocente', models.DO_NOTHING, blank=True, null=True)
-    estado = models.ForeignKey('SagestEstadosolicitud', models.DO_NOTHING)
-    periodo = models.ForeignKey('SgaPeriodo', models.DO_NOTHING)
-    planificacion = models.ForeignKey(InvestigacionPlanificacionrecursoayudaeconomica, models.DO_NOTHING)
-    profesor = models.ForeignKey('SgaProfesor', models.DO_NOTHING)
-    programa = models.ForeignKey(InvestigacionProgramaayudaeconomica, models.DO_NOTHING)
-    tipoprofesor = models.ForeignKey('SgaProfesortipo', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionsolicitudayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-    archivocertificacion = models.CharField(max_length=100, blank=True, null=True)
-    archivocertificacionfirmado = models.CharField(max_length=100, blank=True, null=True)
-    archivoinforme = models.CharField(max_length=100, blank=True, null=True)
-    archivoinformefirmado = models.CharField(max_length=100, blank=True, null=True)
-    cargovalidainforme = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, related_name='investigacionsolicitudayudaeconomica_cargovalidainforme_set', blank=True, null=True)
-    fechavalida = models.DateTimeField(blank=True, null=True)
-    firmasolicita = models.BooleanField()
-    firmavalida = models.BooleanField()
-    informegenerado = models.BooleanField()
-    validainforme = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    numerocertificacion = models.CharField(max_length=150)
-    secuenciacertificacion = models.IntegerField()
-    fechacertificacion = models.DateTimeField(blank=True, null=True)
-    ambito = models.IntegerField()
-    aplicareembolso = models.BooleanField()
-    apruebasolicitud = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigacionsolicitudayudaeconomica_apruebasolicitud_set', blank=True, null=True)
-    archivomemorando = models.CharField(max_length=100, blank=True, null=True)
-    archivomemorandofirmado = models.CharField(max_length=100, blank=True, null=True)
-    cargoapruebasolicitud = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, related_name='investigacionsolicitudayudaeconomica_cargoapruebasolicitud_set', blank=True, null=True)
-    cargodesembolsaayuda = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, related_name='investigacionsolicitudayudaeconomica_cargodesembolsaayuda_set', blank=True, null=True)
-    desembolsaayuda = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigacionsolicitudayudaeconomica_desembolsaayuda_set', blank=True, null=True)
-    desembolsaayudaepunemi = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigacionsolicitudayudaeconomica_desembolsaayudaepunemi_set', blank=True, null=True)
-    fechaaprueba = models.DateTimeField(blank=True, null=True)
-    fechamemorando = models.DateTimeField(blank=True, null=True)
-    firmaaprueba = models.BooleanField()
-    memorandogenerado = models.BooleanField()
-    numeromemorando = models.CharField(max_length=150)
-    origenfinanciamiento = models.IntegerField()
-    secuenciamemorando = models.IntegerField()
-    ayudaactiva = models.BooleanField()
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_solicitudayudaeconomica'
-
-
 class InvestigacionSolicitudayudaeconomicaarticulo(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -22022,64 +20002,45 @@ class InvestigacionSolicitudayudaeconomicaarticulo(models.Model):
     fechatentpublicacion = models.DateField()
     nombrerevista = models.CharField(max_length=500, blank=True, null=True)
     enlacerevista = models.CharField(max_length=500, blank=True, null=True)
-    fechalimitepago = models.DateField(blank=True, null=True)
+    fechalimitepago = models.DateField()
+    observacion = models.TextField()
+    carrera = models.ForeignKey('SgaCarrera', models.DO_NOTHING)
+    categoria = models.ForeignKey('SgaCategorizaciondocente', models.DO_NOTHING, blank=True, null=True)
+    coordinacion = models.ForeignKey('SgaCoordinacion', models.DO_NOTHING)
+    dedicacion = models.ForeignKey('SgaTiempodedicaciondocente', models.DO_NOTHING, blank=True, null=True)
+    estadoadjudicacion = models.ForeignKey('SagestEstadosolicitud', models.DO_NOTHING)
     lineainvestigacion = models.ForeignKey('SgaLineainvestigacion', models.DO_NOTHING)
+    periodo = models.ForeignKey('SgaPeriodo', models.DO_NOTHING)
+    profesor = models.ForeignKey('SgaProfesor', models.DO_NOTHING)
+    revista = models.ForeignKey('SgaRevistainvestigacion', models.DO_NOTHING, blank=True, null=True)
+    tipoprofesor = models.ForeignKey('SgaProfesortipo', models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionsolicitudayudaeconomicaarticulo_usuario_modificacion_set', blank=True, null=True)
     tituloarticulo = models.CharField(max_length=250)
-    cartaaceptacion = models.CharField(max_length=100, blank=True, null=True)
-    costopublicacion = models.DecimalField(max_digits=30, decimal_places=2)
-    evidenciaautor = models.CharField(max_length=100, blank=True, null=True)
-    manuscrito = models.CharField(max_length=100, blank=True, null=True)
-    ordenpago = models.CharField(max_length=100, blank=True, null=True)
-    solicitud = models.ForeignKey(InvestigacionSolicitudayudaeconomica, models.DO_NOTHING, blank=True, null=True)
-    nivelimpactorevista = models.IntegerField(blank=True, null=True)
+    tipomoneda = models.ForeignKey('SagestTipomoneda', models.DO_NOTHING, blank=True, null=True)
+    costodolar = models.DecimalField(max_digits=30, decimal_places=2, blank=True, null=True)
+    costomonedaorigen = models.DecimalField(max_digits=30, decimal_places=2)
+    cuartilrevista = models.IntegerField(blank=True, null=True)
+    perteneceproyecto = models.BooleanField()
+    proyectoinvestigacion = models.ForeignKey(InvestigacionProyectoinvestigacion, models.DO_NOTHING, blank=True, null=True)
+    fecha = models.DateTimeField(blank=True, null=True)
+    numero = models.CharField(max_length=150)
+    secuencia = models.IntegerField()
+    archivo = models.CharField(max_length=100, blank=True, null=True)
+    cargo = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, blank=True, null=True)
+    cargodestinatario = models.ForeignKey('SagestDenominacionpuesto', models.DO_NOTHING, related_name='investigacionsolicitudayudaeconomicaarticulo_cargodestinatario_set', blank=True, null=True)
+    destinatario = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
+    firmasolicita = models.BooleanField()
+    generada = models.BooleanField()
+    archivofirmado = models.CharField(max_length=100, blank=True, null=True)
+    fechaverificacion = models.DateTimeField(blank=True, null=True)
+    personaverifica = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='investigacionsolicitudayudaeconomicaarticulo_personaverifica_set', blank=True, null=True)
+    accionpersonal = models.ForeignKey('SagestAccionpersonal', models.DO_NOTHING, blank=True, null=True)
+    contrato = models.ForeignKey('SagestPersonacontratos', models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = 'investigacion_solicitudayudaeconomicaarticulo'
-
-
-class InvestigacionSolicitudayudaeconomicaestudio(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    tipoestudio = models.IntegerField()
-    ambito = models.IntegerField()
-    nombreprograma = models.CharField(max_length=250)
-    costoprograma = models.DecimalField(max_digits=30, decimal_places=2)
-    existeinstitucion = models.BooleanField()
-    nombreinstitucion = models.CharField(max_length=250, blank=True, null=True)
-    inicioprograma = models.DateField()
-    finprograma = models.DateField()
-    areaconocimiento = models.ForeignKey('SgaAreaconocimientotitulacion', models.DO_NOTHING)
-    canton = models.ForeignKey('SgaCanton', models.DO_NOTHING)
-    institucion = models.ForeignKey('SgaInstitucioneducacionsuperior', models.DO_NOTHING, blank=True, null=True)
-    modalidad = models.ForeignKey('SgaModalidad', models.DO_NOTHING)
-    pais = models.ForeignKey('SgaPais', models.DO_NOTHING)
-    solicitud = models.ForeignKey(InvestigacionSolicitudayudaeconomica, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionsolicitudayudaeconomicaestudio_usuario_modificacion_set', blank=True, null=True)
-    administrativo = models.ForeignKey('SgaAdministrativo', models.DO_NOTHING, blank=True, null=True)
-    garante = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    numeroestancia = models.IntegerField()
-    pasaje = models.DecimalField(max_digits=30, decimal_places=2)
-    pasaporte = models.DecimalField(max_digits=30, decimal_places=2)
-    profesor = models.ForeignKey('SgaProfesor', models.DO_NOTHING, blank=True, null=True)
-    requierepasaje = models.BooleanField()
-    requierepasaporte = models.BooleanField()
-    requierevisa = models.BooleanField()
-    segurovida = models.DecimalField(max_digits=30, decimal_places=2)
-    tiempodia = models.IntegerField()
-    tieneseguro = models.BooleanField()
-    tipogarante = models.IntegerField()
-    urlinstitucion = models.CharField(max_length=250)
-    viatico = models.DecimalField(max_digits=30, decimal_places=2)
-    visa = models.DecimalField(max_digits=30, decimal_places=2)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_solicitudayudaeconomicaestudio'
 
 
 class InvestigacionSolicitudbaseinstitucional(models.Model):
@@ -22164,24 +20125,6 @@ class InvestigacionTextopreguntainvestigacion(models.Model):
         db_table = 'investigacion_textopreguntainvestigacion'
 
 
-class InvestigacionTipoarchivoayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    descripcion = models.CharField(max_length=250)
-    abreviatura = models.CharField(max_length=10)
-    nombre = models.CharField(max_length=250)
-    extension = models.CharField(max_length=250)
-    tamanio = models.CharField(max_length=250)
-    vigente = models.BooleanField()
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciontipoarchivoayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_tipoarchivoayudaeconomica'
-
-
 class InvestigacionTipoarchivoayudaeconomicaarticulo(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -22201,36 +20144,6 @@ class InvestigacionTipoarchivoayudaeconomicaarticulo(models.Model):
     class Meta:
         managed = False
         db_table = 'investigacion_tipoarchivoayudaeconomicaarticulo'
-
-
-class InvestigacionTipoarchivoprogramaayudaeconomica(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    orden = models.IntegerField()
-    programa = models.ForeignKey(InvestigacionProgramaayudaeconomica, models.DO_NOTHING)
-    tipoarchivo = models.ForeignKey(InvestigacionTipoarchivoayudaeconomica, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciontipoarchivoprogramaayudaeconomica_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_tipoarchivoprogramaayudaeconomica'
-
-
-class InvestigacionTipocertificadoinvestigacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    tiporegistro = models.IntegerField()
-    nombre = models.CharField(max_length=250)
-    nombrecorto = models.CharField(max_length=100)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigaciontipocertificadoinvestigacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'investigacion_tipocertificadoinvestigacion'
 
 
 class InvestigacionTipodirectoriorepositorio(models.Model):
@@ -22389,8 +20302,6 @@ class InvestigacionVerificacioncartaaceptacion(models.Model):
     solicitud = models.ForeignKey('SagestSolicitudpublicacion', models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='investigacionverificacioncartaaceptacion_usuario_modificacion_set', blank=True, null=True)
-    fecharespuesta = models.DateTimeField(blank=True, null=True)
-    observacion = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -22684,20 +20595,6 @@ class JuridicoDocumentoincidente(models.Model):
         db_table = 'juridico_documentoincidente'
 
 
-class JuridicoDocumentoseguimiento(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    detalle = models.ForeignKey('JuridicoIncidenteseguimiento', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='juridicodocumentoseguimiento_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'juridico_documentoseguimiento'
-
-
 class JuridicoEstadossolicitudsancion(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -22765,26 +20662,6 @@ class JuridicoIncidenteexamen(models.Model):
     class Meta:
         managed = False
         db_table = 'juridico_incidenteexamen'
-
-
-class JuridicoIncidenteseguimiento(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    observacion = models.TextField(blank=True, null=True)
-    fecha_respuesta = models.DateTimeField(blank=True, null=True)
-    respuesta = models.TextField(blank=True, null=True)
-    estado = models.BooleanField()
-    personaenvia = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    personarecibe = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='juridicoincidenteseguimiento_personarecibe_set', blank=True, null=True)
-    solicitud = models.ForeignKey(JuridicoDetalleincidente, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='juridicoincidenteseguimiento_usuario_modificacion_set', blank=True, null=True)
-    tipoincidente = models.IntegerField()
-
-    class Meta:
-        managed = False
-        db_table = 'juridico_incidenteseguimiento'
 
 
 class JuridicoIphabilitadas(models.Model):
@@ -23037,8 +20914,6 @@ class JuridicoTipoincidente(models.Model):
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='juridicotipoincidente_usuario_modificacion_set', blank=True, null=True)
     responsable = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    externo = models.BooleanField()
-    tecnico = models.BooleanField()
 
     class Meta:
         managed = False
@@ -23962,7 +21837,6 @@ class MatriculaPeriodomatricula(models.Model):
     deuda_visible = models.BooleanField()
     terminos_prematricula = models.TextField(blank=True, null=True)
     fechacobro = models.DateField(blank=True, null=True)
-    permitirloginsolomatriculados = models.BooleanField()
 
     class Meta:
         managed = False
@@ -30007,7 +27881,7 @@ class PosgradoDetallerespuestarubricaposgrado(models.Model):
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
     valor = models.FloatField()
     justificacion = models.CharField(max_length=600, blank=True, null=True)
-    respuestarubrica = models.ForeignKey('SgaRespuestarubrica', models.DO_NOTHING)
+    respuestarubrica_id = models.IntegerField()
     rubricapregunta = models.ForeignKey('SgaRubricapreguntas', models.DO_NOTHING)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='posgradodetallerespuestarubricaposgrado_usuario_modificacion_set', blank=True, null=True)
@@ -33979,39 +31853,10 @@ class PostulateActapartida(models.Model):
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulateactapartida_usuario_modificacion_set', blank=True, null=True)
     tipotribunal = models.IntegerField()
-    numeroacta = models.IntegerField()
 
     class Meta:
         managed = False
         db_table = 'postulate_actapartida'
-
-
-class PostulateActapartidaconfidencialidad(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    acta = models.ForeignKey(PostulateActapartida, models.DO_NOTHING, blank=True, null=True)
-    personacomision = models.ForeignKey('PostulatePartidatribunal', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulateactapartidaconfidencialidad_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_actapartidaconfidencialidad'
-
-
-class PostulateActapartidadesignacion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    acta = models.ForeignKey(PostulateActapartida, models.DO_NOTHING, blank=True, null=True)
-    personacomision = models.ForeignKey('PostulatePartidatribunal', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulateactapartidadesignacion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_actapartidadesignacion'
 
 
 class PostulateActapartidaindividual(models.Model):
@@ -34204,43 +32049,6 @@ class PostulateAspectosmodeloevaluativos(models.Model):
     class Meta:
         managed = False
         db_table = 'postulate_aspectosmodeloevaluativos'
-
-
-class PostulateAutoridaddeclaracion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    estado = models.IntegerField(blank=True, null=True)
-    declaracion = models.ForeignKey('PostulateNepotismoconflictoconvocatoriapersona', models.DO_NOTHING, blank=True, null=True)
-    partida = models.ForeignKey('PostulatePartida', models.DO_NOTHING, blank=True, null=True)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulateautoridaddeclaracion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_autoridaddeclaracion'
-
-
-class PostulateAutoridaddeclaracionpersonaconflicto(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    tipo = models.IntegerField()
-    fechadesignacion = models.DateTimeField(blank=True, null=True)
-    cargos = models.IntegerField(blank=True, null=True)
-    reasignadotthh = models.BooleanField()
-    firma = models.BooleanField()
-    califica = models.BooleanField()
-    declaracionautoridad = models.ForeignKey(PostulateAutoridaddeclaracion, models.DO_NOTHING, blank=True, null=True)
-    item = models.ForeignKey('PostulateDetallemodeloevaluativoconvocatoria', models.DO_NOTHING, blank=True, null=True)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulateautoridaddeclaracionpersonaconflicto_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_autoridaddeclaracionpersonaconflicto'
 
 
 class PostulateCalificaciondisertacion(models.Model):
@@ -34628,21 +32436,6 @@ class PostulateCriterioapelacion(models.Model):
         db_table = 'postulate_criterioapelacion'
 
 
-class PostulateCuestionarionepotismoconflicto(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    tipo = models.IntegerField(blank=True, null=True)
-    nombre = models.CharField(max_length=500)
-    descripcion = models.TextField()
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulatecuestionarionepotismoconflicto_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_cuestionarionepotismoconflicto'
-
-
 class PostulateDetallecalificaciondisertacion(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -34786,27 +32579,6 @@ class PostulateDetalletipopuntajeadicional(models.Model):
         db_table = 'postulate_detalletipopuntajeadicional'
 
 
-class PostulateDetalletitulacionbachillerconcurso(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    calificacion = models.FloatField()
-    actagrado = models.CharField(max_length=100, blank=True, null=True)
-    anioinicioperiodograduacion = models.IntegerField(blank=True, null=True)
-    aniofinperiodograduacion = models.IntegerField(blank=True, null=True)
-    reconocimientoacademico = models.CharField(max_length=100, blank=True, null=True)
-    codigorefrendacion = models.CharField(max_length=50, blank=True, null=True)
-    numerorefrendacion = models.CharField(max_length=50, blank=True, null=True)
-    fechagrado = models.DateTimeField(blank=True, null=True)
-    titulacion = models.ForeignKey('PostulateTitulacionconcurso', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulatedetalletitulacionbachillerconcurso_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_detalletitulacionbachillerconcurso'
-
-
 class PostulateEntidadcertificacionpsicologica(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -34936,7 +32708,6 @@ class PostulateHistorialactafirma(models.Model):
     personatribunal = models.ForeignKey('PostulatePartidatribunal', models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulatehistorialactafirma_usuario_modificacion_set', blank=True, null=True)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -35081,37 +32852,6 @@ class PostulateHorariopersonapartida(models.Model):
         db_table = 'postulate_horariopersonapartida'
 
 
-class PostulateIntegrantesocs(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    cargo = models.CharField(max_length=500)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulateintegrantesocs_usuario_modificacion_set', blank=True, null=True)
-    departamento = models.CharField(max_length=500)
-    denominacion = models.CharField(max_length=500)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_integrantesocs'
-
-
-class PostulateIntentocuestionarionepotismoconflicto(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    resultado = models.IntegerField(blank=True, null=True)
-    cuestionario = models.ForeignKey(PostulateCuestionarionepotismoconflicto, models.DO_NOTHING)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulateintentocuestionarionepotismoconflicto_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_intentocuestionarionepotismoconflicto'
-
-
 class PostulateModeloevaluativoconvocatoria(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -35150,24 +32890,6 @@ class PostulateModeloevaluativodisertacion(models.Model):
         db_table = 'postulate_modeloevaluativodisertacion'
 
 
-class PostulateNepotismoconflictoconvocatoriapersona(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    nepotismo = models.BooleanField()
-    conflicto = models.BooleanField()
-    acta = models.CharField(max_length=100, blank=True, null=True)
-    convocatoria = models.ForeignKey(PostulateConvocatoria, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulatenepotismoconflictoconvocatoriapersona_usuario_modificacion_set', blank=True, null=True)
-    personadeclaracion = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    estado = models.IntegerField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_nepotismoconflictoconvocatoriapersona'
-
-
 class PostulateNotificacionganador(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -35187,21 +32909,6 @@ class PostulateNotificacionganador(models.Model):
         db_table = 'postulate_notificacionganador'
 
 
-class PostulateOpcionespreguntascuestionarionepotismoconflicto(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    descripcion = models.TextField()
-    aplicaopcion = models.BooleanField()
-    pregunta = models.ForeignKey('PostulatePreguntascuestionarionepotismoconflicto', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulateopcionespreguntascuestionarionepotismoconflicto_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_opcionespreguntascuestionarionepotismoconflicto'
-
-
 class PostulateParametrosdisertacion(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -35215,21 +32922,6 @@ class PostulateParametrosdisertacion(models.Model):
     class Meta:
         managed = False
         db_table = 'postulate_parametrosdisertacion'
-
-
-class PostulateParentescoconcurso(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    descripcion = models.CharField(max_length=500)
-    grado = models.IntegerField(blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulateparentescoconcurso_usuario_modificacion_set', blank=True, null=True)
-    tipo = models.IntegerField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_parentescoconcurso'
 
 
 class PostulatePartida(models.Model):
@@ -35351,31 +33043,6 @@ class PostulatePartidatribunal(models.Model):
     class Meta:
         managed = False
         db_table = 'postulate_partidatribunal'
-
-
-class PostulatePartidatribunaldeclaracion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    tipo = models.IntegerField()
-    cargos = models.IntegerField(blank=True, null=True)
-    actaexcusa = models.CharField(max_length=100, blank=True, null=True)
-    declaracion = models.ForeignKey(PostulateNepotismoconflictoconvocatoriapersona, models.DO_NOTHING, blank=True, null=True)
-    partida = models.ForeignKey(PostulatePartida, models.DO_NOTHING, blank=True, null=True)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulatepartidatribunaldeclaracion_usuario_modificacion_set', blank=True, null=True)
-    fechadesignacion = models.DateTimeField(blank=True, null=True)
-    estado = models.IntegerField(blank=True, null=True)
-    reasignadotthh = models.BooleanField()
-    item = models.ForeignKey(PostulateDetallemodeloevaluativoconvocatoria, models.DO_NOTHING, blank=True, null=True)
-    califica = models.BooleanField()
-    firma = models.BooleanField()
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_partidatribunaldeclaracion'
-        unique_together = (('partida', 'persona'),)
 
 
 class PostulatePeriodoacademicoconvocatoria(models.Model):
@@ -35547,8 +33214,6 @@ class PostulatePersonaaplicarpartida(models.Model):
     estadomeritos = models.IntegerField()
     solapelacionopocicion = models.BooleanField()
     observacion_imp = models.TextField(blank=True, null=True)
-    archivoresolucionfinal = models.CharField(max_length=100, blank=True, null=True)
-    obsresolucionfinal = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -35853,45 +33518,6 @@ class PostulatePersonarequisitosconvocatoria(models.Model):
         db_table = 'postulate_personarequisitosconvocatoria'
 
 
-class PostulatePersonasconflicto(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    cabecera = models.ForeignKey(PostulateNepotismoconflictoconvocatoriapersona, models.DO_NOTHING, blank=True, null=True)
-    persona_conflicto = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulatepersonasconflicto_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_personasconflicto'
-
-
-class PostulatePersonasconflictoTiposConflicto(models.Model):
-    personasconflicto = models.ForeignKey(PostulatePersonasconflicto, models.DO_NOTHING)
-    tipointeresconcurso = models.ForeignKey('PostulateTipointeresconcurso', models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_personasconflicto_tipos_conflicto'
-        unique_together = (('personasconflicto', 'tipointeresconcurso'),)
-
-
-class PostulatePersonasvinculos(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    grado_consaguinidad = models.ForeignKey(PostulateParentescoconcurso, models.DO_NOTHING, blank=True, null=True)
-    persona_vinculo = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulatepersonasvinculos_usuario_modificacion_set', blank=True, null=True)
-    cabecera = models.ForeignKey(PostulateNepotismoconflictoconvocatoriapersona, models.DO_NOTHING, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_personasvinculos'
-
-
 class PostulatePersonatipopuntajeadicional(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -35933,21 +33559,6 @@ class PostulatePreguntaperiodoplanificacion(models.Model):
     class Meta:
         managed = False
         db_table = 'postulate_preguntaperiodoplanificacion'
-
-
-class PostulatePreguntascuestionarionepotismoconflicto(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    descripcion = models.TextField()
-    tipo = models.IntegerField(blank=True, null=True)
-    cuestionario = models.ForeignKey(PostulateCuestionarionepotismoconflicto, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulatepreguntascuestionarionepotismoconflicto_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_preguntascuestionarionepotismoconflicto'
 
 
 class PostulatePrograma(models.Model):
@@ -36097,21 +33708,6 @@ class PostulateRequisitosconvocatoriapostulate(models.Model):
         db_table = 'postulate_requisitosconvocatoriapostulate'
 
 
-class PostulateRespuestasintentocuestionarionepotismoconflicto(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    intento = models.ForeignKey(PostulateIntentocuestionarionepotismoconflicto, models.DO_NOTHING)
-    opcionseleccionada = models.ForeignKey(PostulateOpcionespreguntascuestionarionepotismoconflicto, models.DO_NOTHING)
-    pregunta = models.ForeignKey(PostulatePreguntascuestionarionepotismoconflicto, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulaterespuestasintentocuestionarionepotismoconflicto_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_respuestasintentocuestionarionepotismoconflicto'
-
-
 class PostulateTerminoscondicionespostulacion(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -36154,20 +33750,6 @@ class PostulateTipocompetenciaplanificacion(models.Model):
         db_table = 'postulate_tipocompetenciaplanificacion'
 
 
-class PostulateTipointeresconcurso(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    descripcion = models.CharField(max_length=500)
-    grado = models.IntegerField(blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulatetipointeresconcurso_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_tipointeresconcurso'
-
-
 class PostulateTipopersonaconvocatoria(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -36207,52 +33789,6 @@ class PostulateTipoturnoconvocatoria(models.Model):
     class Meta:
         managed = False
         db_table = 'postulate_tipoturnoconvocatoria'
-
-
-class PostulateTitulacionconcurso(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    principal = models.BooleanField()
-    fechainicio = models.DateField(blank=True, null=True)
-    fechaobtencion = models.DateField(blank=True, null=True)
-    fechaegresado = models.DateField(blank=True, null=True)
-    registro = models.CharField(max_length=50)
-    fecharegistro = models.DateField(blank=True, null=True)
-    educacionsuperior = models.BooleanField()
-    anios = models.IntegerField()
-    semestres = models.IntegerField()
-    cursando = models.BooleanField()
-    archivo = models.CharField(max_length=100, blank=True, null=True)
-    verificado = models.BooleanField()
-    verisenescyt = models.BooleanField()
-    veriarchivotitulo = models.BooleanField()
-    aplicobeca = models.BooleanField()
-    tipobeca = models.IntegerField(blank=True, null=True)
-    valorbeca = models.FloatField()
-    fechaaprobaciontitulo = models.DateTimeField(blank=True, null=True)
-    registroarchivo = models.CharField(max_length=100, blank=True, null=True)
-    verificadosenescyt = models.BooleanField()
-    fechamigradosenescyt = models.DateField(blank=True, null=True)
-    areasenescyt = models.ForeignKey('SgaAreatitulosenescyt', models.DO_NOTHING, blank=True, null=True)
-    areatitulo = models.ForeignKey('SgaAreatitulo', models.DO_NOTHING, blank=True, null=True)
-    canton = models.ForeignKey('SgaCanton', models.DO_NOTHING, blank=True, null=True)
-    colegio = models.ForeignKey('SgaColegio', models.DO_NOTHING, blank=True, null=True)
-    financiamientobeca = models.ForeignKey('SgaFinanciamientobeca', models.DO_NOTHING, blank=True, null=True)
-    institucion = models.ForeignKey('SgaInstitucioneducacionsuperior', models.DO_NOTHING, blank=True, null=True)
-    pais = models.ForeignKey('SgaPais', models.DO_NOTHING, blank=True, null=True)
-    parroquia = models.ForeignKey('SgaParroquia', models.DO_NOTHING, blank=True, null=True)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    personaaprobaciontitulo = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='postulatetitulacionconcurso_personaaprobaciontitulo_set', blank=True, null=True)
-    provincia = models.ForeignKey('SgaProvincia', models.DO_NOTHING, blank=True, null=True)
-    subareasenescyt = models.ForeignKey('SgaSubareatitulosenescyt', models.DO_NOTHING, blank=True, null=True)
-    titulo = models.ForeignKey('SgaTitulo', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='postulatetitulacionconcurso_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'postulate_titulacionconcurso'
 
 
 class PostulateTitulosugerido(models.Model):
@@ -36379,8 +33915,6 @@ class PrepracticasRespuestaevaluacion(models.Model):
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='prepracticasrespuestaevaluacion_usuario_modificacion_set', blank=True, null=True)
     columna = models.ForeignKey(PrepracticasOpcionpregunta, models.DO_NOTHING, blank=True, null=True)
     fila = models.ForeignKey(PrepracticasOpcionpregunta, models.DO_NOTHING, related_name='prepracticasrespuestaevaluacion_fila_set', blank=True, null=True)
-    escala = models.IntegerField(blank=True, null=True)
-    vf = models.BooleanField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -36444,7 +33978,6 @@ class SagInformeencuestas(models.Model):
     presentacion = models.TextField(blank=True, null=True)
     carrerainforme = models.ForeignKey(SagCarrerainforme, models.DO_NOTHING, blank=True, null=True)
     manual = models.BooleanField()
-    anexo = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -38153,49 +35686,6 @@ class SagestCapeventoperiodoipec(models.Model):
     class Meta:
         managed = False
         db_table = 'sagest_capeventoperiodoipec'
-
-
-class SagestCapeventoperiodoipecIdioma(models.Model):
-    capeventoperiodoipec = models.ForeignKey(SagestCapeventoperiodoipec, models.DO_NOTHING)
-    idioma = models.ForeignKey('SgaIdioma', models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'sagest_capeventoperiodoipec_idioma'
-        unique_together = (('capeventoperiodoipec', 'idioma'),)
-
-
-class SagestCapeventoperiodoipecidiomas(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    capevento = models.TextField(blank=True, null=True)
-    objetivo = models.TextField(blank=True, null=True)
-    modalidad = models.TextField(blank=True, null=True)
-    contenido = models.TextField(blank=True, null=True)
-    departamento = models.TextField(blank=True, null=True)
-    confiere = models.TextField(blank=True, null=True)
-    certificado_a = models.TextField(blank=True, null=True)
-    aprobacion = models.TextField(blank=True, null=True)
-    duracion = models.TextField(blank=True, null=True)
-    fecha = models.TextField(blank=True, null=True)
-    firma_1 = models.TextField(blank=True, null=True)
-    firma_2 = models.TextField(blank=True, null=True)
-    firma_3 = models.TextField(blank=True, null=True)
-    objetivo_del_programa = models.TextField(blank=True, null=True)
-    duracion_texto = models.TextField(blank=True, null=True)
-    horas_academicas = models.TextField(blank=True, null=True)
-    modalidad_texto = models.TextField(blank=True, null=True)
-    contenido_texto = models.TextField(blank=True, null=True)
-    aval = models.TextField(blank=True, null=True)
-    capeventoperiodoipec = models.ForeignKey(SagestCapeventoperiodoipec, models.DO_NOTHING)
-    idioma = models.ForeignKey('SgaIdioma', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sagestcapeventoperiodoipecidiomas_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'sagest_capeventoperiodoipecidiomas'
 
 
 class SagestCapinscritoipec(models.Model):
@@ -40971,8 +38461,6 @@ class SagestDistributivopersona(models.Model):
     comisioservicios = models.CharField(max_length=300)
     numeroarchivo = models.BigIntegerField()
     seccion = models.ForeignKey('SagestSecciondepartamento', models.DO_NOTHING, blank=True, null=True)
-    fechafin = models.DateField(blank=True, null=True)
-    fechainicio = models.DateField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -41360,7 +38848,6 @@ class SagestEstadosolicitud(models.Model):
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sagestestadosolicitud_usuario_modificacion_set', blank=True, null=True)
     clase = models.CharField(max_length=250, blank=True, null=True)
     observacion = models.CharField(max_length=250, blank=True, null=True)
-    responsable = models.CharField(max_length=250)
 
     class Meta:
         managed = False
@@ -41620,7 +39107,7 @@ class SagestFacturaanticipadarubros(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    factura_id = models.IntegerField()
+    factura = models.ForeignKey(SagestFactura, models.DO_NOTHING)
     rubro = models.ForeignKey('SagestRubro', models.DO_NOTHING)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sagestfacturaanticipadarubros_usuario_modificacion_set', blank=True, null=True)
@@ -41878,22 +39365,6 @@ class SagestGestionperfilpuesto(models.Model):
         db_table = 'sagest_gestionperfilpuesto'
 
 
-class SagestGestionplanificacionplantillafirmashistorial(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    archivo = models.CharField(max_length=100)
-    estadofirma = models.BooleanField(blank=True, null=True)
-    gestion = models.ForeignKey('SagestGestionplanificacionth', models.DO_NOTHING)
-    responsable = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sagestgestionplanificacionplantillafirmashistorial_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'sagest_gestionplanificacionplantillafirmashistorial'
-
-
 class SagestGestionplanificacionth(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -41905,7 +39376,6 @@ class SagestGestionplanificacionth(models.Model):
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sagestgestionplanificacionth_usuario_modificacion_set', blank=True, null=True)
     responsable = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
     responsablesubrogante = models.ForeignKey('SgaPersona', models.DO_NOTHING, related_name='sagestgestionplanificacionth_responsablesubrogante_set', blank=True, null=True)
-    archivoplantilla = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -42973,26 +40443,6 @@ class SagestHistoricodocumentospersonaacciones(models.Model):
         db_table = 'sagest_historicodocumentospersonaacciones'
 
 
-class SagestHistoricoingresopersonal(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    fechaingreso = models.DateField(blank=True, null=True)
-    fechasalida = models.DateField(blank=True, null=True)
-    rmu = models.DecimalField(max_digits=30, decimal_places=2)
-    cargo = models.ForeignKey(SagestDenominacionpuesto, models.DO_NOTHING, blank=True, null=True)
-    modalidadlaboral = models.ForeignKey('SagestModalidadlaboral', models.DO_NOTHING, blank=True, null=True)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    regimenlaboral = models.ForeignKey('SagestRegimenlaboral', models.DO_NOTHING, blank=True, null=True)
-    unidadorganica = models.ForeignKey(SagestDepartamento, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sagesthistoricoingresopersonal_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'sagest_historicoingresopersonal'
-
-
 class SagestHojaruta(models.Model):
     status = models.BooleanField()
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
@@ -43331,7 +40781,6 @@ class SagestIngresoproducto(models.Model):
     status = models.BooleanField()
     numero = models.IntegerField()
     anulado = models.BooleanField()
-    tipoingreso = models.IntegerField()
 
     class Meta:
         managed = False
@@ -43987,36 +41436,6 @@ class SagestMigracionprocedimientoentidad(models.Model):
         db_table = 'sagest_migracionprocedimientoentidad'
 
 
-class SagestMigracionprocedimientoproceso(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    fecha_ejecuta = models.DateTimeField(blank=True, null=True)
-    estado = models.IntegerField()
-    direccion_destino = models.ForeignKey(SagestDepartamento, models.DO_NOTHING)
-    direccion_origen = models.ForeignKey(SagestDepartamento, models.DO_NOTHING, related_name='sagestmigracionprocedimientoproceso_direccion_origen_set')
-    gestion_destino = models.ForeignKey('SagestSecciondepartamento', models.DO_NOTHING, blank=True, null=True)
-    gestion_origen = models.ForeignKey('SagestSecciondepartamento', models.DO_NOTHING, related_name='sagestmigracionprocedimientoproceso_gestion_origen_set', blank=True, null=True)
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    proceso = models.ForeignKey('SagestProcesocalidad', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sagestmigracionprocedimientoproceso_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'sagest_migracionprocedimientoproceso'
-
-
-class SagestMigracionprocedimientoprocesoProcedimientos(models.Model):
-    migracionprocedimientoproceso = models.ForeignKey(SagestMigracionprocedimientoproceso, models.DO_NOTHING)
-    procedimientocalidad = models.ForeignKey('SagestProcedimientocalidad', models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'sagest_migracionprocedimientoproceso_procedimientos'
-        unique_together = (('migracionprocedimientoproceso', 'procedimientocalidad'),)
-
-
 class SagestModalidadlaboral(models.Model):
     status = models.BooleanField()
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
@@ -44224,9 +41643,6 @@ class SagestNormativacalidad(models.Model):
     tipo = models.IntegerField()
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sagestnormativacalidad_usuario_modificacion_set', blank=True, null=True)
-    categoria = models.IntegerField(blank=True, null=True)
-    codigo = models.CharField(max_length=15, blank=True, null=True)
-    unidad = models.ForeignKey(SagestDepartamento, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -45488,7 +42904,6 @@ class SagestPeriodoperfilpuesto(models.Model):
     fechafin = models.DateTimeField(blank=True, null=True)
     version = models.IntegerField()
     fechainicio = models.DateTimeField(blank=True, null=True)
-    direccionth = models.ForeignKey(SagestDepartamento, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -45771,21 +43186,6 @@ class SagestPersonarevisafaseprocesocalidad(models.Model):
     class Meta:
         managed = False
         db_table = 'sagest_personarevisafaseprocesocalidad'
-
-
-class SagestPersonhabilityhv(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    hability = models.CharField(max_length=1000)
-    person = models.ForeignKey('SgaPersona', models.DO_NOTHING)
-    type = models.ForeignKey('SagestTypehability', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sagestpersonhabilityhv_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'sagest_personhabilityhv'
 
 
 class SagestPiezaparteactivospreventivos(models.Model):
@@ -48585,7 +45985,6 @@ class SagestSolicitudpublicacion(models.Model):
     existerevista = models.BooleanField()
     archivoindexacion = models.CharField(max_length=100, blank=True, null=True)
     librocapituloindexado = models.BooleanField()
-    estadocartaarticulo = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -49877,20 +47276,6 @@ class SagestTraspasoactivotecnologico(models.Model):
         db_table = 'sagest_traspasoactivotecnologico'
 
 
-class SagestTypehability(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    name = models.CharField(max_length=1000)
-    is_current = models.BooleanField()
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sagesttypehability_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'sagest_typehability'
-
-
 class SagestUbicacion(models.Model):
     status = models.BooleanField()
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
@@ -50078,48 +47463,6 @@ class SecretariaCategoriaservicioGrupos(models.Model):
         unique_together = (('categoriaservicio', 'group'),)
 
 
-class SecretariaContactinquiry(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    full_name = models.CharField(max_length=150)
-    email = models.CharField(max_length=200)
-    subject = models.CharField(max_length=200)
-    message = models.TextField()
-    person = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='secretariacontactinquiry_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'secretaria_contactinquiry'
-
-
-class SecretariaConvocadoaudiencia(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    tipo = models.IntegerField(blank=True, null=True)
-    estado = models.BooleanField()
-    persona = models.ForeignKey('SgaPersona', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='secretariaconvocadoaudiencia_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'secretaria_convocadoaudiencia'
-
-
-class SecretariaConvocadoaudienciaCarrera(models.Model):
-    convocadoaudiencia = models.ForeignKey(SecretariaConvocadoaudiencia, models.DO_NOTHING)
-    carrera = models.ForeignKey('SgaCarrera', models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'secretaria_convocadoaudiencia_carrera'
-        unique_together = (('convocadoaudiencia', 'carrera'),)
-
-
 class SecretariaConvocatoriaaudiencia(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -50139,10 +47482,6 @@ class SecretariaConvocatoriaaudiencia(models.Model):
     ubicacion = models.ForeignKey(SagestUbicacion, models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='secretariaconvocatoriaaudiencia_usuario_modificacion_set', blank=True, null=True)
-    tipoasis = models.IntegerField(blank=True, null=True)
-    tipodec = models.IntegerField(blank=True, null=True)
-    tipodel = models.IntegerField(blank=True, null=True)
-    tiporesp = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -50160,7 +47499,6 @@ class SecretariaDocumentoaudicencia(models.Model):
     historico = models.ForeignKey(InnoHistoricomatrizsenescyt, models.DO_NOTHING)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='secretariadocumentoaudicencia_usuario_modificacion_set', blank=True, null=True)
-    tipo = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -50473,56 +47811,6 @@ class SecretariaSolicitudasignatura(models.Model):
     class Meta:
         managed = False
         db_table = 'secretaria_solicitudasignatura'
-
-
-class SecurityLogbiometric(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    username = models.CharField(max_length=150)
-    type_verification = models.CharField(max_length=20)
-    timestamp = models.DateTimeField()
-    verification_result = models.JSONField()
-    capture = models.CharField(max_length=100)
-    success = models.BooleanField()
-    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='securitylogbiometric_usuario_creacion_set', blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='securitylogbiometric_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'security_logbiometric'
-
-
-class SecuritySecurityquestionbank(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    question = models.CharField(unique=True, max_length=500)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='securitysecurityquestionbank_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'security_securityquestionbank'
-
-
-class SecurityUsersecurityanswer(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    answer = models.CharField(max_length=300)
-    question = models.ForeignKey(SecuritySecurityquestionbank, models.DO_NOTHING)
-    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='securityusersecurityanswer_usuario_creacion_set', blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='securityusersecurityanswer_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'security_usersecurityanswer'
 
 
 class SgaActaavance(models.Model):
@@ -52027,8 +49315,6 @@ class SgaArticuloinvestigacion(models.Model):
     fechaenvio = models.DateField(blank=True, null=True)
     estadoanterior = models.IntegerField(blank=True, null=True)
     evaluado = models.BooleanField()
-    estadocartaaceptacion = models.IntegerField(blank=True, null=True)
-    revistadesindexada = models.BooleanField()
 
     class Meta:
         managed = False
@@ -58084,7 +55370,7 @@ class SgaDetallerespuestapreinscripcionpppRespuesta(models.Model):
 
 
 class SgaDetallerespuestarubrica(models.Model):
-    respuestarubrica = models.ForeignKey('SgaRespuestarubrica', models.DO_NOTHING)
+    respuestarubrica_id = models.IntegerField()
     rubricapregunta = models.ForeignKey('SgaRubricapreguntas', models.DO_NOTHING)
     valor = models.FloatField()
     status = models.BooleanField()
@@ -62058,7 +59344,6 @@ class SgaInscripcionrequisitosactividadconvalidacionppv(models.Model):
     observacion = models.TextField(blank=True, null=True)
     fechaenviacorregir = models.DateField(blank=True, null=True)
     estado_firma = models.IntegerField()
-    puntaje = models.FloatField()
 
     class Meta:
         managed = False
@@ -64296,7 +61581,6 @@ class SgaMetodologiaprogramaanaliticoasignatura(models.Model):
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
     programaanaliticoasignatura = models.ForeignKey('SgaProgramaanaliticoasignatura', models.DO_NOTHING)
     descripcion = models.TextField()
-    metodologia = models.ForeignKey(InnoMetodologiaplananalitico, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -64598,13 +61882,10 @@ class SgaModulo(models.Model):
     empresa = models.BooleanField()
     link_externo = models.BooleanField()
     urllink_externo = models.CharField(max_length=100, blank=True, null=True)
-    concurso = models.BooleanField()
 
     class Meta:
         managed = False
         db_table = 'sga_modulo'
-
-
 
 
 class SgaModulocategorias(models.Model):
@@ -65213,7 +62494,6 @@ class SgaNotificaciondeudaperiodo(models.Model):
     periodo = models.OneToOneField('SgaPeriodo', models.DO_NOTHING, blank=True, null=True)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sganotificaciondeudaperiodo_usuario_modificacion_set', blank=True, null=True)
-    obligatorio = models.BooleanField()
 
     class Meta:
         managed = False
@@ -65484,7 +62764,6 @@ class SgaOpcioncuadriculaencuestagrupoestudiantes(models.Model):
     opcotros = models.BooleanField()
     oparchivo = models.BooleanField()
     secuenciapregunta = models.ForeignKey('SgaPreguntaencuestagrupoestudiantes', models.DO_NOTHING, related_name='sgaopcioncuadriculaencuestagrupoestudiantes_secuenciapregunta_set', blank=True, null=True)
-    finalizaencuesta = models.BooleanField()
 
     class Meta:
         managed = False
@@ -65835,11 +63114,6 @@ class SgaParentescopersona(models.Model):
     fecha_creacion = models.DateTimeField(blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sgaparentescopersona_usuario_modificacion_set', blank=True, null=True)
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    activo = models.BooleanField()
-    activo_nepotismo = models.BooleanField()
-    grado = models.IntegerField(blank=True, null=True)
-    orden = models.IntegerField()
-    tipo = models.IntegerField()
 
     class Meta:
         managed = False
@@ -70394,7 +67668,6 @@ class SgaRequisitosactividadconvalidacionppv(models.Model):
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sgarequisitosactividadconvalidacionppv_usuario_modificacion_set', blank=True, null=True)
     diascorreccion = models.IntegerField(blank=True, null=True)
     horasrequisito = models.IntegerField(blank=True, null=True)
-    detalle_evidencia = models.ForeignKey(InnoDetalleevidenciaproyectovinculacion, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -70873,7 +68146,7 @@ class SgaRespuestarangoencuestagrupoestudiantes(models.Model):
 
 
 class SgaRespuestarubrica(models.Model):
-    respuestaevaluacion_id = models.IntegerField()
+    respuestaevaluacion = models.ForeignKey(SgaRespuestaevaluacionacreditacion, models.DO_NOTHING)
     rubrica = models.ForeignKey('SgaRubrica', models.DO_NOTHING)
     valor = models.FloatField()
     status = models.BooleanField()
@@ -74874,9 +72147,6 @@ class SgaTiporedpersona(models.Model):
     nombre = models.CharField(max_length=300)
     usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
     usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='sgatiporedpersona_usuario_modificacion_set', blank=True, null=True)
-    clasificacion = models.IntegerField()
-    icono = models.CharField(max_length=500, blank=True, null=True)
-    muestra_perfil = models.BooleanField()
 
     class Meta:
         managed = False
@@ -77191,24 +74461,6 @@ class TokenBlacklistOutstandingtoken(models.Model):
         db_table = 'token_blacklist_outstandingtoken'
 
 
-class UathAutoridadinstitucional(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    type_authority = models.IntegerField()
-    possession_date = models.DateField(blank=True, null=True)
-    is_active = models.BooleanField()
-    cargo = models.ForeignKey(SagestDenominacionpuesto, models.DO_NOTHING, blank=True, null=True)
-    periodo = models.ForeignKey('UathPeriodoautoridadinstitucional', models.DO_NOTHING)
-    persona = models.ForeignKey(SgaPersona, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathautoridadinstitucional_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_autoridadinstitucional'
-
-
 class UathCampoconfirmacion(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -77242,41 +74494,6 @@ class UathCampoconfirmacionperiodo(models.Model):
         managed = False
         db_table = 'uath_campoconfirmacionperiodo'
         unique_together = (('periodo', 'campo_maestro'),)
-
-
-class UathComisioncomprobanteventa(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    fecha_comprobante = models.DateField(blank=True, null=True)
-    ruc = models.CharField(max_length=20, blank=True, null=True)
-    proveedor = models.CharField(max_length=100, blank=True, null=True)
-    numerocomprobante = models.CharField(max_length=100, blank=True, null=True)
-    comprobante = models.CharField(max_length=100, blank=True, null=True)
-    valor = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    grupal = models.BooleanField()
-    comision_participante = models.ForeignKey('UathComisionserviciosparticipante', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathcomisioncomprobanteventa_usuario_modificacion_set', blank=True, null=True)
-    tipo = models.IntegerField()
-
-    class Meta:
-        managed = False
-        db_table = 'uath_comisioncomprobanteventa'
-
-
-class UathComisionnotificacionuath(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    activo = models.BooleanField()
-    persona = models.ForeignKey(SgaPersona, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathcomisionnotificacionuath_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_comisionnotificacionuath'
 
 
 class UathComisionservicios(models.Model):
@@ -77506,119 +74723,6 @@ class UathConfirmaciondatopersona(models.Model):
         db_table = 'uath_confirmaciondatopersona'
 
 
-class UathConflictattempt(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    has_conflict = models.BooleanField()
-    person = models.ForeignKey(SgaPersona, models.DO_NOTHING)
-    simulator = models.ForeignKey('UathConflictsimulator', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathconflictattempt_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_conflictattempt'
-
-
-class UathConflictoption(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    text = models.CharField(max_length=255)
-    value = models.CharField(max_length=100)
-    is_risk_trigger = models.BooleanField()
-    question = models.ForeignKey('UathConflictquestion', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathconflictoption_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_conflictoption'
-
-
-class UathConflictquestion(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    text = models.TextField()
-    question_type = models.CharField(max_length=10)
-    order = models.IntegerField()
-    trigger_value = models.CharField(max_length=100, blank=True, null=True)
-    parent_question = models.ForeignKey('self', models.DO_NOTHING, blank=True, null=True)
-    section = models.ForeignKey('UathConflictsection', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathconflictquestion_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_conflictquestion'
-
-
-class UathConflictresponse(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    text_answer = models.TextField(blank=True, null=True)
-    attempt = models.ForeignKey(UathConflictattempt, models.DO_NOTHING)
-    question = models.ForeignKey(UathConflictquestion, models.DO_NOTHING)
-    selected_option = models.ForeignKey(UathConflictoption, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathconflictresponse_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_conflictresponse'
-
-
-class UathConflictsection(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    title = models.CharField(max_length=200)
-    order = models.IntegerField()
-    description = models.TextField(blank=True, null=True)
-    simulator = models.ForeignKey('UathConflictsimulator', models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathconflictsection_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_conflictsection'
-
-
-class UathConflictsimulator(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    is_active = models.BooleanField()
-    created_at = models.DateTimeField()
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathconflictsimulator_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_conflictsimulator'
-
-
-class UathDetailrecordnepotism(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    authority = models.ForeignKey(UathAutoridadinstitucional, models.DO_NOTHING)
-    record_nepotism = models.ForeignKey('UathRecordnepotism', models.DO_NOTHING)
-    relationship = models.ForeignKey(SgaParentescopersona, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathdetailrecordnepotism_usuario_modificacion_set', blank=True, null=True)
-    is_nepotism = models.BooleanField()
-
-    class Meta:
-        managed = False
-        db_table = 'uath_detailrecordnepotism'
-
-
 class UathParticipanteactualizacion(models.Model):
     status = models.BooleanField()
     fecha_creacion = models.DateTimeField(blank=True, null=True)
@@ -77632,24 +74736,6 @@ class UathParticipanteactualizacion(models.Model):
         managed = False
         db_table = 'uath_participanteactualizacion'
         unique_together = (('persona', 'periodo'),)
-
-
-class UathPeriodnepotism(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    name = models.CharField(max_length=1000)
-    description = models.TextField()
-    is_active = models.BooleanField()
-    start_date = models.DateField(blank=True, null=True)
-    end_date = models.DateField(blank=True, null=True)
-    authority_period = models.ForeignKey('UathPeriodoautoridadinstitucional', models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathperiodnepotism_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_periodnepotism'
 
 
 class UathPeriodoactualizacion(models.Model):
@@ -77667,123 +74753,6 @@ class UathPeriodoactualizacion(models.Model):
     class Meta:
         managed = False
         db_table = 'uath_periodoactualizacion'
-
-
-class UathPeriodoautoridadinstitucional(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    nombre = models.CharField(max_length=200)
-    descripcion = models.TextField()
-    activo = models.BooleanField()
-    fecha_inicio = models.DateField()
-    fecha_fin = models.DateField()
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathperiodoautoridadinstitucional_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_periodoautoridadinstitucional'
-
-
-class UathRecordnepotism(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    start_date = models.DateField(blank=True, null=True)
-    end_date = models.DateField(blank=True, null=True)
-    rmu = models.DecimalField(max_digits=30, decimal_places=2)
-    status_record = models.IntegerField()
-    minute_file = models.CharField(max_length=100, blank=True, null=True)
-    is_sign = models.BooleanField()
-    employment_modality = models.ForeignKey(SagestModalidadlaboral, models.DO_NOTHING, blank=True, null=True)
-    organic_unit = models.ForeignKey(SagestDepartamento, models.DO_NOTHING, blank=True, null=True)
-    period = models.ForeignKey(UathPeriodnepotism, models.DO_NOTHING)
-    person = models.ForeignKey(SgaPersona, models.DO_NOTHING)
-    position = models.ForeignKey(SagestDenominacionpuesto, models.DO_NOTHING)
-    regime = models.ForeignKey(SagestRegimenlaboral, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathrecordnepotism_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_recordnepotism'
-
-
-class UathSettingsmatchshownepotism(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    authority = models.CharField(max_length=1000)
-    is_active = models.BooleanField()
-    is_nepotism_before = models.BooleanField()
-    is_nepotism_after = models.BooleanField()
-    obs_before = models.TextField(blank=True, null=True)
-    obs_after = models.TextField(blank=True, null=True)
-    employment_modality = models.ForeignKey(SagestModalidadlaboral, models.DO_NOTHING, blank=True, null=True)
-    regime = models.ForeignKey(SagestRegimenlaboral, models.DO_NOTHING, blank=True, null=True)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathsettingsmatchshownepotism_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_settingsmatchshownepotism'
-
-
-class UathSettingsshownepotism(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    is_active = models.BooleanField()
-    is_mandatory = models.BooleanField()
-    has_time = models.BooleanField()
-    start_time = models.TimeField(blank=True, null=True)
-    end_time = models.TimeField(blank=True, null=True)
-    regime = models.ForeignKey(SagestRegimenlaboral, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='uathsettingsshownepotism_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'uath_settingsshownepotism'
-
-
-class ValidaPersonpublicprofile(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    public_key = models.TextField(blank=True, null=True)
-    private_key = models.TextField(blank=True, null=True)
-    is_public = models.BooleanField()
-    person = models.OneToOneField(SgaPersona, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='validapersonpublicprofile_usuario_modificacion_set', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'valida_personpublicprofile'
-
-
-class ValidaProfilevisibility(models.Model):
-    status = models.BooleanField()
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
-    fecha_modificacion = models.DateTimeField(blank=True, null=True)
-    show_academic_background = models.BooleanField()
-    show_about_me = models.BooleanField()
-    show_main_skills = models.BooleanField()
-    show_professional_experience = models.BooleanField()
-    show_certifications = models.BooleanField()
-    show_research_projects = models.BooleanField()
-    show_recent_publications = models.BooleanField()
-    show_awards = models.BooleanField()
-    person = models.OneToOneField(ValidaPersonpublicprofile, models.DO_NOTHING)
-    usuario_creacion = models.ForeignKey(AuthUser, models.DO_NOTHING, blank=True, null=True)
-    usuario_modificacion = models.ForeignKey(AuthUser, models.DO_NOTHING, related_name='validaprofilevisibility_usuario_modificacion_set', blank=True, null=True)
-    show_training = models.BooleanField()
-
-    class Meta:
-        managed = False
-        db_table = 'valida_profilevisibility'
 
 
 class ValidaValidarcertificacion(models.Model):
@@ -78204,7 +75173,7 @@ class WebpushPushinformation(models.Model):
 
 
 class WebpushSubscriptioninfo(models.Model):
-    id = models.AutoField(primary_key=True)
+    id = models.IntegerField(primary_key=True)
     browser = models.CharField(max_length=100)
     endpoint = models.CharField(max_length=500)
     auth = models.CharField(max_length=100)
@@ -78238,6 +75207,11 @@ class WpushSubscriptioninfomationGeolocation(models.Model):
     class Meta:
         managed = False
         db_table = 'wpush_subscriptioninfomation_geolocation'
+
+
+
+
+
 
 # ==============================================================================
 # 4. CONFIGURACIÓN DEL CHATBOT (Ahora heredan de ModeloBase)
