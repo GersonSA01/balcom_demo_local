@@ -17,9 +17,12 @@ from django.core.files.storage import FileSystemStorage
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
+import csv
+import io
 from rest_framework.views import APIView
 
 from chatbot.models import (
@@ -40,7 +43,10 @@ from chatbot.models import (
     SgaMatricula,
     SgaPerfilusuario,
     SgaPersona,
-    SgaPeriodo
+    SgaPerfilusuario,
+    SgaPersona,
+    SgaPeriodo,
+    Faq
 )
 from chatbot.services import (
     q_estado_matricula, q_materias_matriculadas, q_nivel_semestre_paralelo,
@@ -513,9 +519,156 @@ def create_chatbot_role(request):
 
         messages.success(request, "Rol creado correctamente.")
     except Exception as e:
-        messages.error(request, f"Error al crear rol: {str(e)}")
-
+        messages.error(request, f"Error al eliminar tipo de proceso: {str(e)}")
+        
     return redirect("chatbot:document_manager")
+
+
+# ==============================================================================
+# FAQ MANAGEMENT VIEWS
+# ==============================================================================
+
+@require_http_methods(["POST"])
+def create_faq(request):
+    try:
+        pregunta = request.POST.get('pregunta')
+        respuesta = request.POST.get('respuesta')
+        activo = request.POST.get('activo') == 'on'
+        
+        # Crea la FAQ (la señal post_save se encarga de enviarla a la IA)
+        Faq.objects.create(
+            pregunta=pregunta,
+            respuesta=respuesta,
+            activo=activo
+        )
+        messages.success(request, "FAQ creada e indexada correctamente.")
+    except Exception as e:
+        messages.error(request, f"Error creando FAQ: {e}")
+    
+    return redirect(reverse("chatbot:document_manager") + "?tab=faqs")
+
+@require_http_methods(["POST"])
+def edit_faq(request):
+    try:
+        faq_id = request.POST.get('faq_id')
+        faq = get_object_or_404(Faq, id=faq_id)
+        
+        faq.pregunta = request.POST.get('pregunta')
+        faq.respuesta = request.POST.get('respuesta')
+        faq.activo = request.POST.get('activo') == 'on'
+        
+        # Al guardar, la señal post_save actualizará la IA
+        faq.save()
+        messages.success(request, "FAQ actualizada correctamente.")
+    except Exception as e:
+        messages.error(request, f"Error editando FAQ: {e}")
+        
+    return redirect(reverse("chatbot:document_manager") + "?tab=faqs")
+
+@require_http_methods(["POST"])
+def delete_faq(request, faq_id):
+    try:
+        faq = get_object_or_404(Faq, id=faq_id)
+        faq.delete() # La señal post_delete limpiará la IA
+        messages.success(request, "FAQ eliminada.")
+    except Exception as e:
+        messages.error(request, f"Error eliminando FAQ: {e}")
+        
+    return redirect(reverse("chatbot:document_manager") + "?tab=faqs")
+
+
+@require_POST
+def import_faqs_csv(request):
+    if 'csv_file' not in request.FILES:
+        messages.error(request, "Por favor selecciona un archivo CSV.")
+        return redirect("chatbot:document_manager")
+
+    file = request.FILES['csv_file']
+    
+    # Verificación básica de extensión
+    if not file.name.endswith('.csv'):
+        messages.error(request, "El archivo debe tener extensión .csv")
+        return redirect("chatbot:document_manager")
+
+    try:
+        # Leer el archivo en modo texto (decodificando utf-8 o latin-1)
+        decoded_file = file.read().decode('utf-8-sig').splitlines()
+        reader = csv.DictReader(decoded_file)
+        
+        # Validar cabeceras (flexibilidad mayúsculas/minúsculas)
+        headers = [h.lower().strip() for h in reader.fieldnames] if reader.fieldnames else []
+        if 'pregunta' not in headers or 'respuesta' not in headers:
+            messages.error(request, "El CSV debe tener las columnas 'Pregunta' y 'Respuesta'.")
+            return redirect("chatbot:document_manager")
+
+        count = 0
+        errores = 0
+        
+        for row in reader:
+            # Normalizar claves para acceder a los datos
+            row_lower = {k.lower().strip(): v for k, v in row.items()}
+            
+            pregunta = row_lower.get('pregunta', '').strip()
+            respuesta = row_lower.get('respuesta', '').strip()
+            
+            if pregunta and respuesta:
+                # Evitar duplicados
+                if not Faq.objects.filter(pregunta__iexact=pregunta).exists():
+                    Faq.objects.create(
+                        pregunta=pregunta,
+                        respuesta=respuesta,
+                        activo=True 
+                    )
+                    count += 1
+                else:
+                    errores += 1
+        
+        if count > 0:
+            messages.success(request, f"Procesado: {count} preguntas importadas correctamente.")
+        else:
+            messages.warning(request, f"No se importaron preguntas. ({errores} duplicadas).")
+
+    except UnicodeDecodeError:
+        messages.error(request, "Error de codificación. Guarda el CSV como 'UTF-8'.")
+    except Exception as e:
+        messages.error(request, f"Error crítico al leer CSV: {str(e)}")
+        
+    return redirect(reverse("chatbot:document_manager") + "?tab=faqs")
+
+
+
+@require_POST
+def bulk_delete_faqs(request):
+    try:
+        body = json.loads(request.body)
+        faq_ids = body.get('faq_ids', [])
+        
+        if not faq_ids:
+            return JsonResponse({'success': False, 'error': 'No se seleccionaron preguntas.'})
+        
+        # Eliminar FAQs una por una para disparar señales
+        qs = Faq.objects.filter(id__in=faq_ids)
+        count = 0
+        errores = 0
+        
+        for faq in qs:
+            try:
+                faq.delete() # Dispara signal delete_faq_de_ia
+                count += 1
+            except Exception as e:
+                print(f"Error al eliminar FAQ {faq.id}: {e}")
+                errores += 1
+        
+        if count > 0:
+            msg = f'Se eliminaron {count} preguntas.'
+            if errores > 0:
+                msg += f' (Hubo {errores} errores).'
+            return JsonResponse({'success': True, 'message': msg})
+        else:
+            return JsonResponse({'success': False, 'error': 'No se pudo eliminar ninguna pregunta.'})
+            
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @require_POST
@@ -775,7 +928,6 @@ def get_servicios_para_estudiante(django_user, perfil_id: Optional[int] = None, 
             print(f"[DEBUG:get_servicios_para_estudiante] ❌ Persona no encontrada para usuario: {django_user}")
             return response_data
 
-        # ✅ CAMBIO CLAVE: Usar el perfil seleccionado si viene
         inscripcion = None
         if perfil_id:
             perfil = SgaPerfilusuario.objects.filter(
@@ -784,7 +936,7 @@ def get_servicios_para_estudiante(django_user, perfil_id: Optional[int] = None, 
             if perfil and perfil.inscripcion:
                 inscripcion = perfil.inscripcion
                 print(
-                    f"[DEBUG:get_servicios_para_estudiante] ✅ Usando inscripcion del PERFIL {perfil_id} "
+                    f"[DEBUG:get_servicios_para_estudiante] Usando inscripcion del PERFIL {perfil_id} "
                     f"(carrera {inscripcion.carrera_id}) para persona {persona.cedula}"
                 )
 
@@ -983,7 +1135,7 @@ class ChatView(APIView):
                 ):
                     """
                     Ejecuta RAG en PrivateGPT, devolviendo JSON NDJSON final.
-                    - ✅ Siempre incluye un mensaje de usuario (fix crítico).
+                    - Siempre incluye un mensaje de usuario (fix crítico).
                     - allowed_ids: lista de db_id (RagDocument.id) permitidos.
                     """
                     yield json.dumps({"type": "status", "text": "Consultando normativa institucional..."}) + "\n"
@@ -1005,7 +1157,6 @@ class ChatView(APIView):
                             ]
                         )
                     else:
-                        # ✅ FIX: siempre mandar user message
                         messages_payload = (
                             [{"role": "system", "content": "RAG_EXPERT_MODE"}]
                             + rag_history
@@ -1045,7 +1196,6 @@ class ChatView(APIView):
                             if data_json:
                                 final_response_text = data_json.get("response", raw_rag_text)
                                 
-                                # ✅ PARSEO ROBUSTO DE answer_found
                                 af_raw = data_json.get("answer_found")
                                 if af_raw is None:
                                     # Si no viene el campo, asumimos True (respuesta encontrada)
@@ -1067,12 +1217,11 @@ class ChatView(APIView):
                                 answer_found = False
                                 logger.warning("⚠️ RAG: No se pudo parsear JSON, answer_found=False")
 
-                            # ✅ LÓGICA: Si no hay información, igual usamos la respuesta del LLM (que ahora dice lo del balcón)
                             if not answer_found:
                                 logger.info("❌ RAG: answer_found=False, usando respuesta conversacional del LLM")
                                 final_sources = []  # Sin fuentes cuando no hay información específica en documentos
                             else:
-                                logger.info("✅ RAG: answer_found=True, usando respuesta de chat_service")
+                                logger.info("RAG: answer_found=True, usando respuesta de chat_service")
                                 # Sources por BD local (ideal)
                                 if cited_db_ids:
                                     docs_from_db = RagDocument.objects.filter(id__in=cited_db_ids)
@@ -1099,10 +1248,10 @@ class ChatView(APIView):
                     if forced_intro_text and answer_found:
                         final_response_text = f"{forced_intro_text}\n\n{final_response_text}"
 
-                    # ✅ LÓGICA FINAL: Sin botones de handoff, solo mensaje fijo cuando no hay info
+                    # LÓGICA FINAL: Sin botones de handoff, solo mensaje fijo cuando no hay info
                     offer_handoff = False  # Siempre False para no mostrar botones
                     
-                    print(f"🎯 RAG Final: answer_found={answer_found}, offer_human_handoff={offer_handoff}")
+                    print(f"RAG Final: answer_found={answer_found}, offer_human_handoff={offer_handoff}")
 
                     yield json.dumps(
                         {
@@ -1218,7 +1367,16 @@ class ChatView(APIView):
                     if is_allowed and doc.doc_id_pgpt:
                         # ⚠️ IMPORTANT: aquí mantenemos tu contrato: docs_ids == RagDocument.id (db_id)
                         doc_ids_for_pgpt.append(str(doc.id))
-                        debug_docs_log.append(f"  ✅ [ID: {doc.id}] {doc.nombre}  --->  {matched_reason}")
+                        debug_docs_log.append(f"[ID: {doc.id}] {doc.nombre}  --->  {matched_reason}")
+
+                # --- FAQs activas ---
+                active_faqs = Faq.objects.filter(activo=True)
+                for faq in active_faqs:
+                    # FAQs no tienen roles, son públicas por defecto si están activas
+                    if faq.doc_id_pgpt:
+                        doc_ids_for_pgpt.append(str(faq.id)) # Usamos el ID de la FAQ como doc_id
+                        debug_docs_log.append(f"[FAQ ID: {faq.id}] {faq.pregunta}  --->  PÚBLICO (FAQ)")
+
 
                 print(f"\nDEBUG: === 📂 DOCUMENTOS AUTORIZADOS ({len(debug_docs_log)}) ===")
                 if debug_docs_log:
@@ -1359,6 +1517,8 @@ class ChatView(APIView):
                     print(f"DEBUG: --- RESPUESTA ROUTER RAW ---\n{raw_content}\n-------------------------------")
 
                     data_router = _safe_parse_router_output(raw_content)
+                    print(f"DEBUG: Parsed Router Data: {data_router}")
+                    print(f"DEBUG: Router Classification: {data_router.get('classification')}")
 
                     server_action = data_router.get("action", "ANSWER")
                     server_func = data_router.get("function_name")
@@ -1372,6 +1532,22 @@ class ChatView(APIView):
                             router_class = "OFF_TOPIC"
                         else:
                             router_class = server_action
+
+                    # =====================================================
+                    # 🚀 0. INTERCEPCIÓN DE FAQ (PRIORIDAD MÁXIMA)
+                    # =====================================================
+                    if router_class == "FAQ_HIT":
+                        yield json.dumps({
+                            "type": "final",
+                            "data": {
+                                "response": server_response,
+                                "sources": [{"title": "Preguntas Frecuentes", "url": None}],
+                                "action": "ANSWER",
+                                "is_function": False,
+                                "offer_human_handoff": False
+                            }
+                        }) + "\n"
+                        return  # <--- IMPORTANTE: Salimos aquí para no ejecutar RAG
 
                     # Manejo de OFF_TOPIC
                     if router_class == "OFF_TOPIC":
@@ -1701,7 +1877,7 @@ class ChatView(APIView):
                             closed_msg = (proc_check.closed_message or "").strip() or (
                                 f"El proceso {proc_check.nombre} no se encuentra habilitado en el rango de fechas actual."
                             )
-                            header_msg = f"⚠️ AVISO: {proc_check.nombre}\n{closed_msg}"
+                            header_msg = f"AVISO: {proc_check.nombre}\n{closed_msg}"
 
                             yield json.dumps(
                                 {"type": "status", "text": "Interpretando consulta..."}
@@ -1872,7 +2048,14 @@ def document_manager(request):
 
     tipos_catalogo = get_dynamic_sga_roles()
     carreras_reales = SgaCarrera.objects.all().values("id", "nombre").order_by("nombre")
-    process_types = BusinessProcessType.objects.filter(status=True).order_by("nombre")
+    processes = BusinessProcess.objects.filter(status=True).select_related('process_type').prefetch_related('roles_permitidos').order_by('nombre')
+    
+    # AGREGAR ESTO:
+    faqs = Faq.objects.all().order_by('-id')
+
+    # Roles para el filtro
+    chatbot_roles = ChatbotRol.objects.all().order_by('nombre')
+    process_types = BusinessProcessType.objects.filter(status=True).order_by('nombre')
     
     procesos_disponibles = BalconProceso.objects.filter(status=True, activo=True, activoadmin=True).only('id', 'sigla', 'descripcion', 'interno', 'externo').order_by('sigla', 'descripcion')
 
@@ -1882,6 +2065,7 @@ def document_manager(request):
         {
             "documents": documents,
             "processes": processes,
+            "faqs": faqs,  # <--- Pasar FAQs al contexto
             "chatbot_roles": chatbot_roles,
             "tipos_base": tipos_catalogo,
             "carreras_list": carreras_reales,
@@ -2142,7 +2326,7 @@ def update_document_role(request, doc_id):
 
 @require_http_methods(["GET"])
 def process_manager(request):
-    return redirect("chatbot:document_manager")
+    return redirect(reverse("chatbot:document_manager") + "?tab=procs")
 
 
 @require_http_methods(["POST"])
@@ -2216,7 +2400,7 @@ def create_process(request):
     except Exception as e:
         messages.error(request, f"Error al crear: {e}")
 
-    return redirect("chatbot:process_manager")
+    return redirect(reverse("chatbot:document_manager") + "?tab=procs")
 
 
 @require_http_methods(["POST"])
@@ -2231,7 +2415,7 @@ def delete_process(request, process_id):
     except Exception as e:
         messages.error(request, f"Error: {e}")
 
-    return redirect("chatbot:process_manager")
+    return redirect(reverse("chatbot:document_manager") + "?tab=procs")
 
 
 @require_http_methods(["POST"])
@@ -2302,7 +2486,7 @@ def edit_process(request, process_id):
     except Exception as e:
         messages.error(request, f"Error: {e}")
 
-    return redirect("chatbot:process_manager")
+    return redirect(reverse("chatbot:document_manager") + "?tab=procs")
 
 
 # ==============================================================================
@@ -2328,7 +2512,7 @@ def create_process_type(request):
     except Exception as e:
         messages.error(request, f"Error al crear tipo: {e}")
 
-    return redirect("chatbot:document_manager")
+    return redirect(reverse("chatbot:document_manager") + "?tab=procs")
 
 
 @require_POST
@@ -2342,7 +2526,7 @@ def edit_process_type(request, type_id):
     except Exception as e:
         messages.error(request, f"Error al actualizar: {e}")
 
-    return redirect("chatbot:document_manager")
+    return redirect(reverse("chatbot:document_manager") + "?tab=procs")
 
 
 @require_POST
@@ -2354,4 +2538,4 @@ def delete_process_type(request, type_id):
     except Exception:
         messages.error(request, "No se puede eliminar este tipo porque hay procesos que lo utilizan.")
 
-    return redirect("chatbot:document_manager")
+    return redirect(reverse("chatbot:document_manager") + "?tab=procs")

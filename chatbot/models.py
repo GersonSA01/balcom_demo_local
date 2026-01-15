@@ -2,6 +2,12 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 from datetime import datetime
+import json
+import requests
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.conf import settings
+from django.core.files.base import ContentFile
 
 ADMINISTRADOR_ID = 116717 
 
@@ -798,7 +804,6 @@ class AcademiaInscripcionadmision(models.Model):
     class Meta:
         managed = False
         db_table = 'academia_inscripcionadmision'
-
 
 class AcademiaIntegranterevisorexpediente(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -78370,3 +78375,85 @@ class BusinessProcess(ModeloBase):
         return f"{self.nombre} ({self.process_type.nombre})"
 
 
+
+# ==========================================
+# FAQ SYSTEM MODELS (ADDED MANUALLY)
+# ==========================================
+import json
+import requests
+from django.db import models
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.conf import settings
+
+class Faq(models.Model):
+    pregunta = models.TextField(help_text="Esto se vectoriza para buscar similitud")
+    respuesta = models.TextField(help_text="Esto se devuelve tal cual si hay coincidencia")
+    activo = models.BooleanField(default=True)
+    doc_id_pgpt = models.CharField(max_length=255, blank=True, null=True, help_text="ID interno en PrivateGPT")
+
+    def __str__(self):
+        return self.pregunta
+
+    class Meta:
+        managed = True
+        verbose_name = "Pregunta Frecuente"
+        verbose_name_plural = "Preguntas Frecuentes"
+
+@receiver(post_save, sender=Faq)
+def sincronizar_faq_con_ia(sender, instance, created, **kwargs):
+    """
+    Sube la FAQ a PrivateGPT usando la misma API que views.py usa para PDFs.
+    """
+    if not instance.activo:
+        return
+
+    # 1. Preparar el contenido: La PREGUNTA es el contenido del archivo
+    file_content = instance.pregunta
+    file_name = f"FAQ_{instance.id}.txt"
+    
+    # 2. API Endpoint
+    if not hasattr(settings, 'PRIVATE_GPT_API_URL'):
+        print("❌ Error: settings.PRIVATE_GPT_API_URL no está definido.")
+        return
+
+    ingest_url = f"{settings.PRIVATE_GPT_API_URL}/v1/ingest/file"
+    
+    try:
+        # Paso A: Subir archivo (Ingesta)
+        files = {'file': (file_name, file_content, 'text/plain')}
+        response = requests.post(ingest_url, files=files, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json().get('data', [])
+            if data:
+                pgpt_id = data[0]['doc_id']
+                
+                if instance.doc_id_pgpt != pgpt_id:
+                    # Guardamos sin disparar señales para evitar bucle recursivo
+                    Faq.objects.filter(pk=instance.pk).update(doc_id_pgpt=pgpt_id)
+
+                # Paso B: Actualizar Metadatos (Aquí guardamos la RESPUESTA y el rol)
+                meta_url = f"{settings.PRIVATE_GPT_API_URL}/v1/ingest/{pgpt_id}/metadata"
+                meta_payload = {
+                    "roles": ["faq_system"], # Rol especial para filtrar rápido
+                    "faq_answer": instance.respuesta, # <--- GUARDAMOS LA RESPUESTA EN METADATA
+                    "is_infinite": True,
+                    "db_id": instance.id
+                }
+                requests.post(meta_url, json=meta_payload, timeout=5)
+                print(f"✅ FAQ '{instance.pregunta[:20]}...' sincronizada con IA.")
+
+    except Exception as e:
+        print(f"❌ Error sincronizando FAQ con IA: {e}")
+
+@receiver(post_delete, sender=Faq)
+def eliminar_faq_de_ia(sender, instance, **kwargs):
+    if instance.doc_id_pgpt:
+        try:
+            if hasattr(settings, 'PRIVATE_GPT_API_URL'):
+                url = f"{settings.PRIVATE_GPT_API_URL}/v1/ingest/{instance.doc_id_pgpt}"
+                requests.delete(url, timeout=5)
+                print(f"🗑️ FAQ eliminada de IA.")
+        except Exception:
+            pass

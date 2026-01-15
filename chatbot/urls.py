@@ -7,7 +7,9 @@ from .views import (
     create_chatbot_role, delete_chatbot_role, edit_chatbot_role,
     get_users_list, create_process_type, edit_process_type, delete_process_type,
     api_get_servicios_estudiante, api_get_proceso_servicios, api_get_servicios_de_proceso,
-    api_get_procesos_por_audiencia, api_get_requisitos_de_servicio
+    api_get_servicios_estudiante, api_get_proceso_servicios, api_get_servicios_de_proceso,
+    api_get_procesos_por_audiencia, api_get_requisitos_de_servicio,
+    create_faq, edit_faq, delete_faq, import_faqs_csv, bulk_delete_faqs
 )
 
 app_name = 'chatbot'
@@ -46,6 +48,13 @@ urlpatterns = [
     path("api/servicios-de-proceso/", api_get_servicios_de_proceso, name="api_servicios_de_proceso"),
     path("api/procesos-por-audiencia/", api_get_procesos_por_audiencia, name="api_procesos_por_audiencia"),
     path("api/requisitos-de-servicio/", api_get_requisitos_de_servicio, name="api_requisitos_de_servicio"),
+
+    # Gestión de FAQs
+    path('gestion/faq/create/', create_faq, name='create_faq'),
+    path('gestion/faq/edit/', edit_faq, name='edit_faq'),
+    path('gestion/faq/delete/<int:faq_id>/', delete_faq, name='delete_faq'),
+    path('gestion/faq/import-csv/', import_faqs_csv, name='import_faqs_csv'),
+    path('gestion/faq/bulk-delete/', bulk_delete_faqs, name='bulk_delete_faqs'),
 
 ]
 

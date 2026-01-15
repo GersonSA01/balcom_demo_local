@@ -134,55 +134,82 @@
                     </div>
                 </div>
 
-                <div id="cp_closedMsgBlock" class="mt-6 border-t border-slate-100 pt-4 hidden">
-                    <div class="flex items-center gap-2 mb-2">
-                        <input type="checkbox" id="cp_has_closed" name="has_closed_message"
-                            class="rounded text-red-600 focus:ring-red-500 border-slate-300"
-                            onchange="toggleClosedMsg('cp')">
-                        <label for="cp_has_closed" class="text-sm font-medium text-slate-700">¿Personalizar mensaje de
-                            "No Disponible"?</label>
-                    </div>
-                    <div id="cp_closed_container" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 transition-all">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Mensaje "No Disponible"</label>
-                            <textarea name="closed_message" id="cp_closed_msg" rows="4"
-                                placeholder="Ej: El proceso ha cerrado..." oninput="updateClosedPreview('cp')"
-                                class="w-full rounded-lg border-slate-300 focus:border-red-500 focus:ring-red-500 font-mono text-sm"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Vista Previa</label>
-                            <div class="bg-red-50 p-4 rounded-xl border border-red-100 h-full flex items-center">
-                                <p id="cp_closed_preview" class="text-sm text-red-800 font-medium w-full">(Escribe el
-                                    mensaje...)</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
             </div>
 
             <div id="cp_step_content_3" class="step-content space-y-4 hidden">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2" id="cp_msg_grid_container">
-                    <div id="cp_msg_textarea_container">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Mensaje de Respuesta</label>
-                        <textarea name="active_message" id="create_active_msg" rows="5" required
-                            placeholder="Escribe requisitos..." oninput="updateCreatePreview()"
-                            class="w-full rounded-lg border-slate-300 focus:ring-[#ff6b35] focus:border-[#ff6b35] font-mono text-sm"></textarea>
+                <div class="space-y-6">
+                    <!-- SECCIÓN 1: MENSAJE DISPONIBLE -->
+                    <div>
+                        <h4
+                            class="text-sm font-bold text-[#1e3a5f] uppercase tracking-wide mb-3 border-b border-slate-100 pb-1">
+                            1. Mensaje de Disponibilidad
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="cp_msg_grid_container">
+                            <div id="cp_msg_textarea_container">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Mensaje de
+                                    Respuesta</label>
+                                <textarea name="active_message" id="create_active_msg" rows="5" required
+                                    placeholder="Escribe requisitos..." oninput="updateCreatePreview()"
+                                    class="w-full rounded-lg border-slate-300 focus:ring-[#ff6b35] focus:border-[#ff6b35] font-mono text-sm"></textarea>
+                            </div>
+                            <div id="cp_preview_container">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">
+                                    Vista Previa Chat
+                                    <span id="cp_tipo_proceso_label"
+                                        class="text-xs font-normal text-slate-500 ml-2 hidden"></span>
+                                </label>
+                                <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 h-full">
+                                    <div
+                                        class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 text-sm text-slate-800">
+                                        <p id="preview_greeting" class="text-slate-500 mb-2 hidden">Hola 👋, para
+                                            continuar con
+                                            tu solicitud necesito que me compartas la documentación requerida:</p>
+                                        <div id="create_msg_preview"
+                                            class="font-medium text-slate-900 whitespace-pre-wrap text-xs">(Mensaje...)
+                                        </div>
+                                        <p id="preview_closing" class="text-slate-500 mt-2 hidden">También necesitaré
+                                            que me des
+                                            de nuevo los detalles de tu solicitud.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div id="cp_preview_container">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">
-                            Vista Previa Chat
-                            <span id="cp_tipo_proceso_label"
-                                class="text-xs font-normal text-slate-500 ml-2 hidden"></span>
-                        </label>
-                        <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 h-full">
-                            <div
-                                class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 text-sm text-slate-800">
-                                <p id="preview_greeting" class="text-slate-500 mb-2 hidden">Hola 👋, para continuar con
-                                    tu solicitud necesito que me compartas la documentación requerida:</p>
-                                <div id="create_msg_preview"
-                                    class="font-medium text-slate-900 whitespace-pre-wrap text-xs">(Mensaje...)</div>
-                                <p id="preview_closing" class="text-slate-500 mt-2 hidden">También necesitaré que me des
-                                    de nuevo los detalles de tu solicitud.</p>
+
+                    <!-- SECCIÓN 2: MENSAJE NO DISPONIBLE -->
+                    <div id="cp_closedMsgBlock" class="pt-4 hidden"> <!-- hidden se quita via JS si no es infinito -->
+                        <h4
+                            class="text-sm font-bold text-red-800 uppercase tracking-wide mb-3 border-b border-red-100 pb-1">
+                            2. Mensaje de No Disponibilidad
+                        </h4>
+
+                        <div class="flex items-center gap-2 mb-4">
+                            <input type="checkbox" id="cp_has_closed" name="has_closed_message"
+                                class="rounded text-red-600 focus:ring-red-500 border-slate-300"
+                                onchange="toggleClosedMsg('cp')">
+                            <label for="cp_has_closed" class="text-sm font-medium text-slate-700">
+                                ¿Personalizar mensaje de cierre? (Opcional)
+                            </label>
+                        </div>
+
+                        <div id="cp_closed_container"
+                            class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 transition-all">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Mensaje de Cierre</label>
+                                <textarea name="closed_message" id="cp_closed_msg" rows="4"
+                                    placeholder="Ej: El proceso ha cerrado..." oninput="updateClosedPreview('cp')"
+                                    class="w-full rounded-lg border-slate-300 focus:border-red-500 focus:ring-red-500 font-mono text-sm"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Vista Previa Cierre</label>
+                                <div
+                                    class="bg-red-50 p-4 rounded-xl border border-red-100 h-full flex items-center justify-center">
+                                    <p id="cp_closed_preview"
+                                        class="text-sm text-red-800 font-medium text-center w-full px-2">
+                                        (Escribe el mensaje...)
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -323,55 +350,82 @@
                     </div>
                 </div>
 
-                <div id="ep_closedMsgBlock" class="mt-6 border-t border-slate-100 pt-4">
-                    <div class="flex items-center gap-2 mb-2">
-                        <input type="checkbox" id="ep_has_closed" name="has_closed_message"
-                            class="rounded text-red-600 focus:ring-red-500 border-slate-300"
-                            onchange="toggleClosedMsg('ep'); updateClosedPreview('ep')">
-                        <label for="ep_has_closed" class="text-sm font-medium text-slate-700">¿Personalizar mensaje de
-                            "No Disponible"?</label>
-                    </div>
-                    <div id="ep_closed_container" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 transition-all">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Mensaje "No Disponible"</label>
-                            <textarea name="closed_message" id="ep_closed_msg" rows="4"
-                                placeholder="Ej: El proceso ha cerrado..." oninput="updateClosedPreview('ep')"
-                                class="w-full rounded-lg border-slate-300 focus:border-red-500 focus:ring-red-500 font-mono text-sm"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Vista Previa</label>
-                            <div class="bg-red-50 p-4 rounded-xl border border-red-100 h-full flex items-center">
-                                <p id="ep_closed_preview" class="text-sm text-red-800 font-medium w-full">(Escribe el
-                                    mensaje...)</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
             </div>
 
             <div id="ep_step_content_3" class="step-content space-y-4 hidden">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2" id="ep_msg_grid_container">
-                    <div id="ep_msg_textarea_container">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Mensaje de Respuesta</label>
-                        <textarea name="active_message" id="ep_active_msg" rows="5" required
-                            placeholder="Escribe requisitos..." oninput="updateEditPreview()"
-                            class="w-full rounded-lg border-slate-300 focus:ring-green-500 focus:border-green-500 font-mono text-sm"></textarea>
+                <div class="space-y-6">
+                    <!-- SECCIÓN 1: MENSAJE DISPONIBLE -->
+                    <div>
+                        <h4
+                            class="text-sm font-bold text-[#1e3a5f] uppercase tracking-wide mb-3 border-b border-slate-100 pb-1">
+                            1. Mensaje de Disponibilidad
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="ep_msg_grid_container">
+                            <div id="ep_msg_textarea_container">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Mensaje de
+                                    Respuesta</label>
+                                <textarea name="active_message" id="ep_active_msg" rows="5" required
+                                    placeholder="Escribe requisitos..." oninput="updateEditPreview()"
+                                    class="w-full rounded-lg border-slate-300 focus:ring-green-500 focus:border-green-500 font-mono text-sm"></textarea>
+                            </div>
+                            <div id="ep_preview_container">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">
+                                    Vista Previa Chat
+                                    <span id="ep_tipo_proceso_label"
+                                        class="text-xs font-normal text-slate-500 ml-2 hidden"></span>
+                                </label>
+                                <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 h-full">
+                                    <div
+                                        class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 text-sm text-slate-800">
+                                        <p id="ep_preview_greeting" class="text-slate-500 mb-2 hidden">Hola 👋, para
+                                            continuar
+                                            con tu solicitud necesito que me compartas la documentación requerida:</p>
+                                        <div id="ep_msg_preview"
+                                            class="font-medium text-slate-900 whitespace-pre-wrap text-xs">
+                                            (Mensaje...)</div>
+                                        <p id="ep_preview_closing" class="text-slate-500 mt-2 hidden">También necesitaré
+                                            que me
+                                            des de nuevo los detalles de tu solicitud.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div id="ep_preview_container">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">
-                            Vista Previa Chat
-                            <span id="ep_tipo_proceso_label"
-                                class="text-xs font-normal text-slate-500 ml-2 hidden"></span>
-                        </label>
-                        <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 h-full">
-                            <div
-                                class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 text-sm text-slate-800">
-                                <p id="ep_preview_greeting" class="text-slate-500 mb-2 hidden">Hola 👋, para continuar
-                                    con tu solicitud necesito que me compartas la documentación requerida:</p>
-                                <div id="ep_msg_preview" class="font-medium text-slate-900 whitespace-pre-wrap text-xs">
-                                    (Mensaje...)</div>
-                                <p id="ep_preview_closing" class="text-slate-500 mt-2 hidden">También necesitaré que me
-                                    des de nuevo los detalles de tu solicitud.</p>
+
+                    <!-- SECCIÓN 2: MENSAJE NO DISPONIBLE -->
+                    <div id="ep_closedMsgBlock" class="pt-4">
+                        <h4
+                            class="text-sm font-bold text-red-800 uppercase tracking-wide mb-3 border-b border-red-100 pb-1">
+                            2. Mensaje de No Disponibilidad
+                        </h4>
+
+                        <div class="flex items-center gap-2 mb-4">
+                            <input type="checkbox" id="ep_has_closed" name="has_closed_message"
+                                class="rounded text-red-600 focus:ring-red-500 border-slate-300"
+                                onchange="toggleClosedMsg('ep'); updateClosedPreview('ep')">
+                            <label for="ep_has_closed" class="text-sm font-medium text-slate-700">
+                                ¿Personalizar mensaje de cierre? (Opcional)
+                            </label>
+                        </div>
+
+                        <div id="ep_closed_container"
+                            class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 transition-all">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Mensaje de Cierre</label>
+                                <textarea name="closed_message" id="ep_closed_msg" rows="4"
+                                    placeholder="Ej: El proceso ha cerrado..." oninput="updateClosedPreview('ep')"
+                                    class="w-full rounded-lg border-slate-300 focus:border-red-500 focus:ring-red-500 font-mono text-sm"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Vista Previa Cierre</label>
+                                <div
+                                    class="bg-red-50 p-4 rounded-xl border border-red-100 h-full flex items-center justify-center">
+                                    <p id="ep_closed_preview"
+                                        class="text-sm text-red-800 font-medium text-center w-full px-2">
+                                        (Escribe el mensaje...)
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

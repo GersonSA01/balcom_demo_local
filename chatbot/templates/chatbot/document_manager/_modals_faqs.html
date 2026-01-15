@@ -1,0 +1,206 @@
+<div id="faqModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg transform transition-all p-6 m-4">
+
+        <div class="flex justify-between items-center mb-6 border-b pb-3">
+            <h3 class="text-xl font-bold text-[#1e3a5f]"><span id="faqModalTitle">Nueva Pregunta Frecuente</span></h3>
+            <button onclick="closeFaqModal()" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+        </div>
+
+        <form id="faqForm" action="{% url 'chatbot:create_faq' %}" method="POST" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="faq_id" id="faq_id">
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Pregunta (Input Usuario)</label>
+                <p class="text-xs text-slate-500 mb-2">Escribe la pregunta tal como la haría un estudiante. Esto se
+                    vectoriza para buscar similitud.</p>
+                <textarea name="pregunta" id="faq_pregunta" rows="2" required
+                    placeholder="Ej: ¿Cuándo inician las clases del pregrado?"
+                    class="w-full rounded-lg border-slate-300 focus:ring-[#ff6b35] focus:border-[#ff6b35] text-sm"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Respuesta (Output Bot)</label>
+                <p class="text-xs text-slate-500 mb-2">Esta es la respuesta exacta que dará el bot si hay coincidencia.
+                </p>
+                <textarea name="respuesta" id="faq_respuesta" rows="5" required placeholder="Respuesta oficial..."
+                    class="w-full rounded-lg border-slate-300 focus:ring-[#ff6b35] focus:border-[#ff6b35] text-sm"></textarea>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2">
+                <input type="checkbox" name="activo" id="faq_activo" checked
+                    class="rounded text-[#ff6b35] focus:ring-[#ff6b35] border-slate-300">
+                <label for="faq_activo" class="text-sm font-medium text-slate-700">FAQ Activa (Visible para IA)</label>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-4">
+                <button type="button" onclick="closeFaqModal()"
+                    class="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">
+                    Cancelar
+                </button>
+                <button type="submit" id="faqSubmitBtn"
+                    class="px-4 py-2 text-sm font-medium text-white bg-[#ff6b35] rounded-lg hover:bg-[#ff8c5a]">
+                    Guardar FAQ
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="importFaqModal"
+    class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-[60]">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 m-4">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <div>
+                <h3 class="text-lg font-bold text-[#1e3a5f]">Importar Preguntas Masivas</h3>
+                <p class="text-xs text-slate-500">Sube un archivo Excel guardado como CSV.</p>
+            </div>
+            <button onclick="closeImportFaqModal()"
+                class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+        </div>
+
+        <form action="{% url 'chatbot:import_faqs_csv' %}" method="POST" enctype="multipart/form-data"
+            id="importFaqForm">
+            {% csrf_token %}
+
+            <div class="mb-5 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                <p class="text-xs text-blue-800 font-semibold mb-2">1. ¿No tienes el archivo?</p>
+                <button type="button" onclick="downloadCsvTemplate()"
+                    class="text-xs bg-white border border-blue-200 text-blue-600 px-3 py-1.5 rounded hover:bg-blue-100 flex items-center gap-2 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Descargar Plantilla de Ejemplo
+                </button>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">2. Sube tu archivo (.csv)</label>
+                <input type="file" name="csv_file" accept=".csv" required class="block w-full text-sm text-slate-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-[#ff6b35]/10 file:text-[#ff6b35]
+                    hover:file:bg-[#ff6b35]/20 cursor-pointer border rounded-lg p-2">
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t mt-4">
+                <button type="button" onclick="closeImportFaqModal()"
+                    class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm">Cancelar</button>
+                <button type="submit" id="btnImportar"
+                    class="px-4 py-2 bg-[#1e3a5f] hover:bg-[#2c4a6b] text-white rounded-lg text-sm font-medium flex items-center gap-2 shadow-md">
+                    <span id="spinImport"
+                        class="hidden animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                    Subir e Procesar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const faqModal = document.getElementById('faqModal');
+    const faqForm = document.getElementById('faqForm');
+    const faqTitle = document.getElementById('faqModalTitle');
+    const faqSubmitBtn = document.getElementById('faqSubmitBtn');
+    const importModal = document.getElementById('importFaqModal');
+    const importForm = document.getElementById('importFaqForm');
+
+    // URLs (Se reemplazan dinámicamente o se manejan en un solo view con lógica condicional)
+    const CREATE_FAQ_URL = "{% url 'chatbot:create_faq' %}";
+    const EDIT_FAQ_URL = "{% url 'chatbot:edit_faq' %}";
+
+    // Script para descargar plantilla CSV sin tocar el backend
+    function downloadCsvTemplate() {
+        const headers = ["Pregunta,Respuesta"];
+        const rows = [
+            '"¿Cuándo inician las matrículas?","Las matrículas inician el 15 de mayo según el calendario académico."',
+            '"¿Cómo recupero mi clave?","Ingrese al SGA y haga clic en Olvidé mi contraseña."'
+        ];
+
+        const csvContent = "\uFEFF" + headers.join("\n") + "\n" + rows.join("\n"); // \uFEFF es para que Excel reconozca UTF-8
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "plantilla_faqs_unemi.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function openCreateFaqModal() {
+        faqForm.reset();
+        document.getElementById('faq_id').value = '';
+        document.getElementById('faqModalTitle').innerText = 'Nueva Pregunta Frecuente';
+        document.getElementById('faqForm').action = "{% url 'chatbot:create_faq' %}";
+        document.getElementById('faq_activo').checked = true;
+
+        // Reset button styles to default for creation
+        const faqSubmitBtn = document.getElementById('faqSubmitBtn');
+        faqSubmitBtn.innerText = "Guardar FAQ";
+        faqSubmitBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+        faqSubmitBtn.classList.add('bg-[#ff6b35]', 'hover:bg-[#ff8c5a]');
+
+        faqModal.classList.remove('hidden');
+        faqModal.classList.add('flex');
+    }
+
+    function closeFaqModal() {
+        faqModal.classList.add('hidden');
+        faqModal.classList.remove('flex');
+    }
+
+    function openEditFaqModal(id, pregunta, respuesta, activo) {
+        document.getElementById('faq_id').value = id;
+        document.getElementById('faq_pregunta').value = pregunta;
+        document.getElementById('faq_respuesta').value = respuesta;
+        document.getElementById('faq_activo').checked = (activo === 'True' || activo === 'true');
+
+        document.getElementById('faqModalTitle').innerText = 'Editar Pregunta Frecuente';
+        document.getElementById('faqForm').action = "{% url 'chatbot:edit_faq' %}";
+
+        // Change button styles for editing
+        const faqSubmitBtn = document.getElementById('faqSubmitBtn');
+        faqSubmitBtn.innerText = "Actualizar FAQ";
+        faqSubmitBtn.classList.remove('bg-[#ff6b35]', 'hover:bg-[#ff8c5a]');
+        faqSubmitBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+
+        faqModal.classList.remove('hidden');
+        faqModal.classList.add('flex');
+    }
+
+    function openImportFaqModal() {
+        importModal.classList.remove('hidden');
+        importModal.classList.add('flex');
+    }
+
+    function closeImportFaqModal() {
+        importModal.classList.add('hidden');
+        importModal.classList.remove('flex');
+    }
+
+    if (importForm) {
+        importForm.addEventListener('submit', function () {
+            const btn = document.getElementById('btnImportar');
+            const spin = document.getElementById('spinImport');
+            if (btn && spin) {
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+                spin.classList.remove('hidden');
+            }
+        });
+    }
+
+    // Cerrar al hacer click fuera
+    faqModal.addEventListener('click', (e) => {
+        if (e.target === faqModal) closeFaqModal();
+    });
+
+    if (importModal) {
+        importModal.addEventListener('click', (e) => {
+            if (e.target === importModal) closeImportFaqModal();
+        });
+    }
+</script>

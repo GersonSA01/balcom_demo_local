@@ -1,0 +1,202 @@
+<div
+    class="p-5 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 rounded-t-xl">
+    <div>
+        <h2 class="text-sm font-bold text-[#1e3a5f] uppercase tracking-wide">Banco de Preguntas</h2>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+        <!-- Botón de eliminar en lote (oculto por defecto o deshabilitado) -->
+        <button id="btnBulkDeleteFaqs" onclick="bulkDeleteFaqs()" disabled
+            class="px-4 py-2 bg-white border border-red-200 text-red-400 font-medium rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                </path>
+            </svg>
+            <span id="bulkDeleteText">Eliminar Seleccionadas</span>
+        </button>
+
+        <div class="relative">
+            <input type="text" id="faqSearch" onkeyup="filterFaqs()" placeholder="Buscar pregunta..."
+                class="pl-3 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-[#ff6b35] focus:border-[#ff6b35] w-64 shadow-sm">
+        </div>
+
+        <button onclick="openImportFaqModal()"
+            class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 hover:text-[#1e3a5f] transition-colors shadow-sm flex items-center gap-2 text-sm">
+            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Importar CSV
+        </button>
+
+        <button onclick="openFaqModal()"
+            class="px-4 py-2 bg-[#ff6b35] text-white font-medium rounded-lg hover:bg-[#ff8c5a] transition-colors shadow-sm flex items-center gap-2 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nueva FAQ
+        </button>
+    </div>
+</div>
+
+<div class="overflow-x-auto rounded-b-xl">
+    <table class="min-w-full divide-y divide-slate-200 table-fixed">
+        <thead class="bg-slate-50">
+            <tr>
+                <th class="px-6 py-3 text-left w-10">
+                    <input type="checkbox" id="checkAllFaqs" onchange="toggleAllFaqs(this)"
+                        class="rounded border-slate-300 text-[#ff6b35] focus:ring-[#ff6b35]">
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-[#1e3a5f] uppercase tracking-wider w-1/3">Pregunta
+                    (Vectorizada)</th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-[#1e3a5f] uppercase tracking-wider w-1/3">
+                    Respuesta (Literal)</th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-[#1e3a5f] uppercase tracking-wider w-24">Estado
+                </th>
+                <th class="px-6 py-3 text-right text-xs font-bold text-[#1e3a5f] uppercase tracking-wider w-32">Acciones
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-slate-200" id="faqTableBody">
+            {% for faq in faqs %}
+            <tr class="hover:bg-slate-50 transition-colors group faq-row">
+                <td class="px-6 py-4 align-top">
+                    <input type="checkbox" name="faq_ids[]" value="{{ faq.id }}" onchange="updateBulkDeleteAction()"
+                        class="rounded border-slate-300 text-[#ff6b35] focus:ring-[#ff6b35] faq-checkbox">
+                </td>
+                <td class="px-6 py-4 align-top">
+                    <div class="text-sm font-semibold text-[#1e293b] line-clamp-2" title="{{ faq.pregunta }}">
+                        {{ faq.pregunta }}
+                    </div>
+                    {% if faq.doc_id_pgpt %}
+                    <span class="text-[10px] text-green-600 flex items-center gap-1 mt-1">
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Sincronizada con IA
+                    </span>
+                    {% else %}
+                    <span class="text-[10px] text-amber-600 flex items-center gap-1 mt-1">
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01" />
+                        </svg>
+                        Pendiente Sync
+                    </span>
+                    {% endif %}
+                </td>
+
+                <td class="px-6 py-4 align-top">
+                    <div class="text-sm text-slate-600 line-clamp-3 whitespace-pre-line" title="{{ faq.respuesta }}">
+                        {{ faq.respuesta }}
+                    </div>
+                </td>
+
+                <td class="px-6 py-4 align-top">
+                    {% if faq.activo %}
+                    <span
+                        class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700 border border-green-200">
+                        Activa
+                    </span>
+                    {% else %}
+                    <span
+                        class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-50 text-gray-600 border border-gray-200">
+                        Inactiva
+                    </span>
+                    {% endif %}
+                </td>
+
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium align-top">
+                    <button
+                        onclick="openEditFaqModal('{{ faq.id }}', '{{ faq.pregunta|escapejs }}', '{{ faq.respuesta|escapejs }}', '{{ faq.activo|lower }}')"
+                        class="text-[#1e3a5f] hover:text-[#ff6b35] font-medium mr-3 text-xs uppercase tracking-wide transition-colors">
+                        Editar
+                    </button>
+
+                    <form action="{% url 'chatbot:delete_faq' faq.id %}" method="POST" class="inline"
+                        onsubmit="return confirm('¿Eliminar esta FAQ? Se borrará también de la IA.');">
+                        {% csrf_token %}
+                        <button type="submit"
+                            class="text-red-400 hover:text-red-600 font-medium text-xs uppercase tracking-wide">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="px-6 py-12 text-center text-slate-500">
+                    No hay preguntas frecuentes registradas.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function filterFaqs() {
+        const query = document.getElementById('faqSearch').value.toLowerCase();
+        const rows = document.querySelectorAll('.faq-row');
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(query) ? '' : 'none';
+        });
+    }
+
+    function toggleAllFaqs(source) {
+        const checkboxes = document.querySelectorAll('.faq-checkbox');
+        checkboxes.forEach(cb => {
+            // Solo marcar si la fila está visible (por si hay filtro)
+            if (cb.closest('tr').style.display !== 'none') {
+                cb.checked = source.checked;
+            }
+        });
+        updateBulkDeleteAction();
+    }
+
+    function updateBulkDeleteAction() {
+        const checkboxes = document.querySelectorAll('.faq-checkbox:checked');
+        const count = checkboxes.length;
+        const btn = document.getElementById('btnBulkDeleteFaqs');
+        const span = document.getElementById('bulkDeleteText');
+
+        if (count > 0) {
+            btn.disabled = false;
+            span.textContent = `Eliminar (${count})`;
+        } else {
+            btn.disabled = true;
+            span.textContent = 'Eliminar Seleccionadas';
+        }
+    }
+
+    function bulkDeleteFaqs() {
+        const checkboxes = document.querySelectorAll('.faq-checkbox:checked');
+        const ids = Array.from(checkboxes).map(cb => cb.value);
+
+        if (ids.length === 0) return;
+
+        if (!confirm(`¿Estás seguro de eliminar ${ids.length} preguntas frecuentes? Se borrarán de la base de datos y de la IA.`)) {
+            return;
+        }
+
+        fetch("{% url 'chatbot:bulk_delete_faqs' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ faq_ids: ids })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Recargar la página para mostrar mensaje de éxito y tabla actualizada
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al procesar la solicitud.');
+            });
+    }
+</script>

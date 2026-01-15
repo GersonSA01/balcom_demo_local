@@ -159,6 +159,16 @@
             </svg>
             Procesos de Negocio
         </button>
+
+        <button onclick="switchTab('faqs')" id="tab-faqs"
+            class="tab-inactive whitespace-nowrap py-4 px-1 text-sm transition-colors flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                </path>
+            </svg>
+            Preguntas Frecuentes (FAQ)
+        </button>
     </nav>
 </div>
 
@@ -170,10 +180,15 @@
     {% include 'chatbot/document_manager/_process_table.html' %}
 </div>
 
+<div id="content-faqs" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 min-h-[400px]">
+    {% include 'chatbot/document_manager/_faq_table.html' %}
+</div>
+
 {% include 'chatbot/document_manager/_modals_documents.html' %}
 {% include 'chatbot/document_manager/_modals_processes.html' %}
 {% include 'chatbot/document_manager/_modals_roles.html' %}
 {% include 'chatbot/document_manager/_modals_process_types.html' %}
+{% include 'chatbot/document_manager/_modals_faqs.html' %}
 
 {% endblock %}
 {% block extra_scripts %}
@@ -414,10 +429,7 @@
 
         // 1. Toggle Fechas
         if (dateContainer) {
-            // CORRECCIÓN: Usamos style.display = 'none' en lugar de classList.add('hidden')
-            // El contenedor usa GRID, así que lo mostramos como 'grid'
             dateContainer.style.display = isInfinite ? 'none' : 'grid';
-
             dateContainer.style.opacity = isInfinite ? '0.5' : '1';
             dateContainer.style.pointerEvents = isInfinite ? 'none' : 'auto';
 
@@ -430,30 +442,21 @@
 
         // 2. Toggle Mensaje Cerrado (Lógica inversa a las fechas)
         if (closedMsgBlock) {
-            // Mostrar si NO es infinito (usamos 'block' para el div)
+            // Mostrar si NO es infinito
             closedMsgBlock.style.display = isInfinite ? 'none' : 'block';
 
             // Si se vuelve infinito, limpiamos el estado del checkbox cerrado
             if (isInfinite) {
                 const closedCheckbox = document.getElementById(prefix + '_has_closed');
                 const closedContainer = document.getElementById(prefix + '_closed_container');
-                if (closedCheckbox) closedCheckbox.checked = false;
+                if (closedCheckbox) {
+                    closedCheckbox.checked = false;
+                    // Disparar evento change para que se limpien los required si es necesario
+                    // Pero como el bloqueo padre se oculta, no importa mucho, pero por limpieza:
+                }
                 if (closedContainer) closedContainer.classList.add('hidden');
-            }
-        }
 
-
-        // 2. Toggle Mensaje Cerrado (Lógica inversa a las fechas)
-        if (closedMsgBlock) {
-            // Mostrar si NO es infinito
-            closedMsgBlock.classList.toggle('hidden', isInfinite);
-
-            // Si se vuelve infinito, limpiamos el estado del checkbox cerrado
-            if (isInfinite) {
-                const closedCheckbox = document.getElementById(prefix + '_has_closed');
-                const closedContainer = document.getElementById(prefix + '_closed_container');
-                if (closedCheckbox) closedCheckbox.checked = false;
-                if (closedContainer) closedContainer.classList.add('hidden');
+                // Tambien limpiar el input si se desea, pero quizas el usuario quiera conservarlo si vuelve a marcar fechas
             }
         }
     }
@@ -692,22 +695,30 @@
 
     // Script optimizado para el cambio de Tabs
     function switchTab(tabName) {
+        // Ocultar todos
         document.getElementById('content-docs').classList.add('hidden');
         document.getElementById('content-procs').classList.add('hidden');
+        const faqsContent = document.getElementById('content-faqs');
+        if (faqsContent) faqsContent.classList.add('hidden');
 
-        const tabDocs = document.getElementById('tab-docs');
-        const tabProcs = document.getElementById('tab-procs');
+        // Resetear estilos tabs
+        ['docs', 'procs', 'faqs'].forEach(t => {
+            const tab = document.getElementById('tab-' + t);
+            if (tab) {
+                tab.classList.remove('tab-active');
+                tab.classList.add('tab-inactive');
+            }
+        });
 
-        tabDocs.classList.remove('tab-active');
-        tabDocs.classList.add('tab-inactive');
+        // Mostrar seleccionado
+        const selectedContent = document.getElementById('content-' + tabName);
+        if (selectedContent) selectedContent.classList.remove('hidden');
 
-        tabProcs.classList.remove('tab-active');
-        tabProcs.classList.add('tab-inactive');
-
-        document.getElementById('content-' + tabName).classList.remove('hidden');
         const activeTab = document.getElementById('tab-' + tabName);
-        activeTab.classList.remove('tab-inactive');
-        activeTab.classList.add('tab-active');
+        if (activeTab) {
+            activeTab.classList.remove('tab-inactive');
+            activeTab.classList.add('tab-active');
+        }
     }
 
     // LOGICA MENSAJE CERRADO
@@ -756,7 +767,7 @@
         const rows = document.querySelectorAll('.doc-row');
 
         rows.forEach(row => {
-            const fileName = row.querySelector('td:first-child').innerText.toLowerCase();
+            const fileName = row.querySelector('td:nth-child(2)').innerText.toLowerCase();
             const roleData = row.getAttribute('data-role'); // "inscripcion,profesor" or ""
 
             // 1. Filtro de Texto
@@ -1433,6 +1444,13 @@
     // Inicializar cuando el DOM esté listo
     $(document).ready(function () {
         initializeServiceSelectors();
+
+        // --- PERSISTENCIA DE TABS ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam) {
+            switchTab(tabParam);
+        }
     });
 </script>
 {% endblock %}
