@@ -4,7 +4,7 @@
 
   // PROPS
   export let sessionData = {};
-  
+
   // Estado interno para controlar si el chat está abierto
   let chatOpened = false;
 
@@ -23,23 +23,24 @@
   // Eliminada toda la lógica de upload y handoff
 
   const API_BASE_URL = "http://localhost:9090/api/chatbot";
+  const MAX_CHARS = 1500;
 
   // Función para procesar markdown básico y formatear el texto
   function formatMessage(text) {
     if (!text) return "";
-    
+
     // Escapar HTML para seguridad
     let formatted = text
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
-    
+
     // Procesar negritas **texto** -> <strong>texto</strong>
     formatted = formatted.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-    
+
     // Procesar saltos de línea
     formatted = formatted.replace(/\n/g, "<br>");
-    
+
     return formatted;
   }
 
@@ -79,8 +80,7 @@
 
   let loadingText = "";
   async function sendMessage(isHidden = false) {
-    if (isLoading || (!inputMessage.trim() && !isHidden))
-      return;
+    if (isLoading || (!inputMessage.trim() && !isHidden)) return;
 
     const userMessage = inputMessage.trim();
     inputMessage = "";
@@ -192,7 +192,11 @@
       console.error(err);
       messages = [
         ...messages,
-        { role: "assistant", content: "Lo siento, no puedo obtener una respuesta en este momento. Por favor intenta realiza la solicitud mediante el balcón de servicios." },
+        {
+          role: "assistant",
+          content:
+            "Lo siento, no puedo obtener una respuesta en este momento. Por favor intenta realiza la solicitud mediante el balcón de servicios.",
+        },
       ];
     } finally {
       isLoading = false;
@@ -276,15 +280,15 @@
     ];
 
     // 3. Simulamos "pensando" y respondemos tras 0.5 segundos
-    isLoading = true; 
-    
+    isLoading = true;
+
     setTimeout(() => {
       isLoading = false;
       messages = [
         ...messages,
-        { 
-          role: "assistant", 
-          content: "Perfecto. ¿En qué más te puedo ayudar 😊?" 
+        {
+          role: "assistant",
+          content: "Perfecto. ¿En qué más te puedo ayudar 😊?",
         },
       ];
     }, 500); // 500ms = 0.5 segundos
@@ -295,9 +299,21 @@
 <div class="chatbot-floating-wrapper">
   <!-- Botón flotante para abrir/cerrar -->
   {#if !chatOpened}
-    <button class="chatbot-toggle-btn" on:click={toggleChat} title="Abrir asistente virtual">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    <button
+      class="chatbot-toggle-btn"
+      on:click={toggleChat}
+      title="Abrir asistente virtual"
+    >
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+        ></path>
       </svg>
       <span class="notification-badge" class:connected={isConnected}></span>
     </button>
@@ -315,7 +331,16 @@
             >
           </div>
           <button class="close-btn" on:click={toggleChat} title="Cerrar chat">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#ffffff"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
@@ -541,22 +566,37 @@
       </div>
 
       <div class="input-container">
-        <textarea
-          bind:this={messageInputEl}
-          bind:value={inputMessage}
-          on:keypress={handleKeyPress}
-          placeholder={isHandoffPending
-            ? "Por favor selecciona una opción arriba 👆"
-            : "Escribe aquí tu consulta 😊… "}
-          disabled={isLoading || !isConnected || isHandoffPending}
-          rows="1"
-          style="flex: 1; min-height: 44px;"
-        ></textarea>
+        <div
+          class="input-wrapper"
+          style="flex: 1; position: relative; display: flex;"
+        >
+          <textarea
+            bind:this={messageInputEl}
+            bind:value={inputMessage}
+            on:keypress={handleKeyPress}
+            placeholder={isHandoffPending
+              ? "Por favor selecciona una opción arriba 👆"
+              : "Escribe aquí tu consulta 😊… "}
+            disabled={isLoading || !isConnected || isHandoffPending}
+            rows="1"
+            maxlength={MAX_CHARS}
+            style="width: 100%; min-height: 44px; padding-bottom: 18px;"
+          ></textarea>
+          <div
+            class="char-counter"
+            style="position: absolute; bottom: 4px; right: 10px; font-size: 10px; color: #94a3b8; pointer-events: none;"
+          >
+            {inputMessage.length}/{MAX_CHARS}
+          </div>
+        </div>
 
         <button
           on:click={() => sendMessage(false)}
           class="send-btn"
-          disabled={isLoading || !isConnected || !inputMessage.trim() || isHandoffPending}
+          disabled={isLoading ||
+            !isConnected ||
+            !inputMessage.trim() ||
+            isHandoffPending}
           title="Enviar mensaje"
         >
           <svg
@@ -674,7 +714,6 @@
       max-height: calc(100vh - 20px);
     }
   }
-
 
   .chatbot-header {
     display: flex;
@@ -802,13 +841,13 @@
     max-width: 100%;
     box-sizing: border-box;
   }
-  
+
   /* Responsive: ajustar en pantallas pequeñas */
   @media (max-width: 768px) {
     .message-content {
       max-width: 85%;
     }
-    
+
     .messages-container {
       padding: 12px;
     }
@@ -894,17 +933,17 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     hyphens: auto; /* Agrega guiones automáticos cuando sea necesario */
   }
-  
+
   /* Estilos para texto dentro del mensaje */
   .message-content strong {
     font-weight: 600;
     color: inherit;
   }
-  
+
   .message.assistant .message-content strong {
     color: #1e3a5f;
   }
-  
+
   .message.user .message-content strong {
     color: #ffffff;
   }
@@ -1170,5 +1209,4 @@
     max-width: 300px;
     line-height: 1.5;
   }
-
 </style>

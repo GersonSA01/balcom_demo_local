@@ -175,13 +175,13 @@ def ejecutar_pruebas():
 
         inicio = time.time()
         
+        respuesta_ia = "ERROR: Sin respuesta"
+        accion_ia = "ERROR"
+        fuentes = []
+
         try:
             # 3. Enviar petición al Chatbot (stream=True es vital para NDJSON)
             resp = requests.post(API_URL, json=payload, stream=True, timeout=None)
-            
-            respuesta_ia = "ERROR: Sin respuesta"
-            accion_ia = "ERROR"
-            fuentes = []
 
             if resp.status_code == 200:
                 output = procesar_stream_ndjson(resp)

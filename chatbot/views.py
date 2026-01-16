@@ -1069,7 +1069,7 @@ class ChatView(APIView):
         except Exception:
             pass
 
-        user_msg = (request.data.get("message", "") or "").strip()
+        user_msg = (request.data.get("message", "") or "").replace("{", "").replace("}", "").strip()[:1500]
         _history = request.data.get("history", [])  # por ahora no se usa en router (puedes usarlo luego)
 
         # Lógica de handoff_mode eliminada - ya no se usa
@@ -1703,7 +1703,7 @@ class ChatView(APIView):
                                 {
                                     "role": "system", 
                                     "content": (
-                                        "ROLE: UNEMI Academic Assistant.\n"
+                                        "ROLE: UNEMI Academic Assistant. SKIP_FAQ\n"
                                         "TASK: Answer the student's SPECIFIC QUESTION based STRICTLY on the provided JSON data.\n\n"
                                         
                                         "### OUTPUT FORMAT (STRICT JSON):\n"
@@ -1714,12 +1714,13 @@ class ChatView(APIView):
                                         "}\n\n"
 
                                         "### PRIORITY RULES:\n"
-                                        "1. DATA FIDELITY (CRITICAL): If the user asks for a specific subject (e.g., 'Contabilidad') and it is NOT listed in the JSON keys, YOU MUST SAY: 'No encontré registros de la materia [Nombre] en este periodo'.\n"
-                                        "2. ANTI-HALLUCINATION: DO NOT use the grade of a related subject (e.g., do NOT give the grade of 'Tax Management' if the user asks for 'Accounting'). If the specific name is missing, the answer is 'Not found'.\n"
+                                        "1. DATA FIDELITY (CRITICAL): If the user asks for a specific subject (e.g., 'Contabilidad') and it is NOT listed in the JSON keys, state it is not found AND recommend checking with 'Balcón de Servicios'.\n"
+                                        "2. ANTI-HALLUCINATION: DO NOT use the grade of a related subject. If the specific name is missing, the answer is 'Not found'.\n"
                                         "3. IF user asks about 'Matrícula' or 'Enrollment': Look strictly at 'estado_matricula' or 'resumen_matricula'.\n"
                                         "4. IF user asks about 'Notas' or 'Grades': List the subjects and grades using bullet points. If asking for a specific one, return only that one.\n"
-                                        "5. IF 'has_data' is false in the source: Polite response indicating no records found.\n"
-                                        "6. LANGUAGE: Spanish."
+                                        "5. IF 'has_data' is false in the source: Polite response indicating no records found and suggesting 'Balcón de Servicios'.\n"
+                                        "6. LANGUAGE: Spanish.\n"
+                                        "7. MISSING INFO PROTOCOL: If any requested information is missing, incomplete, or not found in the JSON, you MUST append this sentence: 'Si requieres más detalles o crees que falta información, por favor realiza una consulta en el Balcón de Servicios'."
                                     )
                                 },
                                 {
@@ -1765,7 +1766,7 @@ class ChatView(APIView):
                             yield json.dumps({
                                 "type": "final",
                                 "data": {
-                                    "response": "Lo siento, hubo un error procesando tus datos.",
+                                    "response": "Lo siento, hubo un error por favor realiza tu solicitud en el balcón de servicios y mis compañeros humanos te ayudarán.",
                                     "action": "ANSWER"
                                 }
                             }) + "\n"
